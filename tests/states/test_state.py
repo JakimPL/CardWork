@@ -69,3 +69,10 @@ def test_with_changes_rejects_what_model_copy_would_have_written(changes: dict[s
 
     with pytest.raises(ValidationError):
         state.with_changes(**changes)
+
+
+@pytest.mark.parametrize("observer", [0, 1, None], ids=["a seat", "another seat", "a spectator"])
+def test_project_hands_the_shared_cursor_to_everyone(observer: int | None) -> None:
+    state = GameState(phase="score", to_act=frozenset({1}), points=(3, 5))
+
+    assert state.project(observer) == state

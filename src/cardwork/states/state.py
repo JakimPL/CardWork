@@ -33,5 +33,19 @@ class GameState(BaseFrozen):
         """
         return type(self).model_validate({**dict(self), **changes})
 
+    def project(self, observer: int | None) -> Self:  # pylint: disable=unused-argument
+        """The cursor as one observer is entitled to read it, which is the whole of it here.
+
+        The three fields every game shares are table knowledge: the phase, the seats that owe an action
+        and the running score are as public as the cards face up on the table. A game whose own state
+        holds something a seat keeps to itself — sealed bids gathered during a simultaneous round, a
+        privately drawn objective — overrides this to blank those fields for every other observer, so
+        that the cursor crossing the wire obeys the same entitlement the cards do.
+
+        Args:
+            observer: the seat receiving the projection, or None for a spectator.
+        """
+        return self
+
 
 StateT = TypeVar("StateT", bound=GameState)
