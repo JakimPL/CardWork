@@ -7,3 +7,6 @@ from cardwork.moves.actions import Action
 class Move(BaseFrozen):
     player: int = Field(ge=-1)
     action: Action
+
+
+Moves = tuple[Move, ...]

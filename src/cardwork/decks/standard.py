@@ -21,7 +21,13 @@ def standard_deck(
     black_jockers: int = 0,
     red_jokers: int = 0,
 ) -> Deck:
-    return (*STANDARD_DECK, *jokers(black=black_jockers, red=red_jokers))
+    return (
+        *STANDARD_DECK,
+        *jokers(
+            black=black_jockers,
+            red=red_jokers,
+        ),
+    )
 
 
 def is_standard_deck(

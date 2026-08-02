@@ -2,17 +2,17 @@ from pydantic import Field
 
 from cardwork.cards.card import Card
 from cardwork.cards.joker import Joker
-from cardwork.models.base import Base
+from cardwork.models.base import BaseFrozen
 
 CardOrJoker = Card | Joker
 
 
-class GameCard(Base):
+class GameCard(BaseFrozen):
     card: CardOrJoker = Field(frozen=True)
-    hidden: bool = False
+    face_down: bool = False
 
     def __str__(self) -> str:
-        hidden = "?" if self.hidden else ""
+        hidden = "?" if self.face_down else ""
         return f"{str(self.card)}{hidden}"
 
     def __repr__(self) -> str:
