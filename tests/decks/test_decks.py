@@ -1,6 +1,6 @@
 from cardwork.cards.cards import ACE_OF_SPADES, BLACK_JOKER, KING_OF_HEARTS, RED_JOKER
 from cardwork.cards.game import GameCard
-from cardwork.decks.decks import compare_decks, count_cards, does_contain_jokers, jokers, normalize_deck
+from cardwork.decks.decks import compare_decks, count_cards, does_contain_jokers, jokers, normalize_deck, to_game_cards
 
 
 def test_normalize_deck_unwraps_game_cards() -> None:
@@ -30,3 +30,15 @@ def test_jokers_builds_the_requested_colours() -> None:
 def test_does_contain_jokers_detects_a_single_joker() -> None:
     assert does_contain_jokers((ACE_OF_SPADES, RED_JOKER))
     assert not does_contain_jokers((ACE_OF_SPADES, KING_OF_HEARTS))
+
+
+def test_to_game_cards_gives_every_card_the_requested_face() -> None:
+    wrapped = to_game_cards((ACE_OF_SPADES, KING_OF_HEARTS), face_down=True)
+
+    assert wrapped == (GameCard(card=ACE_OF_SPADES, face_down=True), GameCard(card=KING_OF_HEARTS, face_down=True))
+
+
+def test_to_game_cards_restates_the_face_of_already_wrapped_cards() -> None:
+    wrapped = to_game_cards((GameCard(card=ACE_OF_SPADES, face_down=True),), face_down=False)
+
+    assert wrapped == (GameCard(card=ACE_OF_SPADES, face_down=False),)

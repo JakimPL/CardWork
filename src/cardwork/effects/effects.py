@@ -1,27 +1,30 @@
 from collections.abc import Mapping
+from typing import Generic
 
+from cardwork.decks.deck import NonEmptyIndices
 from cardwork.effects.effect import Effect
-from cardwork.moves.actions import NonEmptyIndices
+from cardwork.states.state import StateT
+from cardwork.zones.zone import ZoneId
 
 
-class MoveCards(Effect):
-    source: str
+class MoveCards(Effect[StateT], Generic[StateT]):
+    source: ZoneId
     indices: NonEmptyIndices
-    target: str
+    target: ZoneId
     at: int | None = None
     face_down: bool | None = None
 
 
-class SetFace(Effect):
-    zone: str
+class SetFace(Effect[StateT], Generic[StateT]):
+    zone: ZoneId
     indices: NonEmptyIndices
     face_down: bool
 
 
-class Reorder(Effect):
-    zone: str
+class Reorder(Effect[StateT], Generic[StateT]):
+    zone: ZoneId
     order: tuple[int, ...]
 
 
-class SetState(Effect):
+class SetState(Effect[StateT], Generic[StateT]):
     changes: Mapping[str, object]

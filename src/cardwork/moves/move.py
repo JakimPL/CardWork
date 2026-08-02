@@ -5,7 +5,13 @@ from cardwork.moves.actions import Action
 
 
 class Move(BaseFrozen):
-    player: int = Field(ge=-1)
+    """A seat's intent, before the rules have had a say.
+
+    Engine-initiated changes carry `Transaction.move = None`, which leaves every `Move` owned by a
+    real seat.
+    """
+
+    player: int = Field(ge=0)
     action: Action
 
 

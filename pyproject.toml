@@ -63,6 +63,7 @@ disable = [
 
 [tool.importlinter]
 root_packages = ["cardwork", "cardserver"]
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "Layered architecture"

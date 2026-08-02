@@ -1,11 +1,5 @@
-from typing import Annotated
-
-from pydantic import Field
-
-from cardwork.decks.deck import Indices
+from cardwork.decks.deck import NonEmptyIndices
 from cardwork.models.base import BaseFrozen
-
-NonEmptyIndices = Annotated[Indices, Field(min_length=1, default_factory=set)]
 
 
 class Action(BaseFrozen):

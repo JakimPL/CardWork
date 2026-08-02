@@ -2,11 +2,19 @@ from collections import Counter
 
 from cardwork.cards.game import CardOrJoker, GameCard, is_joker
 from cardwork.cards.joker import Joker
-from cardwork.decks.deck import Deck, GameDeck
+from cardwork.decks.deck import Deck, GameCards, GameDeck
 
 
 def normalize_deck(deck: GameDeck) -> list[CardOrJoker]:
     return [game_card.card if isinstance(game_card, GameCard) else game_card for game_card in deck]
+
+
+def to_game_cards(deck: GameDeck, *, face_down: bool) -> GameCards:
+    """Wrap bare cards for play, giving every one of them the same face.
+
+    Zones hold `GameCard`s, so this is the step between a deck definition and a board layout.
+    """
+    return tuple(GameCard(card=card, face_down=face_down) for card in normalize_deck(deck))
 
 
 def count_cards(deck: GameDeck) -> Counter[CardOrJoker]:

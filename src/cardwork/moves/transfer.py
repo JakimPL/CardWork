@@ -1,10 +1,4 @@
-from typing import ParamSpec, TypeVar
-
 from cardwork.decks.deck import GameCards, Indices
-
-P = ParamSpec("P")
-R = TypeVar("R")
-S = TypeVar("S")
 
 
 def validate_indices(
