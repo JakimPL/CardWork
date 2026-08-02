@@ -28,5 +28,13 @@ def compare_decks(deck1: GameDeck, deck2: GameDeck) -> bool:
     return Counter(normalized_deck1) == Counter(normalized_deck2)
 
 
-def is_standard_deck(deck: Deck) -> bool:
-    return compare_decks(deck, STANDARD_DECK)
+def is_standard_deck(
+    deck: GameDeck,
+    *,
+    black_jockers: int = 0,
+    red_jokers: int = 0,
+) -> bool:
+    normalized_deck = normalize_deck(deck)
+    jockers_count = black_jockers + red_jokers
+    jokers = [Joker(red=index >= black_jockers) for index in range(jockers_count)]
+    return compare_decks([*normalized_deck, *jokers], STANDARD_DECK)

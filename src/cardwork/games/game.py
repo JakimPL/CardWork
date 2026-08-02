@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
-from cardwork.board.board import Board
+from cardwork.boards.board import Board
 from cardwork.cards.deck import Deck
-from cardwork.game.state import GameState
+from cardwork.games.state import GameState
 
 
 class Game(ABC):

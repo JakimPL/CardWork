@@ -8,6 +8,7 @@ from cardwork.cards.joker import Joker
 Deck = tuple[Card | Joker, ...]
 GameDeck = Iterable[Card | Joker] | Iterable[GameCard]
 
+Indices = set[int]
 Group = list[GameCard]
 Stack = deque[GameCard]
 Variant = Group | Stack
