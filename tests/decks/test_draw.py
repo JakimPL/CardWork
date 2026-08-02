@@ -18,4 +18,4 @@ def test_permutation_repeats_for_generators_seeded_alike() -> None:
 
 
 def test_permutation_of_an_empty_run_is_empty(rng: Random) -> None:
-    assert permutation(0, rng) == ()
+    assert not permutation(0, rng)

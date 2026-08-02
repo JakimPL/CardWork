@@ -1,4 +1,4 @@
-from typing import TypeVar
+from typing import Self, TypeVar
 
 from cardwork.models.base import BaseFrozen
 
@@ -19,6 +19,19 @@ class GameState(BaseFrozen):
     def current(self) -> int | None:
         """The single player to act while the phase is sequential, or None while several seats owe an action."""
         return next(iter(self.to_act)) if len(self.to_act) == 1 else None
+
+    def with_changes(self, **changes: object) -> Self:
+        """A state of this same type carrying the given changes, validated as though freshly built.
+
+        This is how a game derives the next cursor: `model_copy` writes whatever it is handed, whereas
+        every field this touches is checked against the game's own declared types before the result can
+        reach a `SetState` and the journal.
+
+        Raises:
+            ValidationError: when a change leaves the state outside those types, or names a field the
+                state does not declare.
+        """
+        return type(self).model_validate({**dict(self), **changes})
 
 
 StateT = TypeVar("StateT", bound=GameState)

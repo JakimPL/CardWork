@@ -1,6 +1,6 @@
 from typing import Generic
 
-from cardwork.effects.effect import Effects
+from cardwork.effects.effects import Effects
 from cardwork.models.base import BaseFrozen
 from cardwork.moves.move import Move
 from cardwork.states.state import GameState, StateT

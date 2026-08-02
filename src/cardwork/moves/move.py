@@ -1,7 +1,7 @@
 from pydantic import Field
 
 from cardwork.models.base import BaseFrozen
-from cardwork.moves.actions import Action
+from cardwork.moves.actions import AnyAction
 
 
 class Move(BaseFrozen):
@@ -12,7 +12,7 @@ class Move(BaseFrozen):
     """
 
     player: int = Field(ge=0)
-    action: Action
+    action: AnyAction
 
 
 Moves = tuple[Move, ...]

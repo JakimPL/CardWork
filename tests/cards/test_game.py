@@ -22,6 +22,15 @@ def test_game_card_marks_a_face_down_card() -> None:
     assert str(GameCard(card=ACE_OF_SPADES, face_down=False)) == "A♠"
 
 
+def test_with_face_turns_a_card_over_and_keeps_the_original() -> None:
+    game_card = GameCard(card=ACE_OF_SPADES, face_down=True)
+
+    turned = game_card.with_face(False)
+
+    assert turned == GameCard(card=ACE_OF_SPADES, face_down=False)
+    assert game_card.face_down is True
+
+
 def test_game_card_rejects_attribute_assignment() -> None:
     game_card = GameCard(card=ACE_OF_SPADES)
 

@@ -4,7 +4,7 @@ from typing import Generic
 
 from cardwork.boards.board import Board
 from cardwork.decks.deck import Deck
-from cardwork.effects.effect import Effects
+from cardwork.effects.effects import Effects
 from cardwork.effects.fold import fold
 from cardwork.exceptions import NotYourTurn, StalePosition, UndoUnavailable
 from cardwork.moves.move import Move
@@ -95,12 +95,22 @@ class Game(ABC, Generic[StateT]):
         self._history.append(fold(transaction.effects, self.position))
         self._journal = self._journal.append(transaction)
 
-    def _transact(self, position: Position[StateT], move: Move, rng: Random) -> Effects[StateT]:
+    def _transact(
+        self,
+        position: Position[StateT],
+        move: Move,
+        rng: Random,
+    ) -> Effects[StateT]:
         self.validate(position, move)
         effects = self.expand(position, move, rng)
         return effects + self.advance(fold(effects, position))
 
-    def step(self, position: Position[StateT], move: Move, rng: Random) -> Position[StateT]:
+    def step(
+        self,
+        position: Position[StateT],
+        move: Move,
+        rng: Random,
+    ) -> Position[StateT]:
         return fold(self._transact(position, move, rng), position)
 
     def submit(self, move: Move, base_seq: int) -> Transaction[StateT]:
@@ -151,7 +161,11 @@ class Game(ABC, Generic[StateT]):
         """Additional checks for supported initial decks."""
 
     @abstractmethod
-    def _deal_cards(self, position: Position[StateT], rng: Random) -> Effects[StateT]:
+    def _deal_cards(
+        self,
+        position: Position[StateT],
+        rng: Random,
+    ) -> Effects[StateT]:
         """The physical deal: shuffle and distribute. No turn or phase logic."""
 
     @abstractmethod
@@ -167,7 +181,12 @@ class Game(ABC, Generic[StateT]):
         """Raise IllegalMove if this move is not permitted."""
 
     @abstractmethod
-    def expand(self, position: Position[StateT], move: Move, rng: Random) -> Effects[StateT]:
+    def expand(
+        self,
+        position: Position[StateT],
+        move: Move,
+        rng: Random,
+    ) -> Effects[StateT]:
         """Translate an intent into primitive effects."""
 
     @abstractmethod

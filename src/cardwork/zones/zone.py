@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Mapping
 
 from cardwork.decks.deck import GameCards
@@ -18,6 +20,15 @@ class Zone(BaseFrozen):
     owner: int | None = None
     visibility: Visibility
     cards: GameCards = ()
+
+    def with_cards(self, cards: GameCards) -> Zone:
+        """The same zone holding the given cards, under its own id, owner and visibility policy."""
+        return Zone(
+            id=self.id,
+            owner=self.owner,
+            visibility=self.visibility,
+            cards=cards,
+        )
 
 
 Zones = Mapping[ZoneId, Zone]
