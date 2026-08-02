@@ -1,9 +1,8 @@
-from pydantic import BaseModel
-
 from cardwork.cards.suit import Suit
+from cardwork.models.base import BaseFrozen
 
 
-class Joker(BaseModel, extra="forbid", frozen=True):
+class Joker(BaseFrozen):
     red: bool
 
     def __str__(self) -> str:

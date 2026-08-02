@@ -2,7 +2,7 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Concatenate, ParamSpec, TypeVar
 
-from cardwork.cards.deck import Group, Indices, Variant
+from cardwork.decks.deck import Group, Indices, Variant
 
 P = ParamSpec("P")
 R = TypeVar("R")

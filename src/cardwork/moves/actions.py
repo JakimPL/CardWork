@@ -1,17 +1,23 @@
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
 
-from cardwork.cards.deck import Indices
+from cardwork.decks.deck import Indices
+from cardwork.models.base import BaseFrozen
 
 NonEmptyIndices = Annotated[Indices, Field(min_length=1, default_factory=set)]
 
 
-class Action(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
+class Action(BaseFrozen):
+    pass
 
 
 class Play(Action):
+    group: str
+    indices: NonEmptyIndices
+
+
+class Take(Action):
     group: str
     indices: NonEmptyIndices
 

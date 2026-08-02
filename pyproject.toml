@@ -12,6 +12,7 @@ dependencies = ["pydantic>=2.9,<3"]
 [dependency-groups]
 dev = [
     "black==26.5.1",
+    "import-linter==2.13",
     "isort==8.0.1",
     "mypy==2.1.0",
     "pre-commit==4.6.0",
@@ -50,6 +51,22 @@ disable = [
     "too-few-public-methods",
     "too-many-instance-attributes",
     "too-many-function-args",
+    "line-too-long",
+]
+
+[tool.importlinter]
+root_package = "cardwork"
+
+[[tool.importlinter.contracts]]
+name = "Layered architecture"
+type = "layers"
+layers = [
+    "cardwork.games",
+    "cardwork.boards",
+    "cardwork.moves",
+    "cardwork.decks",
+    "cardwork.cards",
+    "cardwork.models",
 ]
 
 [tool.pytest.ini_options]

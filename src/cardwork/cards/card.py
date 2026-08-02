@@ -1,10 +1,9 @@
-from pydantic import BaseModel
-
 from cardwork.cards.rank import Rank
 from cardwork.cards.suit import Suit
+from cardwork.models.base import BaseFrozen
 
 
-class Card(BaseModel, extra="forbid", frozen=True):
+class Card(BaseFrozen):
     rank: Rank
     suit: Suit
 
