@@ -77,7 +77,7 @@ class Game(ABC):
         return self._journal
 
     def view(self, observer: int | None) -> PositionView: ...
-    
+
     def replay(self, upto: int | None = None) -> Position:
         return self.journal.replay(upto)
 

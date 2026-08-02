@@ -18,13 +18,13 @@ STANDARD_DECK: Final[Deck] = tuple(
 
 def standard_deck(
     *,
-    black_jockers: int = 0,
+    black_jokers: int = 0,
     red_jokers: int = 0,
 ) -> Deck:
     return (
         *STANDARD_DECK,
         *jokers(
-            black=black_jockers,
+            black=black_jokers,
             red=red_jokers,
         ),
     )
@@ -33,13 +33,13 @@ def standard_deck(
 def is_standard_deck(
     deck: GameDeck,
     *,
-    black_jockers: int = 0,
+    black_jokers: int = 0,
     red_jokers: int = 0,
 ) -> bool:
     return compare_decks(
         deck,
         standard_deck(
-            black_jockers=black_jockers,
+            black_jokers=black_jokers,
             red_jokers=red_jokers,
         ),
     )

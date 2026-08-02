@@ -4,13 +4,11 @@ repos:
     hooks:
       - id: trailing-whitespace
         types: [text]
-        exclude: ^(LICENSE|THIRD-PARTY-LICENSES\.txt|src/sampletones_assets/fonts/LICENSES/)
 
       - id: check-yaml
       - id: check-toml
       - id: end-of-file-fixer
         types: [text]
-        exclude: ^(LICENSE|THIRD-PARTY-LICENSES\.txt|src/sampletones_assets/fonts/LICENSES/)
 
   - repo: https://github.com/timothycrosley/isort
     rev: 9.0.0a3

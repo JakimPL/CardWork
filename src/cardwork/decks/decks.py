@@ -32,5 +32,5 @@ def jokers(
     black: int = 0,
     red: int = 0,
 ) -> Deck:
-    jockers_count = black + red
-    return tuple(Joker(red=index >= black) for index in range(jockers_count))
+    jokers_count = black + red
+    return tuple(Joker(red=index >= black) for index in range(jokers_count))
