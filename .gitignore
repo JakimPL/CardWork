@@ -12,3 +12,7 @@ __pycache__/
 *.pyo
 *.coverage
 *.coverage.*
+
+assets/
+frontend/dist/
+frontend/node_modules/

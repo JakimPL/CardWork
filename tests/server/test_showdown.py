@@ -8,6 +8,7 @@ from cardgames.backend.showdown.game import ONE_ROUND, ShowdownGame
 from cardgames.backend.showdown.rules import BLIND_SIZE, HAND_SIZE, NOTHING, ONE_CARD, TURNS
 from cardgames.backend.showdown.state import ShowdownState
 from cardgames.backend.showdown.zones import DISCARD, Holding, blind_of, hand_of, tray_of
+from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
 from cardserver.sessions import TableSession
 from cardwork.decks.deck import Deck
 from cardwork.decks.standard import standard_deck
@@ -51,7 +52,7 @@ async def commit_the_turn(client: AsyncClient, session: TableSession[ShowdownSta
 
 
 async def test_a_seat_reads_the_five_it_holds_while_the_five_it_plays_blind_read_to_nobody() -> None:
-    async with served(a_showdown_table(), SEATS) as (client, _):
+    async with served(a_showdown_table(), SHOWDOWN_SCENE) as (client, _):
         own = await client.get(VIEW, headers=credentials(0))
         spectator = await client.get(VIEW)
 
@@ -62,7 +63,7 @@ async def test_a_seat_reads_the_five_it_holds_while_the_five_it_plays_blind_read
 
 
 async def test_a_commitment_is_sealed_from_the_whole_table_while_the_turn_stands_open() -> None:
-    async with served(a_showdown_table(), SEATS) as (client, _):
+    async with served(a_showdown_table(), SHOWDOWN_SCENE) as (client, _):
         accepted = await client.post(
             MOVES,
             json=command(commitment(0, Holding.HAND), DEAL, "commitment"),
@@ -79,7 +80,7 @@ async def test_a_commitment_is_sealed_from_the_whole_table_while_the_turn_stands
 
 
 async def test_a_second_commitment_in_one_turn_is_refused_over_the_wire() -> None:
-    async with served(a_showdown_table(), SEATS) as (client, session):
+    async with served(a_showdown_table(), SHOWDOWN_SCENE) as (client, session):
         await client.post(MOVES, json=command(commitment(0, Holding.HAND), DEAL, "first"), headers=credentials(0))
 
         response = await client.post(
@@ -93,7 +94,7 @@ async def test_a_second_commitment_in_one_turn_is_refused_over_the_wire() -> Non
 
 
 async def test_a_turn_every_seat_has_committed_to_turns_over_once_the_window_has_passed() -> None:
-    async with served(a_showdown_table(), SEATS) as (client, session):
+    async with served(a_showdown_table(), SHOWDOWN_SCENE) as (client, session):
         await commit_the_turn(client, session, turn=DEAL)
 
         await session.drain()
@@ -112,7 +113,7 @@ async def test_a_turn_every_seat_has_committed_to_turns_over_once_the_window_has
 
 
 async def test_a_match_played_out_over_the_wire_comes_to_rest_on_the_standing_it_scored() -> None:
-    async with served(a_showdown_table(), SEATS) as (client, session):
+    async with served(a_showdown_table(), SHOWDOWN_SCENE) as (client, session):
         for turn in range(TURNS):
             await commit_the_turn(client, session, turn)
             await session.drain()

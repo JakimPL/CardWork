@@ -1,7 +1,7 @@
 from typing import Generic
 
 from cardserver.errors import UnknownTable
-from cardserver.protocol import Table, TableId
+from cardserver.protocol import Presentation, Table, TableId
 from cardserver.sessions import TableSession
 from cardwork.states.state import StateT
 
@@ -24,11 +24,13 @@ class TableRegistry(Generic[StateT]):
         self,
         table_id: TableId,
         table: Table[StateT],
+        presentation: Presentation,
     ) -> TableSession[StateT]:
         """Put a game into service under a name, and hand back the session that will carry it.
 
         A table opens at the position its deal left it in, and the rules are next asked for anything
-        once a seat has acted.
+        once a seat has acted. It opens with the arrangement it is read through besides, since a client
+        joining asks for both and the host holding the game holds the layout of it too.
 
         Raises:
             ValueError: when a table of that name is already in service, which would leave the record
@@ -37,7 +39,7 @@ class TableRegistry(Generic[StateT]):
         if table_id in self._sessions:
             raise ValueError(f"A table named {table_id!r} is already in service")
 
-        session = TableSession(table_id, table, self._grace_seconds)
+        session = TableSession(table_id, table, presentation, self._grace_seconds)
         self._sessions[table_id] = session
         return session
 

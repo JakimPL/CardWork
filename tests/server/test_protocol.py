@@ -1,7 +1,8 @@
 from inspect import signature
 
-from cardserver.protocol import Table
+from cardserver.protocol import Presentation, Table
 from cardwork.games.game import Game
+from cardwork.presentation.scene import Scene
 
 
 def test_a_game_commits_a_move_the_way_the_port_asks_for_it() -> None:
@@ -30,3 +31,11 @@ def test_a_game_reports_its_head_the_way_the_port_asks_for_it() -> None:
 
 def test_a_game_holds_out_its_record_the_way_the_port_asks_for_it() -> None:
     assert signature(Game.journal.fget) == signature(Table.journal.fget)
+
+
+def test_a_game_reports_its_seating_the_way_the_port_asks_for_it() -> None:
+    assert signature(Game.players.fget) == signature(Table.players.fget)
+
+
+def test_a_scene_lays_a_table_out_the_way_the_port_asks_for_it() -> None:
+    assert signature(Scene.layout) == signature(Presentation.layout)

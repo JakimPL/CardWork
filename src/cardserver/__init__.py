@@ -7,7 +7,7 @@ from cardserver.errors import (
     WrongSeat,
 )
 from cardserver.identity import SEAT_HEADER, SeatPolicy, TokenSeats
-from cardserver.protocol import Table, TableId
+from cardserver.protocol import Presentation, Table, TableId
 from cardserver.registry import TableRegistry
 from cardserver.schemas import ErrorBody, MoveAccepted, MoveRequest
 from cardserver.sessions import TableSession
@@ -19,6 +19,7 @@ __all__ = [
     "JournalSealed",
     "MoveAccepted",
     "MoveRequest",
+    "Presentation",
     "SeatPolicy",
     "Table",
     "TableId",

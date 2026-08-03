@@ -2,8 +2,9 @@ import asyncio
 from typing import Generic
 
 from cardserver.errors import JournalSealed
-from cardserver.protocol import Table, TableId
+from cardserver.protocol import Presentation, Table, TableId
 from cardwork.moves.move import Move
+from cardwork.presentation.layout import Layout
 from cardwork.states.state import StateT
 from cardwork.transactions.journal import Journal
 from cardwork.views.event import EventView
@@ -21,11 +22,21 @@ class TableSession(Generic[StateT]):
     already applied, so a client that retries a request it never saw answered lands its move once, and
     the timer holding the rules back for a moment once a round closes, which is the window a seat has to
     take a commitment back. Time is the adapter's alone to keep; the engine stays synchronous.
+
+    A table is opened with the arrangement its interface reads it through, so the session answers for both
+    halves of what a client is served: the cards its seat is entitled to, and where they lie on the screen.
     """
 
-    def __init__(self, table_id: TableId, table: Table[StateT], grace_seconds: float) -> None:
+    def __init__(
+        self,
+        table_id: TableId,
+        table: Table[StateT],
+        presentation: Presentation,
+        grace_seconds: float,
+    ) -> None:
         self._table_id = table_id
         self._table = table
+        self._presentation = presentation
         self._grace_seconds = grace_seconds
         self._commits = asyncio.Condition()
         self._applied: dict[str, int] = {}
@@ -52,6 +63,15 @@ class TableSession(Generic[StateT]):
     def reveal(self) -> None:
         """Open the table's full record for analysis, which the host does once the game it holds is over."""
         self._revealed = True
+
+    def layout(self, observer: int | None) -> Layout:
+        """How this table is laid out for one observer, which is what an interface draws it from.
+
+        A layout stands for the whole of a table's service: the zones it lays out and the gestures it admits
+        come from the game's rules rather than from its position, so a client reads one as it joins and holds
+        it while the cards move underneath.
+        """
+        return self._presentation.layout(self._table.players, observer)
 
     def view(self, observer: int | None) -> PositionView[StateT]:
         """The table as one observer is entitled to see it, at the sequence it stands at now."""

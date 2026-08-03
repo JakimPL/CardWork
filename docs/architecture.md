@@ -1,7 +1,7 @@
 # CardWork Architecture
 
 CardWork runs multiplayer card games in which the server holds the whole truth and each player is told
-only what they are entitled to know. Three packages divide the work:
+only what they are entitled to know. Four packages divide the work:
 
 - **`cardwork`** — the engine. Synchronous and pure: a position is a value, a move produces another
   value, and every commit is recorded as data that replays exactly.
@@ -9,6 +9,8 @@ only what they are entitled to know. Three packages divide the work:
 - **`cardgames`** — the games written on the framework, each stated twice over: `backend` holds its rules
   and `frontend` the layout a player reads them through. This is where every claim this document makes is
   answerable.
+- **`cardtable`** — the host, and the one place a game and a transport meet: it opens a table of a chosen
+  game, hands out a token per seat, and serves the player interface beside the endpoints (§10, *The host*).
 
 A game is a subclass of `Game` that fills in rules hooks: the zone layout, the deal, what a move means,
 and how the turn advances. Everything else — journalling, projection, concurrency, reconnection, replay —
@@ -154,13 +156,18 @@ the layout nowhere, which is what keeps a game playable with no screen attached 
 presentation from reaching the journal. Every one of these four modules stands on the framework and on its
 own game alone.
 
+**`cardtable` names all three, and nothing names it.** A game class and FastAPI have to meet somewhere, and
+the two contracts above put that somewhere outside `cardgames` and outside `cardserver` alike: the host is
+the fourth package, it holds one module per concern of putting a table into service, and the arrows all
+point into it (§10, *The host*).
+
 `cardwork.exceptions` sits outside the stack deliberately. The refusals of §6 are raised at four
 different heights — journal truncation, the engine's concurrency check, a game's `authorize`, a game's
 `validate` — and a shared vocabulary of refusals is the one thing every height may name.
 
 ### The contract is checked
 
-import-linter holds seven contracts over the three packages, so the boundaries are mechanical rather than
+import-linter holds nine contracts over the four packages, so the boundaries are mechanical rather than
 aspirational:
 
 1. **Layered architecture** — the core order above.
@@ -179,6 +186,10 @@ aspirational:
    height, so whatever two games share lives in `cardwork` where the third will find it. Two contracts state
    what one used to, because the modules of a game are no longer independent of each other: a layout names
    its own rules, and only its own.
+8. **Nothing names the host** — none of `cardwork`, `cardserver` or `cardgames` names `cardtable`, so the
+   composition root stays a leaf nothing depends on and a second host costs no change below it.
+9. **Host layers** — `cardtable` layers in its own right, high to low: `cli`, `catalogue`, `hosting`, and
+   then `settings`, `interface` and `seats` standing independent of one another at the bottom.
 
 ---
 
@@ -1046,6 +1057,8 @@ satisfies it by having the methods, which leaves the core free of any mention th
 ```python
 class Table(Protocol[StateT]):
     @property
+    def players(self) -> int: ...
+    @property
     def head(self) -> int: ...
     @property
     def journal(self) -> Journal[StateT]: ...
@@ -1060,7 +1073,21 @@ class Table(Protocol[StateT]):
 Everything above it — HTTP, JSON, auth, sockets — is an adapter; everything below is a pure function.
 `head` is on it because the streams need to know when there is more; `journal` because the post-game
 reveal serves it; `mark_published` because publication is the adapter's act; `settle` because the grace
-window is the adapter's clock.
+window is the adapter's clock; `players` because a layout is built for a table of a size.
+
+**A table is served with the arrangement it is read through, which is a port of its own.** A client asks for
+two things and they are answered from different halves of the design: the cards its seat is entitled to,
+which the rules produce, and the layout it draws them into, which is stated apart from them. So `protocol.py`
+holds a second `Protocol` beside `Table`, satisfied by `cardwork.presentation.Scene` and by anything else a
+host keeps a table's arrangement in:
+
+```python
+class Presentation(Protocol):
+    def layout(self, players: int, observer: int | None) -> Layout: ...
+```
+
+A table opens with both — `registry.open(table_id, table, presentation)` — and `TableSession` answers for
+each, which is what puts a layout and a projection behind one credential and one seat.
 
 **`StateT` is invariant, and the application is generic instead.** A covariant state type would let one
 registry hold `Table[GameState]` for any game, and it is unsound: `Journal.append` and `Effect.apply` use
@@ -1075,12 +1102,17 @@ declared field intact.
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/tables/{id}/moves` | Submit a command. Body: `{move, base_seq, idempotency_key}`. Answers `{seq}`, or a refusal from the table below. |
+| `GET` | `/tables/{id}/layout` | How this observer lays the table out: its own zones and gestures, and the shared table. Asked for once on join. |
 | `GET` | `/tables/{id}/view` | Full projection for this observer, stamped with `seq`. Used on join and reconnect. |
 | `GET` | `/tables/{id}/events` | SSE stream of projected events, resuming from `Last-Event-ID` or `?since=`. |
 | `GET` | `/tables/{id}/journal` | Full reveal for analysis, once the host has called the game over. |
 
 Request and response bodies are frozen models that forbid undeclared fields, so a body carrying a field
 the schema leaves out is refused with `422` before a handler runs.
+
+`/layout` is the one projection whose type is not generic in the game's state, so it is the one that
+produces an OpenAPI schema rather than declaring `response_model=None`. That is what lets an interface
+generate its layout types from the served document and hand-write only the view ones.
 
 Refusals are mapped kind by kind, one handler each:
 
@@ -1224,6 +1256,40 @@ Deciding when a game is over is the host's, since the phase that means "finished
 (§9) and the adapter reads no rules. The record then reads the same to every client, seat and spectator
 alike, so the request needs no seat at all.
 
+### The host
+
+Two contracts say a game class and FastAPI may not meet inside `cardgames` or inside `cardserver`, so they
+meet in `cardtable`, which nothing names. It is a composition root and holds one module per concern:
+
+| module | states |
+|---|---|
+| `catalogue` | which games this host puts into service, and the deck and scene each is opened with |
+| `hosting` | one table in service: a registry, a token per seat, an application, and the page beside it |
+| `interface` | a built player interface served from the root of the same application |
+| `seats` | a token per seat, drawn as the table opens |
+| `settings` | what one table is opened with: its name, its seating, its seed, its window |
+| `paths` | where the checkout keeps what a host reads off disk: the artwork, the interface and its build |
+
+`catalogue.opened(game, settings)` is the whole of it, and `catalogue` is the one module of the repository
+naming `cardgames`. The state type of the game is bound inside that call and stays there: `Hosted` names an
+application, a table name, the tokens and the page, none of which is generic, which is what lets one host
+open games whose cursors are of different shapes through the one entry point.
+
+**Every path a run reads is stated in `paths`, at the foot of the host.** One module climbs from its own
+file to the checkout, and the artwork, the interface and its build are named from there — so a directory
+moved is one line changed, and a test holds the climb honest by reading the manifest at the top of it. The
+host is the one package that names a place on disk at all: the rules and the adapter answer from memory, and
+a fetch script takes the artwork's path from here rather than counting the directories over again.
+
+**The page is served from the application the table answers on**, so the two are one origin: a client
+reaches `/tables/...` with no cross-origin arrangement, and the seat token stays in a header rather than in
+a query string a log would keep. The mount goes on last, which leaves every endpoint matching ahead of it,
+and a checkout holding no build serves the endpoints alone.
+
+**A table lives as long as the process.** A position is held in memory and a restart deals a fresh one, so
+the host runs under no reloader and `uv run cardtable` is the whole of starting one. Ending the process ends
+the service through the application's own lifespan, which drops every timer still in hand.
+
 ---
 
 ## 11. A round, end to end
@@ -1365,6 +1431,7 @@ play was good **given what the player knew**.
 | Framework vs. games | the `The framework knows no game` contract; `cardgames` is a distribution of its own | a mechanism under `cardwork/` names a game, or a handler branches on which game it serves |
 | What a game states vs. how it looks | `presentation` holds zone ids, kinds of move and fields of the cursor | a layout carries a measurement, or an interface branches on a zone id or a phase |
 | A game's rules vs. its layout | the `Rules know no presentation` contract; `backend` and `frontend` per game | a rules module names a slot or a caption, or a zone id is written twice |
+| A mechanism vs. the choice of game | the `Nothing names the host` contract; `cardtable.catalogue` is the only module naming `cardgames` | a registry, a handler or a scene is reached for by a game's name outside the catalogue |
 | A round vs. a match | `rounds` sits above `games`; a game states one round and the layer states the match | a game deals its own next round, or adds its own tally into the standing |
 
 ---
@@ -1391,6 +1458,11 @@ the same take-back refused after the round has settled.
 
 Each game in `cardgames` carries a suite of its own, which plays full matches in-process and holds every
 position they pass through to card conservation and to `history[n] == journal.replay(n)`. Each is also put
-into service through `create_app` and played over the four endpoints: a game's own state fields reach a
-client's view, its own refusals arrive as the statuses of §6, and a blind holding stays unread by the seat
-that owns it over the wire as it does on the table.
+into service through `create_app` and played over the endpoints: a game's own state fields reach a client's
+view, its own refusals arrive as the statuses of §6, and a blind holding stays unread by the seat that owns
+it over the wire as it does on the table.
+
+The host is held to the same standard from the other end. A table opened through `cardtable.catalogue` is
+served the layout the game's own module states, a token speaks for the seat it was issued for and for no
+other, and a move read out of a seat's own `legal` lands through the endpoints — so the wiring of rules,
+scene and transport is a test rather than a first run in a browser.

@@ -6,6 +6,7 @@ from cardgames.backend.passing.game import PassingGame
 from cardgames.backend.passing.rules import HAND_ON_TURN, HAND_SIZE, NOTHING
 from cardgames.backend.passing.state import PassingPhase, PassingState
 from cardgames.backend.passing.zones import PILE, STACK, hand_of
+from cardgames.frontend.passing.layout import PASSING_SCENE
 from cardserver.sessions import TableSession
 from cardwork.decks.deck import Deck
 from cardwork.decks.standard import standard_decks
@@ -52,7 +53,7 @@ def pass_on(seat: int) -> Move:
 
 
 async def test_a_served_round_carries_the_cursor_the_game_declared_out_to_the_wire() -> None:
-    async with served(a_passing_table(), SEATS) as (client, session):
+    async with served(a_passing_table(), PASSING_SCENE) as (client, session):
         leading = turn_of(session)
 
         response = await client.get(VIEW, headers=credentials(0))
@@ -69,7 +70,7 @@ async def test_a_served_round_carries_the_cursor_the_game_declared_out_to_the_wi
 
 
 async def test_the_seat_on_turn_exchanges_with_the_pile_over_the_wire() -> None:
-    async with served(a_passing_table(), SEATS) as (client, session):
+    async with served(a_passing_table(), PASSING_SCENE) as (client, session):
         turn = turn_of(session)
 
         accepted = await client.post(MOVES, json=command(exchange(turn), DEAL, "exchange"), headers=credentials(turn))
@@ -86,7 +87,7 @@ async def test_the_seat_on_turn_exchanges_with_the_pile_over_the_wire() -> None:
 
 
 async def test_the_pass_hands_the_turn_and_the_fourth_card_to_the_next_seat_over_the_wire() -> None:
-    async with served(a_passing_table(), SEATS) as (client, session):
+    async with served(a_passing_table(), PASSING_SCENE) as (client, session):
         turn = turn_of(session)
 
         await client.post(MOVES, json=command(pass_on(turn), DEAL, "pass"), headers=credentials(turn))
@@ -102,7 +103,7 @@ async def test_the_pass_hands_the_turn_and_the_fourth_card_to_the_next_seat_over
 
 
 async def test_a_second_exchange_in_one_turn_is_refused_over_the_wire() -> None:
-    async with served(a_passing_table(), SEATS) as (client, session):
+    async with served(a_passing_table(), PASSING_SCENE) as (client, session):
         turn = turn_of(session)
         await client.post(MOVES, json=command(exchange(turn), DEAL, "first"), headers=credentials(turn))
 

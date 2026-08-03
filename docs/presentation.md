@@ -110,6 +110,13 @@ seat of the table takes a plaque, named by where it sits until a host holds a na
 entitlement the projection gives an observer over the cards, and it now lives in one place rather than in
 every game that would have to remember it.
 
+**A scene is a port the adapter asks for by shape.** A table is put into service with the arrangement it is
+read through beside the game itself, and `GET /tables/{id}/layout` answers the layout of the seat behind the
+credential — the same seat its view is projected for (`architecture.md` §10). It is the one answer whose type
+is not generic in a game's state, so it is the one an interface can generate its types from. A layout stands
+for the whole match rather than for a position, so a client asks once as it joins and holds it while the cards
+move underneath.
+
 ---
 
 ## 4. A layout answers for itself
@@ -171,10 +178,10 @@ Three places where the vocabulary stops at what the games ask for, each followin
 
 ## 7. The two worked examples
 
-`cardgames.frontend.passing` and `cardgames.frontend.showdown` state a layout apiece, each one function over
-`(players, observer)` returning a `Layout` whose every zone id is concrete. Between them they exercise both
-addressings §1 sets out, and `docs/games/passing.md` §5 and `docs/games/showdown.md` §5 read them out zone by
-zone.
+`cardgames.frontend.passing` and `cardgames.frontend.showdown` state a `Scene` apiece — constants for what the
+table shares and three functions of a seat for what it holds — and each lays out every observer from it, with
+every zone id concrete. Between them they exercise both addressings §1 sets out, and `docs/games/passing.md` §5
+and `docs/games/showdown.md` §5 read them out zone by zone.
 
 They are held to their own rules by test: every move a game's `legal_moves` offers a seat is matched against
 the layout that seat is served, and the gesture it resolves to has to pick in a zone the projection holds and

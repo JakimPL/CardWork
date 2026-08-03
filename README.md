@@ -2,7 +2,7 @@
 
 A framework for server-authoritative, transactional playing-card games with partial knowledge.
 
-Three packages:
+Four packages:
 
 - **`cardwork`** — the engine. Synchronous and pure: a position is a value, a move produces another
   value, and every commit is recorded as data that replays exactly.
@@ -10,6 +10,8 @@ Three packages:
 - **`cardgames`** — the games written on it, each stated twice over: `backend` holds a game's rules and
   `frontend` the layout a player reads them through. `passing` is a game of four cards played in turn;
   `showdown`, a game of ten turns played at once.
+- **`cardtable`** — the host: it opens a table of a chosen game, hands out a token per seat, and serves
+  the player interface beside the endpoints. The one place a game and a transport meet.
 
 `docs/architecture.md` is the design and the reasoning behind it; `docs/combinations.md`, `docs/rounds.md`,
 `docs/presentation.md` and `docs/games/` state the parts a game reaches for and the two games themselves. What
@@ -21,6 +23,7 @@ follows is enough to start.
 make install      # uv sync --all-extras
 make check        # lint, mypy --strict, import contracts, coverage
 make test         # pytest -n auto
+make play         # open a table and answer for it; GAME=showdown PLAYERS=4 to choose
 ```
 
 ## Writing a game
@@ -142,16 +145,18 @@ from cardserver import TableRegistry, TokenSeats, create_app
 from cardwork.decks.standard import standard_deck
 
 registry: TableRegistry[Trump] = TableRegistry(grace_seconds=2.0)
-session = registry.open("green-baize", MyGame(players=3, deck=standard_deck()))
+session = registry.open("green-baize", MyGame(players=3, deck=standard_deck()), MYGAME_SCENE)
 
 app = create_app(registry, TokenSeats({"green-baize": {"tok-0": 0, "tok-1": 1, "tok-2": 2}}))
 ```
 
-Run it with `uvicorn`, and the table answers four endpoints:
+A table opens with the game and the arrangement it is read through, since a client asks for both. Run it
+with `uvicorn`, and the table answers five endpoints:
 
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/tables/{id}/moves` | Submit `{move, base_seq, idempotency_key}`; answers `{seq}` |
+| `GET` | `/tables/{id}/layout` | How this observer lays the table out: its own zones and gestures, and the shared table |
 | `GET` | `/tables/{id}/view` | This observer's projection of the table and the moves it may make, stamped with `seq` |
 | `GET` | `/tables/{id}/events` | SSE stream of projected commits, resumable via `Last-Event-ID` |
 | `GET` | `/tables/{id}/journal` | The full record, once `session.reveal()` has opened it |
@@ -165,3 +170,28 @@ Two decisions the host makes:
   command restarts the wait, and the rules decide whether a retraction is still in time.
 - **`session.reveal()`** opens a table's full record for analysis. Until then `/journal` answers `403`,
   since the record names every card a seat still holds.
+
+## Playing it
+
+`cardtable` does the wiring above for the games in this repository, which is all it takes to sit down at
+one:
+
+```bash
+uv run cardtable --game showdown --players 4      # or: make play GAME=showdown PLAYERS=4
+```
+
+It prints the address and one token per seat. Each player opens the address in a tab of their own and
+offers their token; a tab offering none watches the table. The page comes out of the same application the
+endpoints do, so nothing is cross-origin and the token stays in a header.
+
+A table lives as long as the process: the position is held in memory, and a restart deals a fresh one.
+
+Card artwork is fetched rather than kept here:
+
+```bash
+make assets      # into a gitignored assets/
+```
+
+Two packs land side by side — Susan Kare's Solitaire faces as one 13×4 sprite sheet at 71×96 a card, and a
+public-domain drawing per card that covers the jokers the sheet has no face for. Neither is needed: `Suit`
+values are `♠♥♦♣` and `Rank` values are `2` through `A`, so a readable card draws from the JSON alone.

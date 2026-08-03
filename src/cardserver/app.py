@@ -10,6 +10,7 @@ from cardserver.identity import SEAT_HEADER, SeatPolicy, confirm_actor
 from cardserver.registry import TableRegistry
 from cardserver.schemas import MoveAccepted, MoveRequest
 from cardserver.streams import STREAM_START, commits, resume_point
+from cardwork.presentation.layout import Layout
 from cardwork.states.state import StateT
 from cardwork.transactions.journal import Journal
 from cardwork.views.position import PositionView
@@ -21,10 +22,10 @@ STREAM_HEADERS: Final[dict[str, str]] = {"Cache-Control": "no-store", "X-Accel-B
 def create_app(registry: TableRegistry[StateT], seats: SeatPolicy) -> FastAPI:
     """An application serving the tables of one registry to the clients one seat policy admits.
 
-    The four endpoints are the whole of the protocol: a command goes up over `POST`, and everything
-    coming down is a projection — the view a client joins on, the stream it follows, and the record it
-    reads once the game is over. Both directions pass through the seat the credential holds, so what a
-    client may do and what it may know come from the same answer.
+    The five endpoints are the whole of the protocol: a command goes up over `POST`, and everything
+    coming down is read for one observer — the arrangement a client draws the table in, the view it joins
+    on, the stream it follows, and the record it reads once the game is over. Both directions pass through
+    the seat the credential holds, so what a client may do and what it may know come from the same answer.
 
     Args:
         registry: the tables in service, which the host opens before or during service.
@@ -57,6 +58,18 @@ def create_app(registry: TableRegistry[StateT], seats: SeatPolicy) -> FastAPI:
         session = registry.session(table_id)
         seq = await session.submit(command.move, command.base_seq, command.idempotency_key)
         return MoveAccepted(seq=seq)
+
+    @app.get("/tables/{table_id}/layout")
+    async def read_layout(
+        table_id: str,
+        observer: Annotated[int | None, Depends(observer_of)],
+    ) -> Layout:
+        """How this client lays the table out: the zones its seat holds and the moves it makes, and the
+        shared table besides.
+
+        A layout answers for the match rather than for the position, so a client asks once as it joins.
+        """
+        return registry.session(table_id).layout(observer)
 
     # The response type is generic in the game's state, which leaves FastAPI no schema to build from it.
     @app.get("/tables/{table_id}/view", response_model=None)

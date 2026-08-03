@@ -1,16 +1,16 @@
-.PHONY: install format lint typecheck imports test coverage check
+.PHONY: install format lint typecheck imports test coverage check assets play
 
 install:
 	uv sync --all-extras
 
 format:
-	uv run isort src tests
-	uv run black src tests
+	uv run isort src tests scripts
+	uv run black src tests scripts
 
 lint:
-	uv run isort --check-only src tests
-	uv run black --check src tests
-	uv run pylint src
+	uv run isort --check-only src tests scripts
+	uv run black --check src tests scripts
+	uv run pylint src scripts
 
 typecheck:
 	uv run mypy
@@ -25,3 +25,9 @@ coverage:
 	uv run pytest --cov --cov-report=term-missing
 
 check: lint typecheck imports coverage
+
+assets:
+	uv run python scripts/assets.py
+
+play:
+	uv run cardtable --game $(or $(GAME),passing) --players $(or $(PLAYERS),3)

@@ -9,7 +9,7 @@ from httpx import ASGITransport, AsyncClient
 
 from cardserver.app import create_app
 from cardserver.identity import SEAT_HEADER, TokenSeats
-from cardserver.protocol import Table
+from cardserver.protocol import Presentation, Table
 from cardserver.registry import TableRegistry
 from cardserver.schemas import MoveRequest
 from cardserver.sessions import TableSession
@@ -18,6 +18,7 @@ from cardwork.moves.move import Move
 from cardwork.states.state import GameState
 
 from ..games.demo import DECK, SEATS, SealedRoundGame
+from .layout import SEALED_SCENE
 
 TABLE: Final[str] = "green-baize"
 UNSERVED: Final[str] = "no-such-table"
@@ -29,6 +30,7 @@ DEAL: Final[int] = 1
 BASE_URL: Final[str] = "http://cardwork"
 
 MOVES: Final[str] = f"/tables/{TABLE}/moves"
+LAYOUT: Final[str] = f"/tables/{TABLE}/layout"
 VIEW: Final[str] = f"/tables/{TABLE}/view"
 EVENTS: Final[str] = f"/tables/{TABLE}/events"
 JOURNAL: Final[str] = f"/tables/{TABLE}/journal"
@@ -60,7 +62,7 @@ def reclaiming(seat: int, base_seq: int, key: str) -> dict[str, object]:
 @asynccontextmanager
 async def served[StateT: GameState](
     table: Table[StateT],
-    players: int,
+    presentation: Presentation,
 ) -> AsyncIterator[tuple[AsyncClient, TableSession[StateT]]]:
     """One game in service under `TABLE`, answering as the client a seat speaks through and the session behind it.
 
@@ -69,8 +71,9 @@ async def served[StateT: GameState](
     left at nothing, so a round closed by the last seat to act settles as soon as the session is drained.
     """
     registry = TableRegistry[StateT](NO_GRACE)
-    session = registry.open(TABLE, table)
-    app = create_app(registry, TokenSeats({TABLE: {token_of(seat): seat for seat in range(players)}}))
+    session = registry.open(TABLE, table, presentation)
+    seats = TokenSeats({TABLE: {token_of(seat): seat for seat in range(table.players)}})
+    app = create_app(registry, seats)
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as client:
             yield client, session
@@ -96,7 +99,7 @@ def grace_fixture() -> float:
 @pytest.fixture(name="registry")
 async def registry_fixture(grace: float) -> AsyncIterator[TableRegistry[GameState]]:
     registry = TableRegistry[GameState](grace)
-    registry.open(TABLE, SealedRoundGame(players=SEATS, deck=DECK, rng=Random(SEED)))
+    registry.open(TABLE, SealedRoundGame(players=SEATS, deck=DECK, rng=Random(SEED)), SEALED_SCENE)
 
     yield registry
 
