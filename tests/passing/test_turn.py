@@ -4,11 +4,13 @@ from typing import Final
 import pytest
 
 from cardgames.passing.game import PassingGame
-from cardgames.passing.rules import HAND_ON_TURN, HAND_SIZE, PassingClaim, declares, next_seat
-from cardgames.passing.zones import PILE, STACK, TOP_OF_THE_PILE, cards_of, hand_of
+from cardgames.passing.rules import HAND_ON_TURN, HAND_SIZE, PassingClaim, declares
+from cardgames.passing.zones import PILE, STACK, TOP_OF_THE_PILE, hand_of
 from cardwork.exceptions import IllegalMove, NotYourTurn
 from cardwork.moves.actions import Declare, Give, Play, Take
 from cardwork.moves.move import Move
+from cardwork.rounds.seating import next_seat
+from cardwork.zones.zone import cards_of
 
 from .driving import (
     FIRST_CARD,

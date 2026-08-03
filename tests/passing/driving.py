@@ -3,15 +3,17 @@ from random import Random
 from typing import Final
 
 from cardgames.passing.game import PassingGame
-from cardgames.passing.rules import PassingClaim, declares, next_seat
+from cardgames.passing.rules import PassingClaim, declares
 from cardgames.passing.state import PassingState
-from cardgames.passing.zones import PILE, cards_of, hand_of
+from cardgames.passing.zones import PILE, hand_of
 from cardwork.cards.game import CardsOrJokers
 from cardwork.decks.deck import Deck
 from cardwork.decks.standard import standard_decks
 from cardwork.moves.actions import Declare, Give, Take
 from cardwork.moves.move import Move, Moves
+from cardwork.rounds.seating import next_seat
 from cardwork.transactions.transaction import Transaction
+from cardwork.zones.zone import cards_of
 
 SEATS: Final[int] = 3
 TWO_SEATS: Final[int] = 2

@@ -70,13 +70,3 @@ def declares(hand: Iterable[CardOrJoker]) -> bool:
     """
     held = tuple(hand)
     return len(held) == HAND_ON_TURN and three_read_alike(held) and not four_read_alike(held)
-
-
-def next_seat(seat: int, players: int) -> int:
-    """The seat a card passes to, counting on round the table."""
-    return (seat + 1) % players
-
-
-def rotation(leader: int, players: int) -> tuple[int, ...]:
-    """Every seat from the leader round the table, which is the order a round deals and plays in."""
-    return tuple((leader + step) % players for step in range(players))

@@ -7,10 +7,11 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from cardgames.passing.game import BEST, NEXT_BEST, PassingGame
-from cardgames.passing.rules import NOTHING, WINNING_LEAD, next_seat
+from cardgames.passing.rules import NOTHING, WINNING_LEAD
 from cardgames.passing.state import PassingPhase
 from cardgames.passing.zones import PILE
 from cardwork.decks.deck import Deck
+from cardwork.rounds.seating import next_seat
 from cardwork.rounds.state import MatchPhase
 
 from ..cases import Case, descriptions

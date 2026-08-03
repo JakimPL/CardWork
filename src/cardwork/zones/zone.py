@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from cardwork.cards.game import CardsOrJokers
 from cardwork.decks.deck import GameCards
 from cardwork.models.base import BaseFrozen
 from cardwork.zones.visibility import Visibility
@@ -29,6 +30,14 @@ class Zone(BaseFrozen):
             visibility=self.visibility,
             cards=cards,
         )
+
+
+def cards_of(zone: Zone) -> CardsOrJokers:
+    """The cards a zone holds as the rules read them, apart from the face they lie at.
+
+    Faces decide who sees a card, which is the projection's affair; the rules read the cards themselves.
+    """
+    return tuple(game_card.card for game_card in zone.cards)
 
 
 Zones = Mapping[ZoneId, Zone]

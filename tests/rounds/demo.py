@@ -16,6 +16,7 @@ from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.rounds.game import RoundGame
 from cardwork.rounds.redeal import Redeal
+from cardwork.rounds.seating import rotation
 from cardwork.rounds.state import MatchPhase, RoundState
 from cardwork.states.state import Points
 from cardwork.transactions.transaction import Transaction
@@ -132,7 +133,7 @@ class TossGame(RoundGame[MatchState]):
         )
 
     def deal_round(self, position: Position[MatchState], leader: int, rng: Random) -> Effects[MatchState]:
-        counts = {hand_of((leader + place) % position.players): HAND_SIZE for place in range(position.players)}
+        counts = {hand_of(seat): HAND_SIZE for seat in rotation(leader, position.players)}
         return Redeal(position, pile=STOCK, face_down=True).effects(counts, rng)
 
     def opening_state(self, position: Position[MatchState], leader: int) -> MatchState:

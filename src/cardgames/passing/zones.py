@@ -1,6 +1,5 @@
 from typing import Final
 
-from cardwork.cards.game import CardsOrJokers
 from cardwork.decks.deck import Deck
 from cardwork.decks.decks import to_game_cards
 from cardwork.zones import presets
@@ -28,8 +27,3 @@ def passing_zones(players: int, deck: Deck) -> Zones:
         PILE: Zone(id=PILE, visibility=presets.PILE, cards=to_game_cards(deck, face_down=True)),
         STACK: Zone(id=STACK, visibility=presets.PILE),
     }
-
-
-def cards_of(zone: Zone) -> CardsOrJokers:
-    """The cards a zone holds as the rules read them, apart from the face they lie at."""
-    return tuple(game_card.card for game_card in zone.cards)

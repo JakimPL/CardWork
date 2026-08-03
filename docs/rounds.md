@@ -170,6 +170,9 @@ def deal_round(self, position: Position[MatchState], leader: int, rng: Random) -
 The leader arrives with the deal because the round's seat is drawn before its cards go out, which is what
 lets a game deal from the seat it opens on and give that seat a card the others do not get.
 
+`rounds/seating.py` names the seats a game counts round the table: `rotation(leader, players)` is the order a
+round deals, plays and reveals in, and `next_seat(seat, players)` is the seat a turn hands on to.
+
 Three steps, separately available for a game that keeps part of the table standing between rounds:
 
 | step | does |
@@ -198,7 +201,10 @@ point to its winner and nothing to anybody in a draw, which its `round_points` s
 
 **A game of ten turns** (`cardgames.showdown`) plays the number of rounds it was built for, so its
 `match_over` compares `round_number` against a field of its own state. Each of its ten turns adds what the
-turn was worth into `round_points`, and the round closes when both zones have run out.
+turn was worth into `round_points`, and its `round_over` reads the two holdings of every seat, which the tenth
+turn leaves run out. A turn of it is the settlement step §2 describes: every seat commits at once, and the
+reveal that scores the turn and opens the next answers no move of its own. `docs/games/showdown.md` states the
+game whole.
 
 Between them they override neither `next_leader` nor `score_round`: a seat drawn for the first round and the
 next seat after, with the round's tally added into the standing, is what both of them wanted.
