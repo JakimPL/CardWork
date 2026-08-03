@@ -1,7 +1,7 @@
 from collections.abc import Mapping
 
 from cardwork.cards.game import GameCard
-from cardwork.moves.move import Move
+from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.states.state import StateT
 from cardwork.transactions.transaction import Transaction
@@ -19,24 +19,28 @@ def project_position(
     position: Position[StateT],
     seq: int,
     observer: int | None,
+    legal: Moves,
 ) -> PositionView[StateT]:
     """A position narrowed to what one observer is entitled to know, stamped with the sequence it holds at.
 
     This is the security boundary: a full position stays on the server, and this is what a client
     receives in its place. The sequence number comes from the caller because a position is a snapshot
     of a table rather than a point in its history, and the same snapshot is projected at whatever
-    sequence the journal reached.
+    sequence the journal reached. The moves come from the caller for the same reason: enumerating them
+    is the rules' work, and narrowing them to one seat is this boundary's.
 
     Args:
         position: the server-side snapshot to narrow.
         seq: the journal sequence this snapshot stands at, which the client quotes back as `base_seq`.
         observer: the seat receiving the view, or None for a spectator.
+        legal: every move the rules admit from the position, of which the observer receives its own.
     """
     return PositionView(
         observer=observer,
         seq=seq,
         zones=project_zones(position, observer),
         state=position.state.project(observer),
+        legal=project_moves(legal, observer),
     )
 
 
@@ -45,6 +49,7 @@ def project_transaction(
     before: Position[StateT],
     after: Position[StateT],
     observer: int | None,
+    legal: Moves,
 ) -> EventView[StateT]:
     """What one observer learns from a commit: who acted, which of their zones read differently, and the new cursor.
 
@@ -57,6 +62,7 @@ def project_transaction(
         before: the position the commit was applied to.
         after: the position the commit produced.
         observer: the seat receiving the event, or None for a spectator.
+        legal: every move the rules admit from `after`, of which the observer receives its own.
     """
     return EventView(
         seq=transaction.seq,
@@ -67,6 +73,7 @@ def project_transaction(
             project_zones(after, observer),
         ),
         state=after.state.project(observer),
+        legal=project_moves(legal, observer),
     )
 
 
@@ -124,6 +131,17 @@ def project_move(move: Move | None, observer: int | None) -> MoveView | None:
         player=move.player,
         action=move.action if observer == move.player else None,
     )
+
+
+def project_moves(moves: Moves, observer: int | None) -> Moves:
+    """The moves one observer may make, out of every move the rules admit from a position.
+
+    A seat reads its own options and nothing else. That matters most where several seats owe an action at
+    once: the moves open to another seat name positions inside zones this one cannot read, so serving them
+    would spell out the size and shape of a holding the projection is concealing. A spectator holds none,
+    since a move belongs to a seat.
+    """
+    return tuple(move for move in moves if move.player == observer)
 
 
 def zone_changes(

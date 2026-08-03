@@ -10,9 +10,9 @@ Three packages:
 - **`cardgames`** — the games written on it: `passing`, a game of four cards played in turn, and
   `showdown`, a game of ten turns played at once.
 
-`docs/architecture.md` is the design and the reasoning behind it; `docs/combinations.md`, `docs/rounds.md`
-and `docs/games/` state the parts a game reaches for and the two games themselves. What follows is enough
-to start.
+`docs/architecture.md` is the design and the reasoning behind it; `docs/combinations.md`, `docs/rounds.md`,
+`docs/presentation.md` and `docs/games/` state the parts a game reaches for and the two games themselves. What
+follows is enough to start.
 
 ## Getting set up
 
@@ -63,7 +63,8 @@ class MyGame(Game[Trump]):
 ```
 
 Two hooks ship with a body and are overridden only to change a policy: `authorize`, which admits the seats
-`to_act` names, and `legal_moves`, which enumerates nothing until a game chooses to.
+`to_act` names, and `legal_moves`, which enumerates nothing until a game chooses to. A game that does
+enumerate has them reach every client, since a view and an event each carry the moves their observer may make.
 
 Four rules of thumb, each explained at length in `docs/architecture.md`:
 
@@ -79,7 +80,7 @@ Four rules of thumb, each explained at length in `docs/architecture.md`:
 4. **Build the next cursor with `state.with_changes(...)`** and hand it to `SetState`, which validates it
    against your own declared fields.
 
-## Three things a game reaches for
+## Four things a game reaches for
 
 Rules that more than one game wants live in the framework, each in a layer of its own:
 
@@ -92,6 +93,9 @@ Rules that more than one game wants live in the framework, each in a layer of it
 - **`cardwork.rounds`** plays a match as a series of rounds, each dealt afresh from what the last left
   where it lay, led by a seat in turn and scored into a standing. A game of rounds subclasses `RoundGame`
   and states five hooks about one round; the layer states the match around it. `docs/rounds.md`.
+- **`cardwork.presentation`** states how a game is laid out for one player: which zones show and where, how
+  their cards lie, which move a click sends, what each plaque reads. A `Layout` is data a game states and an
+  interface draws, so the geometry stays with the interface. `docs/presentation.md`.
 
 ## Games to read
 
@@ -120,7 +124,7 @@ Run it with `uvicorn`, and the table answers four endpoints:
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/tables/{id}/moves` | Submit `{move, base_seq, idempotency_key}`; answers `{seq}` |
-| `GET` | `/tables/{id}/view` | This observer's projection of the table, stamped with `seq` |
+| `GET` | `/tables/{id}/view` | This observer's projection of the table and the moves it may make, stamped with `seq` |
 | `GET` | `/tables/{id}/events` | SSE stream of projected commits, resumable via `Last-Event-ID` |
 | `GET` | `/tables/{id}/journal` | The full record, once `session.reveal()` has opened it |
 

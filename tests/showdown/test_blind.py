@@ -37,20 +37,21 @@ def test_a_blind_reads_the_same_to_everybody_whatever_stands_in_it(cards: list[C
     substituted = restocked(DEALT, tuple(cards))
 
     assert all(
-        project_position(DEALT, SEQ, observer) == project_position(substituted, SEQ, observer) for observer in OBSERVERS
+        project_position(DEALT, SEQ, observer, legal=()) == project_position(substituted, SEQ, observer, legal=())
+        for observer in OBSERVERS
     )
 
 
 @pytest.mark.parametrize("observer", OBSERVERS, ids=[str(observer) for observer in OBSERVERS])
 def test_a_blind_reports_its_size_to_every_observer_and_its_cards_to_none(observer: int | None) -> None:
-    view = project_position(DEALT, SEQ, observer)
+    view = project_position(DEALT, SEQ, observer, legal=())
 
     assert all(card is None for card in view.zones[blind_of(OWNER)].cards)
     assert len(view.zones[blind_of(OWNER)].cards) == BLIND_SIZE
 
 
 def test_a_seat_reads_the_five_of_its_hand_while_the_five_of_its_blind_stay_unread() -> None:
-    view = project_position(DEALT, SEQ, OWNER)
+    view = project_position(DEALT, SEQ, OWNER, legal=())
 
     assert view.zones[hand_of(OWNER)].cards == DEALT.board.zone(hand_of(OWNER)).cards
     assert len(view.zones[hand_of(OWNER)].cards) == HAND_SIZE

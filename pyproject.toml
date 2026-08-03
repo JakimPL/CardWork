@@ -70,6 +70,7 @@ include_external_packages = true
 name = "Layered architecture"
 type = "layers"
 layers = [
+    "cardwork.presentation",
     "cardwork.rounds",
     "cardwork.games",
     "cardwork.views",

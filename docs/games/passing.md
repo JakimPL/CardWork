@@ -97,7 +97,7 @@ is a thing the cards say for themselves. A refusal names the rule it comes from:
 | any other intent | `Seat 2 exchanges or passes, and offered play` |
 
 `legal_moves` lists every exchange and pass the turn admits, which is every move there is to make, so a solver
-reading the list plays by the rules alone.
+reading the list plays by the rules alone, and the seat on turn is offered the same list in its view.
 
 ---
 

@@ -108,12 +108,17 @@ class Game(ABC, Generic[StateT]):
         """The table as one observer is entitled to see it, stamped with the sequence it stands at.
 
         The stamp is what a client quotes back as `base_seq`, which ties the move it submits to the
-        position it was looking at.
+        position it was looking at, and the moves the view carries are the ones that stamp accepts.
 
         Args:
             observer: the seat receiving the view, or None for a spectator.
         """
-        return project_position(self.position, self.head, observer)
+        return project_position(
+            self.position,
+            self.head,
+            observer,
+            self.legal_moves(self.position),
+        )
 
     def events(
         self,
@@ -124,7 +129,8 @@ class Game(ABC, Generic[StateT]):
 
         A client that dropped at a known sequence number reads the stream from there and arrives at the
         knowledge a fresh view would give it, so reconnecting costs what staying connected costs. Each
-        event is the difference between two snapshots the engine already holds.
+        event is the difference between two snapshots the engine already holds, and carries the moves the
+        later of the two admits, so a client reading the stream is never a round trip behind its options.
 
         Args:
             observer: the seat receiving the events, or None for a spectator.
@@ -142,6 +148,7 @@ class Game(ABC, Generic[StateT]):
                 self.snapshot(transaction.seq),
                 self.snapshot(transaction.seq + 1),
                 observer,
+                self.legal_moves(self.snapshot(transaction.seq + 1)),
             )
             for transaction in self._journal.transactions[since:]
         )

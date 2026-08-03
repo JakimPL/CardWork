@@ -3,6 +3,7 @@ from typing import Generic
 from cardwork.cards.game import GameCard
 from cardwork.models.base import BaseFrozen
 from cardwork.moves.actions import AnyAction
+from cardwork.moves.move import Moves
 from cardwork.states.state import StateT
 from cardwork.zones.zone import ZoneId
 
@@ -36,6 +37,11 @@ class EventView(BaseFrozen, Generic[StateT]):
 
     An event carries the knowledge a position view would have carried, so a client that joined at a
     known sequence number stays current from the stream alone, and one rule governs both shapes.
+
+    `legal` holds the moves open to this observer once the commit has landed, which the table stands `seq + 1`
+    commits into and is what a client quotes as `base_seq` for one of them. Carrying them here is what lets a
+    client read the stream and know its options from it, rather than asking after each commit and racing the
+    next one.
     """
 
     seq: int
@@ -43,3 +49,4 @@ class EventView(BaseFrozen, Generic[StateT]):
     move: MoveView | None
     changes: tuple[ZoneChange, ...]
     state: StateT
+    legal: Moves

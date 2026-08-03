@@ -86,7 +86,9 @@ closed and read by a `match`. A refusal names the rule it comes from:
 | a second commitment in one turn | `NotYourTurn`, since the turn stands with the seats that have yet to act |
 
 `legal_moves` lists every card of both holdings for each seat still to commit, so a solver reading the list
-plays by the rules alone, and a seat that has committed leaves the list to the seats that have not.
+plays by the rules alone, and a seat that has committed leaves the list to the seats that have not. A seat
+served that list in its view reads its own commitments out of it, since the projection narrows the moves to
+their owner as it narrows the cards (`architecture.md` §7).
 
 Every seat owing an action at once meets the engine's optimistic commit: a client pins its move to the
 sequence it read, so two seats committing at the same moment leave the later one reading the position again

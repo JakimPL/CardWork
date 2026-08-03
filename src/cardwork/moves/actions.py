@@ -4,6 +4,7 @@ from pydantic import Field
 
 from cardwork.decks.deck import Indices, NonEmptyIndices
 from cardwork.models.base import BaseFrozen
+from cardwork.moves.kind import ActionKind
 
 
 class Action(BaseFrozen):
@@ -14,30 +15,30 @@ class Action(BaseFrozen):
 
 
 class Play(Action):
-    kind: Literal["play"] = "play"
+    kind: Literal[ActionKind.PLAY] = ActionKind.PLAY
     group: str
     indices: NonEmptyIndices
 
 
 class Take(Action):
-    kind: Literal["take"] = "take"
+    kind: Literal[ActionKind.TAKE] = ActionKind.TAKE
     group: str
     indices: NonEmptyIndices
 
 
 class Give(Action):
-    kind: Literal["give"] = "give"
+    kind: Literal[ActionKind.GIVE] = ActionKind.GIVE
     target_player: int = Field(ge=0)
     indices: NonEmptyIndices
 
 
 class Reject(Action):
-    kind: Literal["reject"] = "reject"
+    kind: Literal[ActionKind.REJECT] = ActionKind.REJECT
     indices: NonEmptyIndices
 
 
 class Discard(Action):
-    kind: Literal["discard"] = "discard"
+    kind: Literal[ActionKind.DISCARD] = ActionKind.DISCARD
     group: str
     indices: NonEmptyIndices
 
@@ -50,7 +51,7 @@ class Declare(Action):
     and an empty set makes it of the whole zone.
     """
 
-    kind: Literal["declare"] = "declare"
+    kind: Literal[ActionKind.DECLARE] = ActionKind.DECLARE
     claim: str
     indices: Indices
 

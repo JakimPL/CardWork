@@ -17,13 +17,14 @@ This document is organised as principles first, then the mechanisms each princip
 part to internalise: when a design question arises that the rest of the document leaves open, the six
 rules answer it.
 
-Four documents state the parts a game reaches for and the games themselves, and this one states what they
+Five documents state the parts a game reaches for and the games themselves, and this one states what they
 all rest on:
 
 | document | states |
 |---|---|
 | `docs/combinations.md` | what a run of cards reads as: patterns, jokers, duplicates, rankings, points |
 | `docs/rounds.md` | a match played as a series of rounds, each dealt afresh and scored into a standing |
+| `docs/presentation.md` | how a game states its own table for a player: regions, spreads, gestures, plaques |
 | `docs/games/passing.md` | a game of four cards, in which a fourth circulates and three reading alike win |
 | `docs/games/showdown.md` | a game of ten sealed turns, every seat committing one card at once |
 
@@ -103,6 +104,7 @@ the server enforces.
 
 | Layer | Holds | Answers |
 |---|---|---|
+| `presentation` | `Layout`, `Slot`, `Gesture`, `Plaque`, `Readout` | how a game is laid out for a player |
 | `rounds` | `RoundGame`, `RoundState`, `Redeal`, seating | how a match of rounds runs |
 | `games` | `Game`: setup hooks, rules hooks, and the concrete engine | how a table plays |
 | `views` | `PositionView`, `EventView`, per-observer projection | what an observer is told |
@@ -132,6 +134,12 @@ reads cards and jokers, so it stands above `cards` and below `decks`, and a game
 about cards alone. `rounds` stands **above** `games` because it is `Game` plus the bookkeeping of a match —
 the deal of a fresh round, the standing, the leader — while the cursor, the journal and the rules of play
 stay where they already were (`docs/rounds.md` §1).
+
+`presentation` sits at the head, and every layer beneath it plays a game whether or not anybody is watching. It
+is a vocabulary for stating how a game is laid out on a screen: `zones` names a zone to lay out, `moves` a kind
+of move to make, `states` a field of the cursor to show, and those three are the whole of what it reaches for. A
+layout is data a game states and an interface reads, so the geometry stays with the interface and the game names
+no measurement (`docs/presentation.md`).
 
 **`cardgames` is a distribution of its own, and the import goes one way.** A game imports the framework,
 which is what keeps every mechanism here general enough for the game after these two. Each game package
@@ -509,7 +517,9 @@ Replaying a `Reorder` a decade later reproduces the same order because the order
 
 `Action` names what a client asks for — play these cards to that group, take from there, discard — and the
 rules translate it into effects in `expand`. Actions carry a `kind` tag apiece and union as `AnyAction` on
-the same grounds as the effects: a `Move` crosses the wire in both directions.
+the same grounds as the effects: a `Move` crosses the wire in both directions. The tags are the members of
+`ActionKind`, so a layer speaking about a kind of move rather than about one move — a layout saying which
+gesture puts a `Take` on the table (`docs/presentation.md` §1) — holds a member of a closed vocabulary.
 
 Six intents cover the vocabulary a client sends, and a game reads the ones it is played with:
 
@@ -683,10 +693,11 @@ class PositionView(BaseFrozen, Generic[StateT]):
     seq: int
     zones: Mapping[ZoneId, ZoneView]
     state: StateT
+    legal: Moves                         # the moves this observer may make, and those alone
 
 
 def project_position(
-    position: Position[StateT], seq: int, observer: int | None
+    position: Position[StateT], seq: int, observer: int | None, legal: Moves
 ) -> PositionView[StateT]: ...
 ```
 
@@ -717,6 +728,31 @@ ordinary card-game information and a prerequisite for addressing them at all.
 - Raw `Transaction.effects`, which name every card they touch.
 - The `Journal`, until the host declares the game over (§10, *The sealed record*).
 
+### The moves a seat may make are narrowed like the cards
+
+Enumerating the moves a position admits is a rules hook (§9); putting them on the wire is a projection, so the
+two meet where every other narrowing happens:
+
+```python
+def project_moves(moves: Moves, observer: int | None) -> Moves:
+    return tuple(move for move in moves if move.player == observer)
+```
+
+A seat reads its own options and no others. That matters most in a simultaneous phase, where `to_act` holds
+every seat at once: the moves open to another seat name positions inside zones this one may not read, so serving
+them would spell out the shape of a holding the zone pass is busy concealing. A spectator receives none, since a
+move belongs to a seat.
+
+**A view and its moves name one position.** `PositionView` carries `legal` beside the `seq` a client quotes as
+`base_seq`, and `EventView` carries the moves admitted by the position its commit produced — the table `seq + 1`
+commits in, which is the `base_seq` a move drawn from `event.legal` is submitted against. So a client reading the
+stream knows its options from the stream, and asks no second question that an incoming commit would race into
+answering about a table that has already moved.
+
+A game that enumerates nothing serves an empty run, and its clients propose a move and let `validate` answer
+(§9). `legal` is what an interface offers and greys out with; what the server admits stays `authorize` and
+`validate`, which every path runs through.
+
 ### Events are diffs of projections
 
 ```python
@@ -737,6 +773,7 @@ class EventView(BaseFrozen, Generic[StateT]):
     move: MoveView | None
     changes: tuple[ZoneChange, ...]
     state: StateT
+    legal: Moves                         # the moves open to this observer once the commit has landed
 
 
 def project_transaction(
@@ -744,6 +781,7 @@ def project_transaction(
     before: Position[StateT],
     after: Position[StateT],
     observer: int | None,
+    legal: Moves,
 ) -> EventView[StateT]: ...
 ```
 
@@ -890,7 +928,7 @@ Inherited verbatim, and listed here because they are the whole of what a game ge
 | `settle()` | the transactions the rules still owe, until the table comes to rest |
 | `step(position, move, rng)` | the same pure path, applied to any position (§8) |
 | `undo()` | one unpublished transaction rolled back |
-| `view(observer)` | this observer's projection, stamped with the head |
+| `view(observer)` | this observer's projection and the moves it may make, stamped with the head |
 | `events(observer, since)` | every commit from `since` onward as that observer learns of it |
 | `snapshot(seq)` / `replay(upto)` | the position at a sequence, cheaply or honestly |
 | `mark_published()` | the publication mark advanced to the head (P5) |
@@ -911,7 +949,7 @@ A game that overrides any of them has found a missing hook.
 | `expand(position, move, rng)` | abstract | translate an intent into primitive effects |
 | `advance(position, move, rng)` | abstract | turn and phase transitions, scoring, terminal detection |
 | `authorize(position, move)` | concrete | raise `NotYourTurn` unless this seat may act. Default: `move.player in state.to_act` |
-| `legal_moves(position)` | concrete | enumerate moves for AI and for UIs that grey out actions. Default: none |
+| `legal_moves(position)` | concrete | enumerate the moves this position admits, for a search and for the interfaces they reach through `view` (§7). Default: none |
 
 Four rules for reading that surface:
 
@@ -1313,19 +1351,21 @@ play was good **given what the player knew**.
 | Engine vs. rules | rules take `position`; only engine methods read `self` | a rules method reads the cursor and search silently evaluates the wrong board |
 | Adapter layers | the `Adapter layers` contract over `cardserver` | `sessions` imports `registry`, or `protocol` imports anything above it |
 | Framework vs. games | the `The framework knows no game` contract; `cardgames` is a distribution of its own | a mechanism under `cardwork/` names a game, or a handler branches on which game it serves |
+| What a game states vs. how it looks | `presentation` holds zone ids, kinds of move and fields of the cursor | a layout carries a measurement, or an interface branches on a zone id or a phase |
 | A round vs. a match | `rounds` sits above `games`; a game states one round and the layer states the match | a game deals its own next round, or adds its own tally into the standing |
 
 ---
 
 ## 13. Invariants under test
 
-Most of the suite is ordinary unit coverage. Six properties are the ones worth naming, because each
+Most of the suite is ordinary unit coverage. Seven properties are the ones worth naming, because each
 stands in for a class of bug rather than a case:
 
 | Property | Guards |
 |---|---|
 | A projection survives any **substitution** of what it conceals (§7) | every information leak, including the ones nobody thought to look for |
 | An event view names exactly the zones its observer reads differently, and the action reaches no other seat | a delta that discloses more than a pair of views would |
+| A view and an event offer their observer its own moves and no others | a simultaneous phase disclosing the shape of another seat's holding through the options it opens |
 | `history[n] == journal.replay(n)` for every `n`, after a random legal sequence | the memo and the record drifting apart, which would make `base_seq` name a position that never existed |
 | A `Transaction` survives a JSON round-trip with every effect field intact | the discriminated unions degrading to their abstract bases |
 | Card conservation over `starting_deck` on every dealt table | a zone layout that loses or duplicates a card |

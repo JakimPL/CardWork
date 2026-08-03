@@ -47,7 +47,7 @@ def test_a_state_carries_its_shared_cursor_fields_through_a_projection(bidding: 
 
 
 def test_a_position_view_carries_the_cursor_the_state_projects(bidding: Position[SealedBidState]) -> None:
-    view = project_position(bidding, SEQ, 1)
+    view = project_position(bidding, SEQ, 1, legal=())
 
     assert view.state.bids == (None, 5, None)
 
@@ -55,12 +55,12 @@ def test_a_position_view_carries_the_cursor_the_state_projects(bidding: Position
 def test_an_event_view_carries_the_cursor_the_state_projects(bidding: Position[SealedBidState]) -> None:
     transaction: Transaction[SealedBidState] = Transaction(seq=SEQ, move=None, effects=())
 
-    event = project_transaction(transaction, bidding, bidding, observer=0)
+    event = project_transaction(transaction, bidding, bidding, observer=0, legal=())
 
     assert event.state.bids == (3, None, None)
 
 
 def test_projecting_a_position_leaves_the_sealed_bids_on_the_server(bidding: Position[SealedBidState]) -> None:
-    project_position(bidding, SEQ, 1)
+    project_position(bidding, SEQ, 1, legal=())
 
     assert bidding.state.bids == BIDS
