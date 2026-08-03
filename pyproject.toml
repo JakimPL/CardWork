@@ -80,6 +80,7 @@ layers = [
     "cardwork.zones",
     "cardwork.decks",
     "cardwork.cards",
+    "cardwork.ordering",
     "cardwork.models",
 ]
 
