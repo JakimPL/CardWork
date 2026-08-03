@@ -44,7 +44,7 @@ target-version = ["py312"]
 [tool.isort]
 profile = "black"
 line_length = 120
-known_first_party = ["cardwork", "cardserver"]
+known_first_party = ["cardwork", "cardserver", "cardgames"]
 
 [tool.pylint.main]
 extension-pkg-allow-list = ["pydantic"]
@@ -120,7 +120,7 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 
 [tool.coverage.run]
-source = ["cardwork", "cardserver"]
+source = ["cardwork", "cardserver", "cardgames"]
 
 [tool.coverage.report]
 show_missing = true
@@ -128,7 +128,7 @@ fail_under = 80
 
 [tool.mypy]
 python_version = "3.12"
-files = ["src/cardwork", "src/cardserver"]
+files = ["src/cardwork", "src/cardserver", "src/cardgames"]
 exclude = ["tests"]
 disallow_subclassing_any = true
 ignore_missing_imports = true

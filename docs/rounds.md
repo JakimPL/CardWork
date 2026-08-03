@@ -9,7 +9,7 @@ one round *is*; this states the match around it.
 
 ```python
 class ShowdownGame(RoundGame[ShowdownState]):
-    def deal_round(self, position, rng): ...       # the cards a fresh round gets
+    def deal_round(self, position, leader, rng): ...    # the cards a fresh round gets
     def opening_state(self, position, leader): ... # the cursor it opens on
     def advance_round(self, position, move, rng): ...  # everything inside it
     def round_over(self, position): ...            # whether it has run out
@@ -162,10 +162,13 @@ transaction that opened a round and settling again deals that round afresh, as `
 `Redeal` is the deal of a fresh round made out of the cards the last one left where they lay:
 
 ```python
-def deal_round(self, position: Position[MatchState], rng: Random) -> Effects[MatchState]:
-    counts = {hand_of(seat): HAND_SIZE for seat in range(position.players)}
+def deal_round(self, position: Position[MatchState], leader: int, rng: Random) -> Effects[MatchState]:
+    counts = {hand_of(seat): HAND_SIZE for seat in rotation(leader, position.players)}
     return Redeal(position, pile=STOCK, face_down=True).effects(counts, rng)
 ```
+
+The leader arrives with the deal because the round's seat is drawn before its cards go out, which is what
+lets a game deal from the seat it opens on and give that seat a card the others do not get.
 
 Three steps, separately available for a game that keeps part of the table standing between rounds:
 
@@ -187,10 +190,11 @@ position of every round.
 
 ## 5. What a game states for itself
 
-**A game of four cards** (`cardgames.passing`) plays rounds until one seat leads the next-best by two, so its
-`match_over` reads the standing and its `round_over` reads the seat that declared a win or an exhausted pile.
-A round scores one point to its winner and nothing to anybody in a draw, which its `round_points` states as
-the win lands.
+**A game of four cards** (`cardgames.passing`) plays rounds until one seat leads the next best by two, so its
+`match_over` reads the standing. Its round writes its own outcome — a confirmed claim, or a pile run out — into
+a phase of its own as the move that settles it lands, and `round_over` reads that phase. A round scores one
+point to its winner and nothing to anybody in a draw, which its `round_points` states as the win lands.
+`docs/games/passing.md` states the game whole.
 
 **A game of ten turns** (`cardgames.showdown`) plays the number of rounds it was built for, so its
 `match_over` compares `round_number` against a field of its own state. Each of its ten turns adds what the

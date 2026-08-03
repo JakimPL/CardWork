@@ -21,7 +21,7 @@ class RoundGame(Game[RoundStateT], ABC):
 
     | hook | states |
     |---|---|
-    | `deal_round(position, rng)` | the cards a fresh round is dealt, for which `Redeal` is the usual answer |
+    | `deal_round(position, leader, rng)` | the cards a fresh round is dealt, for which `Redeal` is the usual answer |
     | `opening_state(position, leader)` | the cursor a round opens on: the phase it runs in, and who acts |
     | `advance_round(position, move, rng)` | what the rules owe inside a round, exactly as `advance` states it |
     | `round_over(position)` | whether the round in play has run out |
@@ -91,7 +91,8 @@ class RoundGame(Game[RoundStateT], ABC):
         """The effects opening the next round: the cards it is dealt, and the cursor it begins on.
 
         The round's count, its leader and a tally of zeros are stamped onto the cursor the game states, so a
-        game writes the phase its round runs in and reads the rest back from the state.
+        game writes the phase its round runs in and reads the rest back from the state. The leader is drawn
+        before the cards go out, which is what lets a deal begin at the seat leading the round.
         """
         leader = self.next_leader(position, rng)
         opened = self.opening_state(position, leader).with_changes(
@@ -99,7 +100,7 @@ class RoundGame(Game[RoundStateT], ABC):
             leader=leader,
             round_points=(0,) * position.players,
         )
-        return self.deal_round(position, rng) + (SetState(state=opened),)
+        return self.deal_round(position, leader, rng) + (SetState(state=opened),)
 
     def close_round(self, position: Position[RoundStateT]) -> Effects[RoundStateT]:
         """The effects closing the round in play: its award added into the standing, and the table left between rounds.
@@ -171,12 +172,19 @@ class RoundGame(Game[RoundStateT], ABC):
     def deal_round(
         self,
         position: Position[RoundStateT],
+        leader: int,
         rng: Random,
     ) -> Effects[RoundStateT]:
         """The cards a fresh round is dealt, gathered from wherever the last one left them.
 
         `Redeal` is the usual answer: everything back to one pile, shuffled, and dealt out by the count each
         zone is owed.
+
+        Args:
+            position: the table as the round about to open finds it, its cards lying where the last left them.
+            leader: the seat leading the round, which is where a deal round the table begins and which reads
+                the extra card a game gives the seat it opens on.
+            rng: the generator the shuffle draws from, whose draw travels as the `Reorder` it decides.
         """
 
     @abstractmethod

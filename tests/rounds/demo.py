@@ -131,8 +131,8 @@ class TossGame(RoundGame[MatchState]):
             ),
         )
 
-    def deal_round(self, position: Position[MatchState], rng: Random) -> Effects[MatchState]:
-        counts = {hand_of(seat): HAND_SIZE for seat in range(position.players)}
+    def deal_round(self, position: Position[MatchState], leader: int, rng: Random) -> Effects[MatchState]:
+        counts = {hand_of((leader + place) % position.players): HAND_SIZE for place in range(position.players)}
         return Redeal(position, pile=STOCK, face_down=True).effects(counts, rng)
 
     def opening_state(self, position: Position[MatchState], leader: int) -> MatchState:
