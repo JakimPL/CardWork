@@ -24,7 +24,7 @@ all rest on:
 |---|---|
 | `docs/combinations.md` | what a run of cards reads as: patterns, jokers, duplicates, rankings, points |
 | `docs/rounds.md` | a match played as a series of rounds, each dealt afresh and scored into a standing |
-| `docs/games/passing.md` | a game of four cards, in which a fourth circulates and a seat claims a win on three |
+| `docs/games/passing.md` | a game of four cards, in which a fourth circulates and three reading alike win |
 | `docs/games/showdown.md` | a game of ten sealed turns, every seat committing one card at once |
 
 ---
@@ -522,12 +522,15 @@ Six intents cover the vocabulary a client sends, and a game reads the ones it is
 | `Discard(group, indices)` | a group and positions | cards laid off |
 | `Declare(claim, indices)` | a word and the positions it is claimed of | those cards read as the claim names |
 
-**`Declare` is the one intent that carries a word.** Claiming a win — "these four cards are three of a
-rank" — names positions *and* what they are claimed to be, and the rules answer it by reading the cards
-themselves, so a claim stands once the rules have confirmed it. The word is a `str` on the wire and a
-`StrEnum` in the game that reads it, which keeps the vocabulary of one game closed while the action stays
-general. `indices` may be empty here alone, since a claim of a whole hand is a claim of everything the seat
-holds.
+**`Declare` is the one intent that carries a word.** A bid, a trump named, a contract announced — each names
+positions *and* what the seat says of them, and the rules answer by reading the cards themselves. The word is
+a `str` on the wire and a `StrEnum` in the game that reads it, which keeps the vocabulary of one game closed
+while the action stays general. `indices` may be empty here alone, since a declaration over a whole hand
+covers everything the seat holds.
+
+Neither game here sends one, and the reason is worth stating: a declaration earns an intent where the seat's
+word decides something. A win the cards already read decides nothing — a seat holding one gains nothing by
+withholding it — so `cardgames.passing` awards it instead of asking for it (`docs/games/passing.md` §1).
 
 Actions address cards **positionally**: "the first, third and sixth cards of my hand". Positional
 addressing is the right choice under partial knowledge, because it lets a client reference a card it
@@ -977,7 +980,7 @@ The two games in `cardgames` are the worked examples, and between them they exer
 
 | the game | plays | reads for |
 |---|---|---|
-| `cardgames.passing` | a sequential turn: one exchange with the pile, then a pass or a claim of a win | `Declare` answered by a rules question over `combinations`, and a match the standing ends |
+| `cardgames.passing` | a sequential turn: one exchange with the pile, then a pass round the table | an outcome a rules question over `combinations` decides, and a match the standing ends |
 | `cardgames.showdown` | a simultaneous turn: every seat commits one sealed card, and they turn over together | `to_act` holding every seat, `HIDDEN` zones, and a turn settled behind no move at all |
 
 ---

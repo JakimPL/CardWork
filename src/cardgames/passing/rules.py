@@ -1,5 +1,4 @@
 from collections.abc import Iterable
-from enum import StrEnum
 from typing import Final
 
 from cardwork.cards.game import CardOrJoker
@@ -33,16 +32,6 @@ WITHHOLDING_PATTERNS: Final[tuple[Pattern, ...]] = (
     SameRank(places=HAND_ON_TURN),
     SameSuit(places=HAND_ON_TURN),
 )
-
-
-class PassingClaim(StrEnum):
-    """The words a seat claims with, of which a win is the one this game knows.
-
-    `Declare` carries the word beside the cards, and a game states its own vocabulary for it, so a claim is
-    read against this and refused where it names anything else.
-    """
-
-    WIN = "win"
 
 
 def three_read_alike(hand: Iterable[CardOrJoker]) -> bool:

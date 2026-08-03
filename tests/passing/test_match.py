@@ -9,8 +9,10 @@ from hypothesis import strategies as st
 from cardgames.passing.game import BEST, NEXT_BEST, PassingGame
 from cardgames.passing.rules import NOTHING, WINNING_LEAD
 from cardgames.passing.state import PassingPhase
-from cardgames.passing.zones import PILE
 from cardwork.decks.deck import Deck
+from cardwork.effects.fold import fold
+from cardwork.moves.actions import Give
+from cardwork.moves.move import Move
 from cardwork.rounds.seating import next_seat
 from cardwork.rounds.state import MatchPhase
 
@@ -23,15 +25,11 @@ from .driving import (
     SEED,
     TWO_SEATS,
     a_match,
-    exchange_until_the_pile_runs_out,
-    pass_on,
     play_out,
+    with_the_pile_run_out,
 )
 
 FULL_TABLE: Final[int] = 8
-SECOND_ROUND: Final[int] = 2
-BOUNDARY_TRANSACTIONS: Final[int] = 2
-PILED_AFRESH: Final[int] = 45
 SEEDS: Final[range] = range(10)
 
 
@@ -65,31 +63,42 @@ def a_match_played_out(case: MatchCase) -> PassingGame:
     return game
 
 
-def test_the_pile_running_out_draws_the_round_and_scores_nobody(two_seats: PassingGame) -> None:
-    exchange_until_the_pile_runs_out(two_seats)
+def test_the_pass_closing_a_turn_over_a_pile_run_out_draws_the_round_and_scores_nobody(
+    passing: PassingGame,
+) -> None:
+    position = with_the_pile_run_out(passing)
+    seat = position.state.current
+    assert seat is not None
 
-    pass_on(two_seats, FIRST_CARD)
+    drawn = passing.step(
+        position,
+        Move(player=seat, action=Give(target_player=next_seat(seat, SEATS), indices=frozenset({FIRST_CARD}))),
+        Random(SEED),
+    )
 
-    assert two_seats.state.phase == PassingPhase.DECIDED
-    assert two_seats.state.winner is None
-    assert two_seats.state.round_points == (NOTHING,) * TWO_SEATS
-    assert two_seats.state.to_act == frozenset()
+    assert drawn.state.phase == PassingPhase.DECIDED
+    assert drawn.state.winner is None
+    assert drawn.state.round_points == (NOTHING,) * SEATS
+    assert drawn.state.to_act == frozenset()
 
 
-def test_a_drawn_round_is_followed_by_a_fresh_deal_on_the_standing_it_left(two_seats: PassingGame) -> None:
-    exchange_until_the_pile_runs_out(two_seats)
-    leader = two_seats.state.led_by
+def test_a_drawn_round_is_scored_into_the_standing_as_the_nothing_it_awarded(passing: PassingGame) -> None:
+    position = with_the_pile_run_out(passing)
+    seat = position.state.current
+    assert seat is not None
+    standing = position.state.points
+    assert standing is not None
 
-    pass_on(two_seats, FIRST_CARD)
-    settled = two_seats.settle()
+    drawn = passing.step(
+        position,
+        Move(player=seat, action=Give(target_player=next_seat(seat, SEATS), indices=frozenset({FIRST_CARD}))),
+        Random(SEED),
+    )
+    closed = fold(passing.close_round(drawn), drawn)
 
-    assert two_seats.state.points == (NOTHING,) * TWO_SEATS
-    assert two_seats.state.round_number == SECOND_ROUND
-    assert two_seats.state.phase == PassingPhase.PASSING
-    assert two_seats.state.led_by == next_seat(leader, TWO_SEATS)
-    assert len(two_seats.board.zone(PILE).cards) == PILED_AFRESH
-    assert len(settled) == BOUNDARY_TRANSACTIONS
-    assert all(transaction.move is None for transaction in settled)
+    assert closed.state.points == standing
+    assert closed.state.phase == MatchPhase.BETWEEN_ROUNDS
+    assert closed.state.to_act == frozenset()
 
 
 @pytest.mark.parametrize("case", MATCHES, ids=descriptions(MATCHES))

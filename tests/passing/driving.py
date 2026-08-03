@@ -3,14 +3,14 @@ from random import Random
 from typing import Final
 
 from cardgames.passing.game import PassingGame
-from cardgames.passing.rules import PassingClaim, declares
 from cardgames.passing.state import PassingState
-from cardgames.passing.zones import PILE, hand_of
+from cardgames.passing.zones import PILE, STACK, hand_of
 from cardwork.cards.game import CardsOrJokers
 from cardwork.decks.deck import Deck
 from cardwork.decks.standard import standard_decks
-from cardwork.moves.actions import Declare, Give, Take
+from cardwork.moves.actions import Give, Take
 from cardwork.moves.move import Move, Moves
+from cardwork.positions.position import Position
 from cardwork.rounds.seating import next_seat
 from cardwork.transactions.transaction import Transaction
 from cardwork.zones.zone import cards_of
@@ -75,32 +75,22 @@ def pass_on(game: PassingGame, index: int) -> Transaction[PassingState]:
     )
 
 
-def claim_a_win(game: PassingGame) -> Transaction[PassingState]:
-    """The seat on turn claims a win of its whole hand."""
-    seat = seat_on_turn(game)
-    return game.submit(
-        Move(player=seat, action=Declare(claim=PassingClaim.WIN, indices=frozenset())),
-        base_seq=game.head,
-    )
+def with_the_pile_run_out(game: PassingGame) -> Position[PassingState]:
+    """The table as it stands, its pile emptied onto the stack, which is where an exhausted pile is answered.
 
-
-def until_the_turn_holds_no_win(game: PassingGame) -> int:
-    """The seat on turn once its hand holds a win back, the card passing on until such a seat has the turn."""
-    while declares(held_by(game, seat_on_turn(game))):
-        pass_on(game, FIRST_CARD)
-
-    return seat_on_turn(game)
-
-
-def exchange_until_the_pile_runs_out(game: PassingGame) -> None:
-    """Every turn spends its exchange, until the pile they draw from holds nothing.
-
-    The turn that empties the pile is left standing open, which is where the rules meet a pile run out.
+    A win falls to a hand the moment it reads one, so no run of play empties a pile of forty-odd cards, and the
+    rules answering an exhausted one are read against a position built to hold that. Every hook takes the
+    position it works on, so one built here is answered exactly as the table's own is, and the cards move
+    between two zones rather than out of the game, which leaves the board holding the deck it started from.
     """
-    while game.board.zone(PILE).cards:
-        exchange(game, FIRST_CARD)
-        if game.board.zone(PILE).cards:
-            pass_on(game, FIRST_CARD)
+    board = game.board
+    pile, stack = board.zone(PILE), board.zone(STACK)
+    return game.position.with_board(
+        board.with_zones(
+            pile.with_cards(()),
+            stack.with_cards(stack.cards + pile.cards),
+        ),
+    )
 
 
 def play_out(game: PassingGame, choose: Chooser) -> None:
@@ -113,24 +103,23 @@ def play_out(game: PassingGame, choose: Chooser) -> None:
             return
 
 
-def play_to_a_claim(game: PassingGame, choose: Chooser) -> int:
-    """Drive the table until a seat claims the win it holds, answering with the seat that claimed it.
+def play_to_a_win(game: PassingGame, choose: Chooser) -> int:
+    """Drive the table until a round is won, answering with the seat that won it.
 
-    A claim is taken as soon as the rules list one, and every other move comes from the chooser, so a round
-    that runs its pile out carries on into the next.
+    A win needs no move of its own, so this plays on until the cursor names a winner, which is the transaction
+    a dealt or completed hand reading three alike lands in.
 
     Raises:
-        ValueError: when the table comes to rest with no claim made, which a standing moved by wins alone
+        ValueError: when the table comes to rest with no round won, which a standing moved by wins alone
             leaves out of reach.
     """
     while True:
-        moves = game.legal_moves(game.position)
-        claims = tuple(move for move in moves if isinstance(move.action, Declare))
-        if claims:
-            game.submit(claims[FIRST_CARD], base_seq=game.head)
-            return claims[FIRST_CARD].player
+        winner = game.state.winner
+        if winner is not None:
+            return winner
 
+        moves = game.legal_moves(game.position)
         if moves:
             game.submit(choose(moves), base_seq=game.head)
         elif not game.settle():
-            raise ValueError(f"The table came to rest at sequence {game.head} with no seat claiming a win")
+            raise ValueError(f"The table came to rest at sequence {game.head} with no round won")

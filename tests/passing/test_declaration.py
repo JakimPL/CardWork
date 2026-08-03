@@ -4,7 +4,7 @@ from typing import Final
 
 import pytest
 
-from cardgames.passing.rules import NOTHING, ROUND_POINT, PassingClaim, declares, four_read_alike, three_read_alike
+from cardgames.passing.rules import NOTHING, ROUND_POINT, declares, four_read_alike, three_read_alike
 from cardgames.passing.state import PassingPhase
 from cardgames.passing.zones import hand_of
 from cardwork.cards.cards import (
@@ -24,26 +24,20 @@ from cardwork.cards.cards import (
     TWO_OF_SPADES,
 )
 from cardwork.cards.game import CardsOrJokers
-from cardwork.exceptions import IllegalMove
-from cardwork.moves.actions import Declare
-from cardwork.moves.move import Move
 
 from ..cases import Case, descriptions
 from .driving import (
-    FIRST_CARD,
+    JOKERED_DECK,
     SEATS,
     SEED,
     PassingGame,
-    claim_a_win,
-    every_hand,
+    a_match,
     held_by,
-    play_to_a_claim,
-    seat_on_turn,
-    until_the_turn_holds_no_win,
+    play_to_a_win,
 )
 
 FIRST_ROUND: Final[int] = 1
-ANOTHER_WORD: Final[str] = "bluff"
+SEEDS: Final[range] = range(40)
 
 
 @dataclass(frozen=True)
@@ -177,53 +171,8 @@ def test_a_hand_declares_on_three_reading_alike_while_the_four_do_not(case: Decl
     assert declares(case.hand) is case.declares
 
 
-def test_a_claim_the_hand_holds_back_is_refused_and_leaves_the_round_as_it_stood(passing: PassingGame) -> None:
-    until_the_turn_holds_no_win(passing)
-    standing, hands, head = passing.state, every_hand(passing), passing.head
-
-    with pytest.raises(IllegalMove, match="holds back"):
-        claim_a_win(passing)
-
-    assert passing.state == standing
-    assert every_hand(passing) == hands
-    assert passing.head == head
-    assert passing.state.phase == PassingPhase.PASSING
-
-
-def test_a_claim_in_a_word_the_game_leaves_out_is_refused_and_leaves_the_round_as_it_stood(
-    passing: PassingGame,
-) -> None:
-    seat = seat_on_turn(passing)
-    standing, hands, head = passing.state, every_hand(passing), passing.head
-
-    with pytest.raises(IllegalMove, match=ANOTHER_WORD):
-        passing.submit(
-            Move(player=seat, action=Declare(claim=ANOTHER_WORD, indices=frozenset())),
-            base_seq=passing.head,
-        )
-
-    assert passing.state == standing
-    assert every_hand(passing) == hands
-    assert passing.head == head
-
-
-def test_a_claim_of_part_of_the_hand_is_refused_and_leaves_the_round_as_it_stood(passing: PassingGame) -> None:
-    seat = seat_on_turn(passing)
-    standing, hands, head = passing.state, every_hand(passing), passing.head
-
-    with pytest.raises(IllegalMove, match="whole hand"):
-        passing.submit(
-            Move(player=seat, action=Declare(claim=PassingClaim.WIN, indices=frozenset({FIRST_CARD}))),
-            base_seq=passing.head,
-        )
-
-    assert passing.state == standing
-    assert every_hand(passing) == hands
-    assert passing.head == head
-
-
-def test_a_confirmed_claim_decides_the_round_and_shows_the_hand_it_was_made_from(passing: PassingGame) -> None:
-    winner = play_to_a_claim(passing, Random(SEED).choice)
+def test_a_hand_that_wins_decides_its_round_and_shows_the_cards_it_won_with(passing: PassingGame) -> None:
+    winner = play_to_a_win(passing, Random(SEED).choice)
 
     assert passing.state.phase == PassingPhase.DECIDED
     assert passing.state.winner == winner
@@ -233,8 +182,8 @@ def test_a_confirmed_claim_decides_the_round_and_shows_the_hand_it_was_made_from
     assert all(not game_card.face_down for game_card in passing.board.zone(hand_of(winner)).cards)
 
 
-def test_the_table_reads_the_hand_a_confirmed_claim_was_made_from(passing: PassingGame) -> None:
-    winner = play_to_a_claim(passing, Random(SEED).choice)
+def test_the_table_reads_the_hand_a_round_was_won_with(passing: PassingGame) -> None:
+    winner = play_to_a_win(passing, Random(SEED).choice)
     onlooker = (winner + 1) % SEATS
 
     view = passing.view(observer=onlooker)
@@ -242,15 +191,60 @@ def test_the_table_reads_the_hand_a_confirmed_claim_was_made_from(passing: Passi
     assert view.zones[hand_of(winner)].cards == passing.board.zone(hand_of(winner)).cards
 
 
-def test_the_round_a_claim_won_is_scored_into_the_standing_and_the_next_one_dealt(passing: PassingGame) -> None:
-    winner = play_to_a_claim(passing, Random(SEED).choice)
-    leader = passing.state.led_by
+def test_a_win_lands_in_the_transaction_of_the_move_that_completed_the_hand(passing: PassingGame) -> None:
+    """A move leaving a winning hand behind carries the award, so no window of latency comes between them."""
+    winner = play_to_a_win(passing, Random(SEED).choice)
+    deciding = passing.journal.transactions[passing.head - 1]
+
+    assert deciding.move is not None
+    assert passing.snapshot(passing.head - 1).state.winner is None
+    assert passing.snapshot(passing.head).state.winner == winner
+
+
+def test_the_round_a_win_took_is_scored_into_the_standing_and_the_next_one_dealt(passing: PassingGame) -> None:
+    winner = play_to_a_win(passing, Random(SEED).choice)
+    standing, leader = passing.state.points, passing.state.led_by
+    assert standing is not None
 
     passing.settle()
 
-    assert passing.state.points == tuple(ROUND_POINT if seat == winner else NOTHING for seat in range(SEATS))
+    assert passing.state.points == tuple(
+        scored + (ROUND_POINT if seat == winner else NOTHING) for seat, scored in enumerate(standing)
+    )
     assert passing.state.phase == PassingPhase.PASSING
     assert passing.state.round_number > FIRST_ROUND
     assert passing.state.led_by == (leader + 1) % SEATS
     assert passing.state.winner is None
     assert passing.state.round_points == (NOTHING,) * SEATS
+
+
+def test_a_seat_offered_a_move_is_never_holding_a_win(passing: PassingGame) -> None:
+    """The turn stands only with a hand holding no win, which is what leaves the award nothing to decide."""
+    chooser = Random(SEED)
+    while True:
+        moves = passing.legal_moves(passing.position)
+        if not moves:
+            if not passing.settle():
+                return
+
+            continue
+
+        seat = passing.state.current
+        assert seat is not None
+        assert not declares(held_by(passing, seat))
+        passing.submit(chooser.choice(moves), base_seq=passing.head)
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_a_deal_reading_a_win_decides_its_round_before_a_seat_acts(seed: int) -> None:
+    """A table opens on a round with a turn to take, whatever the deal it was given.
+
+    A fourth card dealt into three that read alike wins where no seat has yet acted, and the table settles that
+    round away as it is built, so every driver beyond this finds a seat on turn holding no win.
+    """
+    game = a_match(SEATS, JOKERED_DECK, seed)
+
+    assert game.state.phase == PassingPhase.PASSING
+    assert game.state.current is not None
+    assert not declares(held_by(game, game.state.current))
+    assert game.legal_moves(game.position) != ()

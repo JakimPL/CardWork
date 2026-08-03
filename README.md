@@ -97,7 +97,7 @@ Rules that more than one game wants live in the framework, each in a layer of it
 
 | game | plays | reads for |
 |---|---|---|
-| `cardgames.passing` | a sequential turn: one exchange with the pile, then a pass or a claim of a win | a game whose rules ask a question about cards |
+| `cardgames.passing` | a sequential turn: one exchange with the pile, then a pass round the table | a game whose rules ask a question about cards |
 | `cardgames.showdown` | a simultaneous turn: every seat commits one sealed card, and they turn over together | a game whose turn belongs to the whole table |
 
 `tests/games/demo.py` is a smaller exercise game: a simultaneous round with sealed commitments, a reveal,

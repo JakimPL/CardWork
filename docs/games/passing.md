@@ -1,9 +1,9 @@
 # Passing
 
 `cardgames.passing` is a game of four cards: three in every hand, a fourth travelling round the table, and a
-win claimed the moment three of the four a seat holds read as one rank or one suit. It seats two to eight,
-plays over any number of whole standard decks and any number of jokers, and runs until one seat leads the
-next best by two points.
+win falling to the seat the moment three of the four it holds read as one rank or one suit. It seats two to
+eight, plays over any number of whole standard decks and any number of jokers, and runs until one seat leads
+the next best by two points.
 
 It is the first game written on this framework, so what it needs and what it inherits are worth reading
 together: it states four modules of its own — the cursor, the table, the rules, the hooks — and asks
@@ -21,9 +21,9 @@ game = PassingGame(players=4, deck=standard_decks(1, black_jokers=1, red_jokers=
 **A round deals three cards to every seat and a fourth to the seat leading it**, from the pile that holds the
 gathered deck. Exactly one seat holds four cards at a time, and the turn travels with that card.
 
-**A turn admits one exchange and closes on a pass or a claim.** The seat on turn may give one held card up for
-the top of the pile, the card it gives up going face up on the stack. It then either claims a win or passes one
-card to the seat next round the table, which closes the turn.
+**A turn admits one exchange and closes on a pass.** The seat on turn may give one held card up for the top of
+the pile, the card it gives up going face up on the stack. It then passes one card to the seat next round the
+table, which closes the turn.
 
 **A hand of four wins where some three of it read as one rank or as one suit, while the four do not.** A joker
 stands in for whatever the three asks of it. That single sentence settles every hand:
@@ -45,9 +45,16 @@ declare nothing, since the lone natural card — or none — leaves the four rea
 Cards from different decks count as themselves, so three spade cards are three of a suit where two of them are
 the same spade. `rules.PASSING_EVALUATION` states that as `Duplicates.COUNT`.
 
-**A confirmed claim wins the round and scores its seat one point.** The hand turns face up as the claim lands,
-so the table reads the win the rules confirmed. **An exhausted pile draws the round** as the turn it ran out on
-closes, and scores nobody — which leaves the seat that took the last card free to claim the win it drew.
+**A win takes the round and scores its seat one point, and needs no claim to do it.** A seat holding a win has
+nothing to gain by passing it on, so there is no decision here for a move to carry: the rules award the win the
+moment the cards read one, and the hand turns face up so the table reads what took the round. **An exhausted pile
+draws the round** as the turn it ran out on closes, and scores nobody — the seat that took the last card is still
+awarded the win it drew.
+
+The award travels in the transaction that dealt or completed the hand, so a seat is never offered a move while
+holding a win and no stretch of latency comes between holding one and being given it. Because a hand reading a
+win ends its round at once, a pile of forty-odd cards outlives no run of play, which leaves the drawn round a
+rule the game keeps rather than one it reaches.
 
 **The match belongs to the first seat leading the next best by two points.** The first round is led by a seat
 drawn at random, each later round by the seat after the previous leader, which is what `RoundGame` arrives
@@ -59,7 +66,7 @@ with.
 
 | zone | holds | read by |
 |---|---|---|
-| `hand:p` | the three cards a seat holds, four while it has the turn | its owner, and the whole table once a claim shows it |
+| `hand:p` | the three cards a seat holds, four while it has the turn | its owner, and the whole table once a win shows it |
 | `pile` | the rest of the deck, face down | nobody, its size besides |
 | `stack` | every card given up in an exchange, face up | everybody |
 
@@ -75,13 +82,10 @@ difference between what a seat may take and what it has given up.
 |---|---|
 | `Take(group="pile", indices={i})` | the exchange: give up card *i*, take the top of the pile |
 | `Give(target_player=p, indices={i})` | the pass: hand card *i* to the seat next round the table |
-| `Declare(claim="win", indices=set())` | the claim: this whole hand is a win |
 
-Every one of them names positions in the seat's own hand, and the group or the seat it names is the other side
-of the move. A claim is of the whole hand, which an empty set of indices states and a full set states as well.
-
-`PassingClaim` holds the word a claim carries, so the vocabulary a client sends is closed and read by a
-`match`. A refusal names the rule it comes from:
+Both name positions in the seat's own hand, and the group or the seat they name is the other side of the move.
+Two intents are the whole vocabulary, because the third thing a seat could do with a hand — say that it wins —
+is a thing the cards say for themselves. A refusal names the rule it comes from:
 
 | the move | the refusal |
 |---|---|
@@ -89,12 +93,11 @@ of the move. A claim is of the whole hand, which an empty set of indices states 
 | an exchange with the pile run out | `Seat 2 exchanges with a pile that has run out` |
 | a second exchange in one turn | `Seat 2 exchanges once in a turn, and has exchanged in this one` |
 | a pass to any seat but the next | `Seat 2 passes to seat 3, and named seat 0` |
-| a claim in another word | `Seat 2 claims a win, and claimed 'bluff'` |
-| a claim of part of the hand | `Seat 2 claims a win of its whole hand, and named [0]` |
-| a claim the hand holds back | `Seat 2 claims a win its hand holds back: three cards read alike, and the four do not` |
+| a card the hand does not hold | `Seat 2 named position 4 of a hand holding 4` |
+| any other intent | `Seat 2 exchanges or passes, and offered play` |
 
-`legal_moves` lists every exchange and pass the turn admits, and a claim where the hand does declare, so a
-solver reading the list plays by the rules alone and a refused claim is one a client made up.
+`legal_moves` lists every exchange and pass the turn admits, which is every move there is to make, so a solver
+reading the list plays by the rules alone.
 
 ---
 
@@ -112,13 +115,17 @@ against the one `phase` field:
 
 `PassingState` adds the two things a round tracks beyond the cursor every match keeps: `swapped`, which states
 that the turn has spent its exchange and reads False again as the turn passes on, and `winner`, which names the
-seat whose claim the rules confirmed.
+seat the round belongs to.
 
-**Every change a round makes answers a move.** The exchange a turn spends, the turn a pass hands on, the outcome
-a claim or an exhausted pile settles: each lands in the transaction of the move that prompted it, so
-`advance_round` finds nothing owed on a settlement pass and hands the table straight to the boundary. What the
-boundary then does — the round scored into the standing, the gather, the shuffle, the next deal, the next leader
-— is `cardwork.rounds`, written once for every game.
+**A move carries every change it causes, and a deal is answered on the settlement that follows it.** The exchange
+a turn spends, the turn a pass hands on, the win the hand left behind reads, the draw an exhausted pile settles:
+each lands in the transaction of the move that prompted it, which is what keeps a window of latency out of an
+award nobody chose. The one win no move puts on the table is the one a fresh deal lays out, and `advance_round`
+answers for that on a settlement pass — so a game built here settles once before service, leaving a round in
+play with a seat on turn.
+
+What the boundary then does — the round scored into the standing, the gather, the shuffle, the next deal, the
+next leader — is `cardwork.rounds`, written once for every game.
 
 ---
 

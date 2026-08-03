@@ -194,7 +194,7 @@ position of every round.
 ## 5. What a game states for itself
 
 **A game of four cards** (`cardgames.passing`) plays rounds until one seat leads the next best by two, so its
-`match_over` reads the standing. Its round writes its own outcome — a confirmed claim, or a pile run out — into
+`match_over` reads the standing. Its round writes its own outcome — a hand that wins, or a pile run out — into
 a phase of its own as the move that settles it lands, and `round_over` reads that phase. A round scores one
 point to its winner and nothing to anybody in a draw, which its `round_points` states as the win lands.
 `docs/games/passing.md` states the game whole.

@@ -4,10 +4,10 @@ from typing import Final
 import pytest
 
 from cardgames.passing.game import PassingGame
-from cardgames.passing.rules import HAND_ON_TURN, HAND_SIZE, PassingClaim, declares
+from cardgames.passing.rules import HAND_ON_TURN, HAND_SIZE
 from cardgames.passing.zones import PILE, STACK, TOP_OF_THE_PILE, hand_of
 from cardwork.exceptions import IllegalMove, NotYourTurn
-from cardwork.moves.actions import Declare, Give, Play, Take
+from cardwork.moves.actions import Give, Play, Take
 from cardwork.moves.move import Move
 from cardwork.rounds.seating import next_seat
 from cardwork.zones.zone import cards_of
@@ -19,10 +19,10 @@ from .driving import (
     SEED,
     every_hand,
     exchange,
-    exchange_until_the_pile_runs_out,
     held_by,
     pass_on,
     seat_on_turn,
+    with_the_pile_run_out,
 )
 
 LAST_CARD: Final[int] = -1
@@ -59,16 +59,16 @@ def test_a_second_exchange_in_one_turn_is_refused_and_leaves_the_round_as_it_sto
     assert passing.head == head
 
 
-def test_an_exchange_with_a_pile_run_out_is_refused_and_leaves_the_round_as_it_stood(two_seats: PassingGame) -> None:
-    exchange_until_the_pile_runs_out(two_seats)
-    standing, hands, head = two_seats.state, every_hand(two_seats), two_seats.head
+def test_an_exchange_with_a_pile_run_out_is_refused(passing: PassingGame) -> None:
+    position = with_the_pile_run_out(passing)
+    seat = position.state.current
+    assert seat is not None
 
     with pytest.raises(IllegalMove, match="pile that has run out"):
-        exchange(two_seats, FIRST_CARD)
-
-    assert two_seats.state == standing
-    assert every_hand(two_seats) == hands
-    assert two_seats.head == head
+        passing.validate(
+            position,
+            Move(player=seat, action=Take(group=PILE, indices=frozenset({FIRST_CARD}))),
+        )
 
 
 def test_an_exchange_with_a_zone_other_than_the_pile_is_refused(passing: PassingGame) -> None:
@@ -152,7 +152,7 @@ def test_naming_a_position_the_hand_does_not_hold_is_refused(passing: PassingGam
 def test_an_intent_this_game_leaves_out_is_refused(passing: PassingGame) -> None:
     seat = seat_on_turn(passing)
 
-    with pytest.raises(IllegalMove, match="exchanges, passes or claims a win"):
+    with pytest.raises(IllegalMove, match="exchanges or passes"):
         passing.submit(
             Move(player=seat, action=Play(group=STACK, indices=frozenset({FIRST_CARD}))),
             base_seq=passing.head,
@@ -169,7 +169,7 @@ def test_a_seat_the_turn_stands_away_from_is_refused(passing: PassingGame) -> No
         )
 
 
-def test_the_moves_listed_are_the_exchanges_the_passes_and_a_claim_the_hand_holds(passing: PassingGame) -> None:
+def test_the_moves_listed_are_the_exchanges_and_the_passes_the_turn_admits(passing: PassingGame) -> None:
     seat = seat_on_turn(passing)
 
     moves = passing.legal_moves(passing.position)
@@ -177,9 +177,7 @@ def test_the_moves_listed_are_the_exchanges_the_passes_and_a_claim_the_hand_hold
     assert all(move.player == seat for move in moves)
     assert len(tuple(move for move in moves if isinstance(move.action, Take))) == HAND_ON_TURN
     assert len(tuple(move for move in moves if isinstance(move.action, Give))) == HAND_ON_TURN
-    assert tuple(move.action for move in moves if isinstance(move.action, Declare)) == (
-        (Declare(claim=PassingClaim.WIN, indices=frozenset()),) if declares(held_by(passing, seat)) else ()
-    )
+    assert len(moves) == HAND_ON_TURN + HAND_ON_TURN
 
 
 def test_a_spent_exchange_leaves_the_passes_on_the_list(passing: PassingGame) -> None:
@@ -191,10 +189,10 @@ def test_a_spent_exchange_leaves_the_passes_on_the_list(passing: PassingGame) ->
     assert len(tuple(move for move in moves if isinstance(move.action, Give))) == HAND_ON_TURN
 
 
-def test_a_pile_run_out_leaves_the_passes_on_the_list(two_seats: PassingGame) -> None:
-    exchange_until_the_pile_runs_out(two_seats)
+def test_a_pile_run_out_leaves_the_passes_on_the_list(passing: PassingGame) -> None:
+    position = with_the_pile_run_out(passing)
 
-    moves = two_seats.legal_moves(two_seats.position)
+    moves = passing.legal_moves(position)
 
     assert all(not isinstance(move.action, Take) for move in moves)
     assert len(tuple(move for move in moves if isinstance(move.action, Give))) == HAND_ON_TURN

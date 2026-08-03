@@ -7,7 +7,6 @@ from cardgames.passing.rules import (
     NOTHING,
     ROUND_POINT,
     WINNING_LEAD,
-    PassingClaim,
     declares,
 )
 from cardgames.passing.state import PassingPhase, PassingState
@@ -16,14 +15,14 @@ from cardwork.decks.deck import Deck, Indices
 from cardwork.decks.standard import ONE_DECK, standard_multiplicity
 from cardwork.effects.effects import Effects, MoveCards, SetFace, SetState
 from cardwork.exceptions import IllegalMove
-from cardwork.moves.actions import Declare, Give, Take
+from cardwork.moves.actions import Give, Take
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.rounds.game import RoundGame
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import next_seat, rotation
 from cardwork.rounds.state import MatchPhase
-from cardwork.zones.zone import Zone, Zones, cards_of
+from cardwork.zones.zone import Zones, cards_of
 
 SEATS_LEAST: Final[int] = 2
 SEATS_MOST: Final[int] = 8
@@ -31,36 +30,53 @@ ONE_CARD: Final[int] = 1
 BEST: Final[int] = 0
 NEXT_BEST: Final[int] = 1
 
-type PassingIntent = Take | Give | Declare
+type PassingIntent = Take | Give
 
 
 def intent(move: Move) -> PassingIntent:
-    """The intent behind a move, which is an exchange with the pile, a pass, or a claim of a win.
+    """The intent behind a move, which is an exchange with the pile or a pass to the next seat.
 
     Raises:
         IllegalMove: when the move carries some other intent.
     """
     action = move.action
-    if isinstance(action, Take | Give | Declare):
+    if isinstance(action, Take | Give):
         return action
 
-    raise IllegalMove(f"Seat {move.player} exchanges, passes or claims a win, and offered {action.kind}")
+    raise IllegalMove(f"Seat {move.player} exchanges or passes, and offered {action.kind}")
 
 
 class PassingGame(RoundGame[PassingState]):
-    """A match of rounds in which a fourth card circulates and a seat claims a win on three cards reading alike.
+    """A match of rounds in which a fourth card circulates and a win falls to the seat whose three read alike.
 
     A round deals three cards to every seat and a fourth to the seat leading it, so exactly one seat holds four
     at a time and the turn travels with that card. A turn admits one exchange with the top of the pile, the card
-    given up going face up on the stack, and closes with a claim or with a card passed to the next seat.
+    given up going face up on the stack, and closes with a card passed to the next seat.
 
     A hand of four wins where some three of it read as one rank or as one suit while the four do not, a joker
-    standing in for whatever the three asks of it. `rules.declares` holds that rule whole. A confirmed claim
-    turns the hand face up and scores its seat a point; an exhausted pile draws the round as the turn it ran out
-    on closes, and scores nobody. The match belongs to the first seat leading the next best by two points.
+    standing in for whatever the three asks of it. `rules.declares` holds that rule whole. A win needs no claim:
+    a seat holding one has nothing to gain by passing it on, so the rules take it the moment the cards read it,
+    turning the hand face up and scoring its seat a point. An exhausted pile draws the round as the turn it ran
+    out on closes, and scores nobody. The match belongs to the first seat leading the next best by two points.
 
         game = PassingGame(players=4, deck=standard_decks(1, black_jokers=1, red_jokers=1), rng=Random(7))
     """
+
+    def __init__(
+        self,
+        players: int,
+        deck: Deck,
+        *,
+        rng: Random | None = None,
+    ) -> None:
+        """A table dealt its first round, settled to the point a seat has a turn to take.
+
+        A deal that already reads a win decides its round before any seat acts, so the table settles here until
+        it stands on a round with someone to act, which is what every driver and adapter beyond this expects of
+        a table it has just opened.
+        """
+        super().__init__(players, deck, rng=rng)
+        self.settle()
 
     def zones(self, players: int, deck: Deck) -> Zones:
         return passing_zones(players, deck)
@@ -118,17 +134,19 @@ class PassingGame(RoundGame[PassingState]):
         move: Move | None,
         rng: Random,
     ) -> Effects[PassingState]:
-        """The cursor the round stands on once a seat has acted, which is the whole of what a round owes.
+        """The cursor the round stands on once a seat has acted, and the win the cards may already read.
 
-        Every change a round makes answers a move — the exchange a turn has spent, the turn a pass hands on, the
-        outcome a confirmed claim or an exhausted pile settles — so a settlement pass finds a round at rest and
-        hands the table to the boundary.
+        A move carries the turn it spends and the turn it hands on, and the win the hand it leaves behind reads
+        travels in the same transaction, so a seat is awarded a win in the moment it holds one and no stretch of
+        latency stands between the two. A settlement pass answers with the win a fresh deal laid out, which is
+        the one no move put there.
         """
         if move is None:
-            return ()
+            return self._decided(position)
 
-        acted: Effects[PassingState] = (SetState(state=self._acted(position, move)),)
-        return acted
+        acted = self._acted(position, move)
+        settled: Effects[PassingState] = (SetState(state=acted),)
+        return settled + self._decided(position.with_state(acted))
 
     def round_over(self, position: Position[PassingState]) -> bool:
         return position.state.phase == PassingPhase.DECIDED
@@ -143,7 +161,7 @@ class PassingGame(RoundGame[PassingState]):
         return standing[BEST] - standing[NEXT_BEST] >= WINNING_LEAD
 
     def validate(self, position: Position[PassingState], move: Move) -> None:
-        """Read the move as one of the three a turn is made of, and hold it to the rules of that one.
+        """Read the move as one of the two a turn is made of, and hold it to the rules of that one.
 
         Raises:
             IllegalMove: when the move carries another intent, or breaks a rule of the intent it carries.
@@ -155,16 +173,13 @@ class PassingGame(RoundGame[PassingState]):
             case Give() as passing:
                 self._validate_pass(position, move.player, passing)
 
-            case Declare() as claim:
-                self._validate_claim(position, move.player, claim)
-
     def expand(
         self,
         position: Position[PassingState],
         move: Move,
         rng: Random,
     ) -> Effects[PassingState]:
-        """The cards a move moves: the exchange with the pile, the pass to the next seat, the claim shown."""
+        """The cards a move moves: the exchange with the pile, or the pass to the next seat."""
         match intent(move):
             case Take() as exchange:
                 return self._exchanged(move.player, exchange.indices)
@@ -172,14 +187,11 @@ class PassingGame(RoundGame[PassingState]):
             case Give() as passing:
                 return self._passed(move.player, passing)
 
-            case Declare():
-                return self._shown(position, move.player)
-
     def legal_moves(self, position: Position[PassingState]) -> Moves:
-        """Every exchange, pass and claim the seat on turn may make.
+        """Every exchange and pass the seat on turn may make.
 
-        A claim appears among them where the hand does declare, so a listed move is one the rules go on to
-        confirm, and a solver reading this list plays the game by its rules alone.
+        A hand that wins is awarded the round in the transaction that dealt or completed it, so a seat reading
+        this list holds no win and has only these two to weigh.
         """
         return tuple(move for seat in sorted(position.state.to_act) for move in self._turn_of(position, seat))
 
@@ -202,12 +214,7 @@ class PassingGame(RoundGame[PassingState]):
             )
             for place in places
         )
-        claims = (
-            (Move(player=seat, action=Declare(claim=PassingClaim.WIN, indices=frozenset())),)
-            if declares(cards_of(held))
-            else ()
-        )
-        return exchanges + passes + claims
+        return exchanges + passes
 
     def _may_exchange(self, position: Position[PassingState]) -> bool:
         """Whether the turn still holds its exchange and the pile a card for it to take."""
@@ -256,41 +263,6 @@ class PassingGame(RoundGame[PassingState]):
             raise IllegalMove(f"Seat {seat} passes to seat {following}, and named seat {passing.target_player}")
 
         self._validate_one_held(position, seat, passing.indices)
-
-    def _validate_claim(
-        self,
-        position: Position[PassingState],
-        seat: int,
-        claim: Declare,
-    ) -> None:
-        """Confirm the claim is of a win, made of the whole hand, and that the hand holds the win it claims.
-
-        Raises:
-            IllegalMove: when the claim carries another word, names part of the hand, or is made of a hand
-                whose four cards read alike or whose three do not.
-        """
-        held = position.board.zone(hand_of(seat))
-        match claim.claim:
-            case PassingClaim.WIN:
-                self._validate_win(seat, held, claim.indices)
-
-            case _:
-                raise IllegalMove(f"Seat {seat} claims a {PassingClaim.WIN}, and claimed {claim.claim!r}")
-
-    def _validate_win(self, seat: int, held: Zone, indices: Indices) -> None:
-        """Confirm a claim of a win is made of the whole hand and that the hand declares one.
-
-        Raises:
-            IllegalMove: when the claim names part of the hand, or when the hand holds the win back.
-        """
-        whole_hand = frozenset(range(len(held.cards)))
-        if indices and indices != whole_hand:
-            raise IllegalMove(f"Seat {seat} claims a win of its whole hand, and named {sorted(indices)}")
-
-        if not declares(cards_of(held)):
-            raise IllegalMove(
-                f"Seat {seat} claims a win its hand holds back: three cards read alike, and the four do not"
-            )
 
     def _validate_one_held(
         self,
@@ -343,12 +315,29 @@ class PassingGame(RoundGame[PassingState]):
         )
         return passed
 
+    def _decided(self, position: Position[PassingState]) -> Effects[PassingState]:
+        """The win the hand on turn reads, shown and scored, or nothing where the hand holds none.
+
+        A win asks nothing of the seat holding it: passing it on gives it up and gains that seat nothing, so
+        there is no decision here for a move to carry and the rules take the win as soon as the cards read it.
+        A hand of three cards never reads one, which leaves every seat off turn out of this.
+        """
+        seat = position.state.current
+        if seat is None:
+            return ()
+
+        held = position.board.zone(hand_of(seat))
+        if not declares(cards_of(held)):
+            return ()
+
+        return self._shown(position, seat) + (SetState(state=self._won_by(position, seat)),)
+
     def _shown(
         self,
         position: Position[PassingState],
         seat: int,
     ) -> Effects[PassingState]:
-        """The claiming hand turned face up, so the table reads the win the rules confirmed."""
+        """The winning hand turned face up, so the table reads the win the round closed on."""
         held = len(position.board.zone(hand_of(seat)).cards)
         shown: Effects[PassingState] = (
             SetFace(
@@ -372,9 +361,6 @@ class PassingGame(RoundGame[PassingState]):
             case Give():
                 return self._handed_on(position, move.player)
 
-            case Declare():
-                return self._won_by(position, move.player)
-
     def _handed_on(
         self,
         position: Position[PassingState],
@@ -382,8 +368,7 @@ class PassingGame(RoundGame[PassingState]):
     ) -> PassingState:
         """The turn a pass hands to the next seat, and the round drawn where the pile has run out.
 
-        A turn closes on its pass, so the exchange that empties the pile leaves the seat making it free to
-        claim the win it drew.
+        A turn closes on its pass, so the exchange that empties the pile is still awarded the win it drew.
         """
         if not position.board.zone(PILE).cards:
             return self._drawn(position)
@@ -402,7 +387,7 @@ class PassingGame(RoundGame[PassingState]):
         position: Position[PassingState],
         winner: int,
     ) -> PassingState:
-        """The round decided by a confirmed claim, which scores its winner the point a round is worth."""
+        """The round decided by a hand that wins, which scores its winner the point a round is worth."""
         return position.state.with_changes(
             phase=PassingPhase.DECIDED,
             to_act=frozenset(),
