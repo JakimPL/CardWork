@@ -20,7 +20,7 @@ from cardwork.zones.zone import Zones
 SETTLE_LIMIT: Final[int] = 64
 
 
-class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
+class Game(ABC, Generic[StateT]):
     """One table under way: the record of everything committed to it, and the rules driving what may be.
 
     A game subclasses this with its own state type and fills in the rules hooks — how the table is laid
@@ -49,7 +49,10 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
         self._validate_initial_deck(deck)
 
         origin = Position(
-            board=Board(zones=self.zones(players, deck), starting_deck=deck),
+            board=Board(
+                zones=self.zones(players, deck),
+                starting_deck=deck,
+            ),
             state=self._initialize(players),
             players=players,
         )
@@ -60,15 +63,17 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
         self._rng = rng if rng is not None else Random()
 
         deal = self._deal_cards(origin, self._rng)
+        effects = deal + self.advance(
+            fold(deal, origin),
+            None,
+            self._rng,
+        )
+
         self._commit(
             Transaction(
                 seq=0,
                 move=None,
-                effects=deal
-                + self.advance(
-                    fold(deal, origin),
-                    None,
-                ),
+                effects=effects,
             ),
         )
 
@@ -198,7 +203,7 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
         """
         settled: list[Transaction[StateT]] = []
         for _ in range(SETTLE_LIMIT):
-            effects = self.advance(self.position, None)
+            effects = self.advance(self.position, None, self._rng)
             if not effects:
                 return tuple(settled)
 
@@ -236,9 +241,10 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
         move back sends a further move retracting it, which leaves the record every seat reads strictly
         append-only.
 
-        The generator keeps whatever it drew for the dropped commit, so submitting the same move again
-        draws afresh and may resolve differently. Replay stays exact throughout, since a transaction
-        records the outcome of every draw that went into it.
+        The generator keeps whatever it drew for the dropped commit, so reaching that position again draws
+        afresh and may resolve differently — the same move re-submitted, and the same settlement asked for
+        a second time, each shuffle and each seat drawn anew. Replay stays exact throughout, since a
+        transaction records the outcome of every draw that went into it.
 
         Raises:
             UndoUnavailable: when every commit the journal holds has already been published.
@@ -292,7 +298,7 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
         self.authorize(position, move)
         self.validate(position, move)
         effects = self.expand(position, move, rng)
-        return effects + self.advance(fold(effects, position), move)
+        return effects + self.advance(fold(effects, position), move, rng)
 
     def _basic_initial_validation(self, players: int, deck: Deck) -> None:
         if players < 1:
@@ -362,12 +368,16 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
         self,
         position: Position[StateT],
         move: Move | None,
+        rng: Random,
     ) -> Effects[StateT]:
         """The changes the rules owe once a position is reached: whose turn it becomes, which phase opens, what scores.
 
         Args:
             position: the position the move's own effects have already been folded into.
             move: the move that led here, and None while the table settles on its own.
+            rng: the generator to consume where the rules draw as they carry the table onward — the shuffle
+                that opens the next round, the seat that leads it. Every draw reaches the journal inside the
+                effect it decided, so replay reproduces it from the record.
 
         Returns:
             The effects carrying the table onward, and an empty run once it has come to rest.

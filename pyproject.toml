@@ -58,6 +58,7 @@ disable = [
     "too-few-public-methods",
     "too-many-instance-attributes",
     "too-many-function-args",
+    "too-many-public-methods",
     "line-too-long",
 ]
 
@@ -69,6 +70,7 @@ include_external_packages = true
 name = "Layered architecture"
 type = "layers"
 layers = [
+    "cardwork.rounds",
     "cardwork.games",
     "cardwork.views",
     "cardwork.transactions",
@@ -103,7 +105,14 @@ layers = [
 name = "Core is transport-free"
 type = "forbidden"
 source_modules = ["cardwork"]
-forbidden_modules = ["cardserver", "fastapi", "starlette", "httpx", "asyncio", "requests"]
+forbidden_modules = [
+    "cardserver",
+    "fastapi",
+    "starlette",
+    "httpx",
+    "asyncio",
+    "requests",
+]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib --strict-markers"

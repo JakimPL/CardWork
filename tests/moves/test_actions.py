@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from cardwork.moves.actions import AnyAction, Discard, Give, Play, Reject, Take
+from cardwork.moves.actions import AnyAction, Declare, Discard, Give, Play, Reject, Take
 from cardwork.moves.move import Move
 
 ACTIONS = (
@@ -10,6 +10,7 @@ ACTIONS = (
     Give(target_player=2, indices=frozenset({1, 3})),
     Reject(indices=frozenset({4})),
     Discard(group="hand", indices=frozenset({0})),
+    Declare(claim="three of a rank", indices=frozenset({0, 1, 3})),
 )
 
 
@@ -21,6 +22,14 @@ def test_a_move_round_trips_every_field_of_the_action_it_carries(action: AnyActi
 
     assert restored == move
     assert type(restored.action) is type(action)
+
+
+def test_a_declaration_carries_a_claim_made_of_no_named_card() -> None:
+    move = Move(player=1, action=Declare(claim="a winning hand", indices=frozenset()))
+
+    restored = Move.model_validate_json(move.model_dump_json())
+
+    assert restored == move
 
 
 def test_a_move_rejects_an_action_of_an_unrecorded_kind() -> None:

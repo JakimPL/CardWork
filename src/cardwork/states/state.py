@@ -2,6 +2,8 @@ from typing import Self, TypeVar
 
 from cardwork.models.base import BaseFrozen
 
+type Points = tuple[int, ...]
+
 
 class GameState(BaseFrozen):
     """The rules cursor every game shares: which phase is running, who owes an action, and the score.
@@ -13,7 +15,7 @@ class GameState(BaseFrozen):
 
     phase: str
     to_act: frozenset[int] = frozenset()
-    points: tuple[int, ...] | None = None
+    points: Points | None = None
 
     @property
     def current(self) -> int | None:

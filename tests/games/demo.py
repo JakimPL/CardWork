@@ -13,7 +13,7 @@ from cardwork.games.game import Game
 from cardwork.moves.actions import Play, Take
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
-from cardwork.states.state import GameState
+from cardwork.states.state import GameState, Points
 from cardwork.zones.presets import HAND, PILE
 from cardwork.zones.zone import Zone, ZoneId, Zones
 
@@ -105,7 +105,7 @@ class DiscardGame(Game[GameState]):
             ),
         )
 
-    def advance(self, position: Position[GameState], move: Move | None) -> Effects[GameState]:
+    def advance(self, position: Position[GameState], move: Move | None, rng: Random) -> Effects[GameState]:
         state = position.state
         if move is not None:
             return (SetState(state=state.with_changes(to_act=state.to_act - {move.player})),)
@@ -125,7 +125,7 @@ class DiscardGame(Game[GameState]):
             for index in range(len(position.board.zone(hand_of(seat)).cards))
         )
 
-    def _points(self, position: Position[GameState]) -> tuple[int, ...]:
+    def _points(self, position: Position[GameState]) -> Points:
         """A point for every card a seat still holds once the round has closed."""
         return tuple(len(position.board.zone(hand_of(seat)).cards) for seat in range(position.players))
 
@@ -180,14 +180,14 @@ class SealedRoundGame(DiscardGame):
             ),
         )
 
-    def advance(self, position: Position[GameState], move: Move | None) -> Effects[GameState]:
+    def advance(self, position: Position[GameState], move: Move | None, rng: Random) -> Effects[GameState]:
         if move is not None and isinstance(move.action, Take):
             return (SetState(state=position.state.with_changes(to_act=position.state.to_act | {move.player})),)
 
         if move is None and position.state.phase == "play" and not position.state.to_act:
             return self._reveal(position)
 
-        return super().advance(position, move)
+        return super().advance(position, move, rng)
 
     def _reveal(self, position: Position[GameState]) -> Effects[GameState]:
         """Lay every sealed card face up on the discard and score what the seats held back."""
@@ -220,7 +220,7 @@ class SealedRoundGame(DiscardGame):
 class EndlessGame(DiscardGame):
     """A game whose rules carry the table in a circle, which is what `settle`'s cap answers."""
 
-    def advance(self, position: Position[GameState], move: Move | None) -> Effects[GameState]:
+    def advance(self, position: Position[GameState], move: Move | None, rng: Random) -> Effects[GameState]:
         opposite = "deal" if position.state.phase == "play" else "play"
         return (SetState(state=position.state.with_changes(phase=opposite)),)
 
@@ -262,5 +262,5 @@ class BareGame(Game[GameState]):
     def expand(self, position: Position[GameState], move: Move, rng: Random) -> Effects[GameState]:
         return ()
 
-    def advance(self, position: Position[GameState], move: Move | None) -> Effects[GameState]:
+    def advance(self, position: Position[GameState], move: Move | None, rng: Random) -> Effects[GameState]:
         return ()

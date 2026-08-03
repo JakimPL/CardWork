@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 from cardwork.effects.effect import Effect
 from cardwork.effects.effects import MoveCards, Reorder, SetFace, SetState
-from cardwork.moves.actions import Play
+from cardwork.moves.actions import Declare, Play
 from cardwork.moves.move import Move
 from cardwork.states.state import GameState
 from cardwork.transactions.transaction import Transaction
@@ -54,6 +54,21 @@ def test_a_transaction_round_trips_the_move_that_prompted_it() -> None:
     assert restored == transaction
     assert restored.move is not None
     assert isinstance(restored.move.action, Play)
+
+
+def test_a_transaction_round_trips_the_claim_a_seat_declared() -> None:
+    transaction = Transaction[GameState](
+        seq=3,
+        move=Move(player=2, action=Declare(claim="three of a suit", indices=frozenset({0, 1, 3}))),
+        effects=(SetState(state=GameState(phase="won", to_act=frozenset())),),
+    )
+
+    restored = Transaction[GameState].model_validate_json(transaction.model_dump_json())
+
+    assert restored == transaction
+    assert restored.move is not None
+    assert isinstance(restored.move.action, Declare)
+    assert restored.move.action.claim == "three of a suit"
 
 
 def test_a_transaction_round_trips_a_game_s_own_state() -> None:

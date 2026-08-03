@@ -552,9 +552,9 @@ Command(table, move, base_seq, idempotency_key)
    ├─ 5. concurrency      base_seq == journal.head                       409 StalePosition
    ├─ 6. authority        rules.authorize(position, move)                403 NotYourTurn
    ├─ 7. legality         rules.validate(position, move)                 422 IllegalMove
-   ├─ 8. expansion        rules.expand(position, move, rng) -> effects   ← RNG consumed HERE, once
+   ├─ 8. expansion        rules.expand(position, move, rng) -> effects   ← RNG resolved and recorded
    ├─ 9. application      position' = fold(effects, position)            pure
-   ├─ 10. advancement     follow = rules.advance(position', move)        turn / phase / score
+   ├─ 10. advancement     follow = rules.advance(position', move, rng)   turn / phase / score, RNG too
    ├─ 11. commit          journal.append(Transaction(head, move, effects + follow))
    │      ── adapter again ──
    ├─ 12. publish         mark published; wake every stream watching
@@ -855,7 +855,7 @@ A game that overrides any of them has found a missing hook.
 | `_final_validation(position)` | abstract | game-specific checks on the dealt position |
 | `validate(position, move)` | abstract | raise `IllegalMove` unless the move is permitted |
 | `expand(position, move, rng)` | abstract | translate an intent into primitive effects |
-| `advance(position, move)` | abstract | turn and phase transitions, scoring, terminal detection |
+| `advance(position, move, rng)` | abstract | turn and phase transitions, scoring, terminal detection |
 | `authorize(position, move)` | concrete | raise `NotYourTurn` unless this seat may act. Default: `move.player in state.to_act` |
 | `legal_moves(position)` | concrete | enumerate moves for AI and for UIs that grey out actions. Default: none |
 
@@ -863,8 +863,11 @@ Four rules for reading that surface:
 
 - **Every hook takes its subject as a parameter.** No hook reads the engine's cursor. That is P6, and it
   is why each one works on a speculative position, a replayed position, and the table's own.
-- **`rng` appears in two hooks**, `_deal_cards` and `expand`, and is non-optional in both. Elsewhere its
-  absence from the signature is the statement that the hook consumes no randomness.
+- **`rng` appears in three hooks**, `_deal_cards`, `expand` and `advance`, and is non-optional in all of
+  them. Elsewhere its absence from the signature is the statement that the hook consumes no randomness.
+  `advance` holds one because the rules draw where no seat has acted: the shuffle that opens the next round
+  and the seat that leads it are settled during settlement, and each draw reaches the journal inside the
+  effect it decided, so replay consults no generator (P2).
 - **Two hooks ship with a body**, because most games want the default and the ones that do not want to
   change a policy rather than supply a missing one. `authorize` admits the seats the cursor names;
   `legal_moves` enumerates nothing, which suits a game whose move space is wide or awkward to list and
@@ -1228,7 +1231,7 @@ play was good **given what the player knew**.
 | Truth vs. knowledge | `project_position` and `project_transaction` are the only paths from a position to the wire | a handler serializes a `Position`, a `Board`, or a `Transaction` |
 | Truth vs. knowledge, in a game's own state | `GameState.project` narrows the cursor by the game's own rule | a game declares a private field and leaves `project` inherited |
 | Identity vs. seats | the adapter maps a credential to a seat and binds it to `move.player` | a handler passes a client's `move.player` through unchecked |
-| Determinism vs. randomness | `rng` is a parameter of `_deal_cards` and `expand` only | an `Effect.apply` consults an RNG or a clock |
+| Determinism vs. randomness | `rng` is a parameter of `_deal_cards`, `expand` and `advance` only | an `Effect.apply` consults an RNG or a clock |
 | Data vs. code | `kind`-discriminated unions on effects and actions | a wire-facing field is typed as an abstract base and loses every subclass field |
 | Validation vs. assignment | `with_changes` and `revalidate_instances`; effects construct rather than `model_copy` | a `model_copy(update=...)` writes a value nothing has checked |
 | Physical vs. derived | `_deal_cards` moves cards; `advance` decides turns and phases | opening state is computed in a constructor and never reaches the journal |
