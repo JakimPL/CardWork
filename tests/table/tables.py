@@ -10,7 +10,8 @@ from cardgames.frontend.passing.layout import PASSING_SCENE
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
 from cardserver.identity import SEAT_HEADER
 from cardserver.schemas import MoveRequest
-from cardtable.catalogue import GameName, opened
+from cardtable.catalogue import opened
+from cardtable.games import GameName
 from cardtable.hosting import Hosted
 from cardtable.settings import Settings
 from cardwork.presentation.scene import Scene
@@ -26,7 +27,7 @@ NO_GRACE: Final[float] = 0.0
 BASE_URL: Final[str] = "http://cardwork"
 
 SETTINGS: Final[Settings] = Settings(
-    table=TABLE,
+    name=TABLE,
     players=PLAYERS,
     rounds=ROUNDS,
     seed=SEED,

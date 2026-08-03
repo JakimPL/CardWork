@@ -10,7 +10,11 @@ keywords = ["cards", "deck"]
 dependencies = ["pydantic>=2.9,<3"]
 
 [project.optional-dependencies]
-server = ["fastapi>=0.115,<1", "uvicorn>=0.34,<1"]
+server = [
+    "fastapi>=0.115,<1",
+    "pyyaml>=6,<7",
+    "uvicorn>=0.34,<1",
+]
 
 [project.scripts]
 cardtable = "cardtable.cli:main"
@@ -31,6 +35,7 @@ dev = [
     "pytest-asyncio==1.4.0",
     "pytest-cov==7.1.0",
     "pytest-xdist==3.8.0",
+    "types-pyyaml==6.0.12.20260724",
 ]
 
 [build-system]
@@ -101,8 +106,9 @@ layers = [
     "cardtable.cli",
     "cardtable.catalogue",
     "cardtable.hosting",
-    "cardtable.settings : cardtable.interface : cardtable.seats",
-    "cardtable.paths",
+    "cardtable.config",
+    "cardtable.settings : cardtable.service : cardtable.interface : cardtable.seats",
+    "cardtable.games : cardtable.paths",
 ]
 
 [[tool.importlinter.contracts]]

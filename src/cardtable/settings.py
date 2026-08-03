@@ -1,6 +1,10 @@
+from typing import Final
+
 from pydantic import Field
 
 from cardwork.models.base import BaseFrozen
+
+SEED: Final[int] = 20260803
 
 
 class Settings(BaseFrozen):
@@ -9,10 +13,13 @@ class Settings(BaseFrozen):
     A host holds these apart from the game itself, so the same settings open either game and the deck a
     game insists on stays that game's own business. A game plays the rounds it is given where its match runs
     to a count of them, and to a lead in points where it does not.
+
+    The seed stands at a settled number, so a run states one to deal a match other than the one it dealt
+    last time.
     """
 
-    table: str = Field(min_length=1)
+    name: str = Field(min_length=1)
     players: int = Field(ge=2)
     rounds: int = Field(ge=1)
-    seed: int
+    seed: int = SEED
     grace_seconds: float = Field(ge=0.0)

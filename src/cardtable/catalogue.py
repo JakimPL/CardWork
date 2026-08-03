@@ -1,4 +1,3 @@
-from enum import StrEnum
 from random import Random
 from typing import Final
 
@@ -6,6 +5,7 @@ from cardgames.backend.passing.game import PassingGame
 from cardgames.backend.showdown.game import ShowdownGame
 from cardgames.frontend.passing.layout import PASSING_SCENE
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
+from cardtable.games import GameName
 from cardtable.hosting import Hosted, serve
 from cardtable.settings import Settings
 from cardwork.decks.deck import Deck
@@ -14,13 +14,6 @@ from cardwork.decks.standard import standard_deck, standard_decks
 ONE_DECK: Final[int] = 1
 PASSING_DECK: Final[Deck] = standard_decks(ONE_DECK, black_jokers=1, red_jokers=1)
 SHOWDOWN_DECK: Final[Deck] = standard_deck()
-
-
-class GameName(StrEnum):
-    """The games this host puts into service, each named as a person asks for one."""
-
-    PASSING = "passing"
-    SHOWDOWN = "showdown"
 
 
 def a_passing_match(settings: Settings) -> PassingGame:

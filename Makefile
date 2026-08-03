@@ -30,4 +30,4 @@ assets:
 	uv run python scripts/assets.py
 
 play:
-	uv run cardtable --game $(or $(GAME),passing) --players $(or $(PLAYERS),3)
+	uv run cardtable $(if $(GAME),--game $(GAME)) $(if $(PLAYERS),--players $(PLAYERS))

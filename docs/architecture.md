@@ -1263,17 +1263,30 @@ meet in `cardtable`, which nothing names. It is a composition root and holds one
 
 | module | states |
 |---|---|
+| `cli` | the file a run is configured from, and every value of it a command line states instead |
 | `catalogue` | which games this host puts into service, and the deck and scene each is opened with |
 | `hosting` | one table in service: a registry, a token per seat, an application, and the page beside it |
+| `config` | the whole of one run: the game played, the table it is played at, and where that table answers |
+| `settings` | what one table is opened with: its name, its seating, its seed, its window |
+| `service` | where a table answers, and how much of what it does reaches a log |
 | `interface` | a built player interface served from the root of the same application |
 | `seats` | a token per seat, drawn as the table opens |
-| `settings` | what one table is opened with: its name, its seating, its seed, its window |
-| `paths` | where the checkout keeps what a host reads off disk: the artwork, the interface and its build |
+| `games` | the names a person asks for a game by, which the catalogue turns into rules |
+| `paths` | where the checkout keeps what a host reads off disk: the configuration, the artwork, the page |
 
 `catalogue.opened(game, settings)` is the whole of it, and `catalogue` is the one module of the repository
 naming `cardgames`. The state type of the game is bound inside that call and stays there: `Hosted` names an
 application, a table name, the tokens and the page, none of which is generic, which is what lets one host
 open games whose cursors are of different shapes through the one entry point.
+
+**One file states a run, and a command line states where a run departs from it.** `config.yaml` beside the
+repository holds the game played, the table it is played at and where that table answers, and
+`Configuration.read` validates the whole of it as it is read: every field is asked for outright, so a value
+left out is refused at the file rather than met as a surprise at the table, and a key the configuration holds
+no field for is refused with it. The seed and the port stand at settled numbers, since a local run deals the
+same match and answers at the same address until it is told otherwise. Each option of the command line stands
+empty until it is given, and an option left alone is answered by the file — so a value a person turns lives
+in one place, and `make play` passes on only what it was handed.
 
 **Every path a run reads is stated in `paths`, at the foot of the host.** One module climbs from its own
 file to the checkout, and the artwork, the interface and its build are named from there — so a directory
@@ -1432,6 +1445,7 @@ play was good **given what the player knew**.
 | What a game states vs. how it looks | `presentation` holds zone ids, kinds of move and fields of the cursor | a layout carries a measurement, or an interface branches on a zone id or a phase |
 | A game's rules vs. its layout | the `Rules know no presentation` contract; `backend` and `frontend` per game | a rules module names a slot or a caption, or a zone id is written twice |
 | A mechanism vs. the choice of game | the `Nothing names the host` contract; `cardtable.catalogue` is the only module naming `cardgames` | a registry, a handler or a scene is reached for by a game's name outside the catalogue |
+| A value a person turns vs. one the code settles | `config.yaml` states a run; `Configuration` asks for each field outright | a default sits in a flag, a Makefile and a file at once, and a run reads whichever was edited last |
 | A round vs. a match | `rounds` sits above `games`; a game states one round and the layer states the match | a game deals its own next round, or adds its own tally into the standing |
 
 ---

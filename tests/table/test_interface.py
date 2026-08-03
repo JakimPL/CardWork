@@ -5,7 +5,7 @@ from typing import Final
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
-from cardtable.catalogue import GameName
+from cardtable.games import GameName
 from cardtable.interface import serve_interface
 
 from .tables import BASE_URL, LAYOUT, playing

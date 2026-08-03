@@ -23,7 +23,7 @@ follows is enough to start.
 make install      # uv sync --all-extras
 make check        # lint, mypy --strict, import contracts, coverage
 make test         # pytest -n auto
-make play         # open a table and answer for it; GAME=showdown PLAYERS=4 to choose
+make play         # open the table config.yaml states; GAME=showdown PLAYERS=4 to depart from it
 ```
 
 ## Writing a game
@@ -177,7 +177,28 @@ Two decisions the host makes:
 one:
 
 ```bash
+uv run cardtable                                  # the run config.yaml states
 uv run cardtable --game showdown --players 4      # or: make play GAME=showdown PLAYERS=4
+```
+
+`config.yaml` states the run: the game played, the table's name and seating, the seed and grace window it
+deals and settles with, and the address it answers at. Every option of the command line stands empty until
+it is given, so it states where one run departs from that file:
+
+```yaml
+game: passing
+
+table:
+  name: green-baize
+  players: 3
+  rounds: 3
+  seed: 20260803
+  grace_seconds: 2.0
+
+service:
+  host: 127.0.0.1
+  port: 8000
+  log_level: info
 ```
 
 It prints the address and one token per seat. Each player opens the address in a tab of their own and

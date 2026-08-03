@@ -1,0 +1,13 @@
+game: passing
+
+table:
+  name: green-baize
+  players: 3
+  rounds: 3
+  seed: 20260803
+  grace_seconds: 2.0
+
+service:
+  host: 127.0.0.1
+  port: 8421
+  log_level: info

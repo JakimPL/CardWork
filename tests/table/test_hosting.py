@@ -1,6 +1,7 @@
 from http import HTTPStatus
 
-from cardtable.catalogue import GameName, opened
+from cardtable.catalogue import opened
+from cardtable.games import GameName
 
 from .tables import PLAYERS, SETTINGS, UNSERVED, playing
 

@@ -40,13 +40,13 @@ def serve[StateT: GameState](
     the table under `/tables`, and the page itself at the root where a build of it exists.
     """
     registry = TableRegistry[StateT](settings.grace_seconds)
-    registry.open(settings.table, table, presentation)
+    registry.open(settings.name, table, presentation)
     tokens = tokens_for(table.players)
-    seats = TokenSeats({settings.table: {token: seat for seat, token in tokens.items()}})
+    seats = TokenSeats({settings.name: {token: seat for seat, token in tokens.items()}})
     app = create_app(registry, seats)
     return Hosted(
         app=app,
-        table=settings.table,
+        table=settings.name,
         tokens=tokens,
         interface=serve_interface(app, INTERFACE),
     )

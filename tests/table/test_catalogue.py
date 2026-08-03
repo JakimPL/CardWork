@@ -2,7 +2,8 @@ from http import HTTPStatus
 
 import pytest
 
-from cardtable.catalogue import GameName, a_passing_match, a_showdown_match, opened
+from cardtable.catalogue import a_passing_match, a_showdown_match, opened
+from cardtable.games import GameName
 from cardwork.presentation.layout import Layout
 
 from ..cases import descriptions
@@ -90,4 +91,4 @@ def test_a_match_of_showdown_runs_the_rounds_asked_for() -> None:
 
 
 def test_a_game_is_opened_under_the_name_the_settings_give_the_table() -> None:
-    assert opened(GameName.PASSING, SETTINGS).table == SETTINGS.table
+    assert opened(GameName.PASSING, SETTINGS).table == SETTINGS.name
