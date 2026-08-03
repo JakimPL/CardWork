@@ -1,6 +1,6 @@
 # Passing
 
-`cardgames.passing` is a game of four cards: three in every hand, a fourth travelling round the table, and a
+`cardgames.backend.passing` is a game of four cards: three in every hand, a fourth travelling round the table, and a
 win falling to the seat the moment three of the four it holds read as one rank or one suit. It seats two to
 eight, plays over any number of whole standard decks and any number of jokers, and runs until one seat leads
 the next best by two points.
@@ -129,7 +129,35 @@ next leader — is `cardwork.rounds`, written once for every game.
 
 ---
 
-## 5. What it asked the framework for
+## 5. The table on screen
+
+`cardgames.frontend.passing` states the `Scene` a player reads this game through, and states nothing of how it
+looks (`presentation.md`). Which zone lies where:
+
+| zone | lies | as |
+|---|---|---|
+| `hand:me` | in the observer's own region, fanned out | the cards it picks from |
+| `hand:other` | on that seat's plaque, as a count | what the table reads of another hand |
+| `pile` | on the shared table, a heap read by its count | a stack of backs |
+| `stack` | on the shared table, a heap read by its top card | every card given up |
+
+A turn is two gestures, one for each intent of §3:
+
+| gesture | picks in | commits onto |
+|---|---|---|
+| `Take(group="pile")` | the observer's own hand | the pile, which is what the exchange is with |
+| `Give(target_player=...)` | the observer's own hand | the seat the move names |
+
+Both pick in the hand, because the positions either intent names address the cards the seat holds: the pile's
+own positions are named by no move at all. So a card is chosen in one place and sent by pointing at where it
+goes — the pile to trade it, the next seat's plaque to pass it — and a selection alone commits nothing.
+
+The standing, the round in play and the seat a round was won by are readouts over `PassingState`. The four
+phases of §4 are captioned there as well, which is what a player reads in place of `"between_rounds"`.
+
+---
+
+## 6. What it asked the framework for
 
 Two things this game needed that the layers below it gained for every game after it:
 

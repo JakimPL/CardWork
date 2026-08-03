@@ -60,3 +60,17 @@ type AnyAction = Annotated[
     Play | Take | Give | Reject | Discard | Declare,
     Field(discriminator="kind"),
 ]
+
+
+def group_of(action: AnyAction) -> str | None:
+    """The group an intent names beside its positions, which is what tells two moves of one kind apart.
+
+    A play, an exchange and a discard each name the group they are made in. The three intents beside them
+    carry a word of their own or none at all, so a group reads as None for those.
+    """
+    match action:
+        case Play() | Take() | Discard():
+            return action.group
+
+        case Give() | Reject() | Declare():
+            return None

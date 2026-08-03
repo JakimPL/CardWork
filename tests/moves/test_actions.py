@@ -1,8 +1,13 @@
+from dataclasses import dataclass
+from typing import Final
+
 import pytest
 from pydantic import ValidationError
 
-from cardwork.moves.actions import AnyAction, Declare, Discard, Give, Play, Reject, Take
+from cardwork.moves.actions import AnyAction, Declare, Discard, Give, Play, Reject, Take, group_of
 from cardwork.moves.move import Move
+
+from ..cases import Case, descriptions
 
 ACTIONS = (
     Play(group="meld", indices=frozenset({0, 2})),
@@ -12,6 +17,51 @@ ACTIONS = (
     Discard(group="hand", indices=frozenset({0})),
     Declare(claim="three of a rank", indices=frozenset({0, 1, 3})),
 )
+
+
+@dataclass(frozen=True)
+class GroupCase(Case):
+    action: AnyAction
+    group: str | None
+
+
+GROUPS: Final[tuple[GroupCase, ...]] = (
+    GroupCase(
+        description="a play names the group it is made in",
+        action=Play(group="meld", indices=frozenset({0})),
+        group="meld",
+    ),
+    GroupCase(
+        description="an exchange names the group it is with",
+        action=Take(group="discard", indices=frozenset({0})),
+        group="discard",
+    ),
+    GroupCase(
+        description="a discard names the group it goes to",
+        action=Discard(group="hand", indices=frozenset({0})),
+        group="hand",
+    ),
+    GroupCase(
+        description="a pass names a seat in place of a group",
+        action=Give(target_player=2, indices=frozenset({0})),
+        group=None,
+    ),
+    GroupCase(
+        description="a rejection names its cards alone",
+        action=Reject(indices=frozenset({0})),
+        group=None,
+    ),
+    GroupCase(
+        description="a declaration names a claim in place of a group",
+        action=Declare(claim="three of a rank", indices=frozenset({0})),
+        group=None,
+    ),
+)
+
+
+@pytest.mark.parametrize("case", GROUPS, ids=descriptions(GROUPS))
+def test_the_group_an_intent_names_is_read_off_the_action(case: GroupCase) -> None:
+    assert group_of(case.action) == case.group
 
 
 @pytest.mark.parametrize("action", ACTIONS, ids=lambda action: action.kind)

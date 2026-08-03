@@ -254,7 +254,7 @@ Counting reads the combination's reading, so a joker standing in for the four of
 
 ## 6. What a game states for itself
 
-**A game of four cards** (`cardgames.passing`) declares a win on three cards of one rank or one suit while
+**A game of four cards** (`cardgames.backend.passing`) declares a win on three cards of one rank or one suit while
 the four are not alike. That is four questions over the same hand:
 
 ```python
@@ -268,7 +268,7 @@ matches(hand, SameRank(places=4), evaluation) or matches(hand, SameSuit(places=4
 Its evaluation counts copies, since several standard decks are in play and three spade cards are three of a
 suit even where two of them are the same spade.
 
-**A game of single cards** (`cardgames.showdown`) compares one card against another and needs one winner
+**A game of single cards** (`cardgames.backend.showdown`) compares one card against another and needs one winner
 every time, so it reads `REGULAR_ORDER` from `cardwork.cards.order` and asks this package nothing.
 
 A game states its own evaluation, its own patterns and its own ranking. What it inherits is the reading:

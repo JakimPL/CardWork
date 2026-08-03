@@ -4,9 +4,9 @@ from typing import Final
 
 import pytest
 
-from cardgames.passing.rules import HAND_ON_TURN, HAND_SIZE, NOTHING
-from cardgames.passing.state import PassingPhase, PassingState
-from cardgames.passing.zones import PILE, STACK, hand_of
+from cardgames.backend.passing.rules import HAND_ON_TURN, HAND_SIZE, NOTHING
+from cardgames.backend.passing.state import PassingPhase, PassingState
+from cardgames.backend.passing.zones import PILE, STACK, hand_of
 from cardwork.decks.standard import standard_decks
 from cardwork.effects.effects import Effects
 from cardwork.positions.position import Position

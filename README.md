@@ -7,7 +7,8 @@ Three packages:
 - **`cardwork`** — the engine. Synchronous and pure: a position is a value, a move produces another
   value, and every commit is recorded as data that replays exactly.
 - **`cardserver`** — a FastAPI adapter that puts tables into service over HTTP and server-sent events.
-- **`cardgames`** — the games written on it: `passing`, a game of four cards played in turn, and
+- **`cardgames`** — the games written on it, each stated twice over: `backend` holds a game's rules and
+  `frontend` the layout a player reads them through. `passing` is a game of four cards played in turn;
   `showdown`, a game of ten turns played at once.
 
 `docs/architecture.md` is the design and the reasoning behind it; `docs/combinations.md`, `docs/rounds.md`,
@@ -66,6 +67,33 @@ Two hooks ship with a body and are overridden only to change a policy: `authoriz
 `to_act` names, and `legal_moves`, which enumerates nothing until a game chooses to. A game that does
 enumerate has them reach every client, since a view and an event each carry the moves their observer may make.
 
+## Laying a game out
+
+A game states how it is played under `cardgames.backend.<game>` and how it is read under
+`cardgames.frontend.<game>`, which is one `Scene`:
+
+```python
+MYGAME_SCENE: Final[Scene] = Scene(
+    title="My game",
+    shared=(presets.heap(DISCARD, "Discard", place=0),),   # the zones every observer reads alike
+    held=slots_of,           # seat -> the zones it holds, where they sit, how their cards lie
+    gestures=gestures_of,    # seat -> which move a selection sends, and what is clicked to send it
+    counts=counts_of,        # seat -> the zones of its own the table reads the size of
+    readouts=READOUTS,       # Readout.of(MyState, "suit", "Trump", scope=Scope.TABLE)
+    phases=PHASES,           # what each phase is called in words
+)
+
+layout = MYGAME_SCENE.layout(players=3, observer=1)
+```
+
+`Scene.layout` reads those three functions at one seat and builds that observer's `Layout`: its own zones
+beside the shared ones, its own gestures, and a plaque for every seat. A spectator gets the shared table and
+no gesture, which is the entitlement the projection gives it over the cards — stated once here rather than in
+each game.
+
+The rules name the layout nowhere, so a game plays with no screen attached; the layout names the rules for
+their zone ids and phases, so no string is written twice. `docs/presentation.md` states the vocabulary.
+
 Four rules of thumb, each explained at length in `docs/architecture.md`:
 
 1. **Randomness is recorded, not re-rolled.** A shuffle is a `Reorder` carrying the permutation that
@@ -101,8 +129,8 @@ Rules that more than one game wants live in the framework, each in a layer of it
 
 | game | plays | reads for |
 |---|---|---|
-| `cardgames.passing` | a sequential turn: one exchange with the pile, then a pass round the table | a game whose rules ask a question about cards |
-| `cardgames.showdown` | a simultaneous turn: every seat commits one sealed card, and they turn over together | a game whose turn belongs to the whole table |
+| `cardgames.backend.passing` | a sequential turn: one exchange with the pile, then a pass round the table | a game whose rules ask a question about cards |
+| `cardgames.backend.showdown` | a simultaneous turn: every seat commits one sealed card, and they turn over together | a game whose turn belongs to the whole table |
 
 `tests/games/demo.py` is a smaller exercise game: a simultaneous round with sealed commitments, a reveal,
 scoring and take-backs.

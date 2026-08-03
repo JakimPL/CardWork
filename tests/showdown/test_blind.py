@@ -4,9 +4,9 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from cardgames.showdown.rules import BLIND_SIZE, HAND_SIZE
-from cardgames.showdown.state import ShowdownState
-from cardgames.showdown.zones import blind_of, hand_of
+from cardgames.backend.showdown.rules import BLIND_SIZE, HAND_SIZE
+from cardgames.backend.showdown.state import ShowdownState
+from cardgames.backend.showdown.zones import blind_of, hand_of
 from cardwork.cards.card import Card
 from cardwork.cards.cards import STANDARD_CARDS
 from cardwork.cards.game import GameCard

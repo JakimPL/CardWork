@@ -3,6 +3,7 @@ from typing import Self
 from pydantic import model_validator
 
 from cardwork.models.base import BaseFrozen
+from cardwork.moves.actions import AnyAction, group_of
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation.commit import Commit
 from cardwork.zones.zone import ZoneId
@@ -27,6 +28,16 @@ class Gesture(BaseFrozen):
     commit: Commit
     target: ZoneId | None
     caption: str
+
+    def matches(self, action: AnyAction) -> bool:
+        """Whether a move carrying that action is the move this gesture makes.
+
+        The kind and the group are the whole of what an intent states beside the positions it names, so those
+        two settle it: a gesture stating a group stands for the moves naming that group, and a gesture stating
+        none stands for every move of its kind. This is the rule an interface reads a served move through,
+        and `Layout` holds a run of gestures to one answer for it.
+        """
+        return self.kind == action.kind and (self.group is None or self.group == group_of(action))
 
     @model_validator(mode="after")
     def _the_commit_names_what_it_lands_on(self) -> Self:

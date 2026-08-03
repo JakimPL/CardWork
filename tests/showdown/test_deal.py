@@ -4,10 +4,10 @@ from typing import Final
 
 import pytest
 
-from cardgames.showdown.game import ONE_ROUND, ShowdownGame
-from cardgames.showdown.rules import BLIND_SIZE, FIRST_TURN, HAND_SIZE, NOTHING, ONE_CARD
-from cardgames.showdown.state import ShowdownPhase, ShowdownState
-from cardgames.showdown.zones import DISCARD, STOCK, blind_of, hand_of, tray_of
+from cardgames.backend.showdown.game import ONE_ROUND, ShowdownGame
+from cardgames.backend.showdown.rules import BLIND_SIZE, FIRST_TURN, HAND_SIZE, NOTHING, ONE_CARD
+from cardgames.backend.showdown.state import ShowdownPhase, ShowdownState
+from cardgames.backend.showdown.zones import DISCARD, STOCK, blind_of, hand_of, tray_of
 from cardwork.decks.decks import jokers
 from cardwork.decks.standard import standard_deck
 from cardwork.effects.effects import Effects

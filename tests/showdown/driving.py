@@ -2,9 +2,9 @@ from collections.abc import Callable
 from random import Random
 from typing import Final
 
-from cardgames.showdown.game import ShowdownGame
-from cardgames.showdown.state import ShowdownState
-from cardgames.showdown.zones import DISCARD, Holding, hand_of, tray_of, zone_of
+from cardgames.backend.showdown.game import ShowdownGame
+from cardgames.backend.showdown.state import ShowdownState
+from cardgames.backend.showdown.zones import DISCARD, Holding, hand_of, tray_of, zone_of
 from cardwork.cards.game import CardsOrJokers
 from cardwork.decks.deck import Deck
 from cardwork.decks.standard import standard_deck

@@ -4,10 +4,10 @@ from typing import Final
 
 from httpx import AsyncClient
 
-from cardgames.showdown.game import ONE_ROUND, ShowdownGame
-from cardgames.showdown.rules import BLIND_SIZE, HAND_SIZE, NOTHING, ONE_CARD, TURNS
-from cardgames.showdown.state import ShowdownState
-from cardgames.showdown.zones import DISCARD, Holding, blind_of, hand_of, tray_of
+from cardgames.backend.showdown.game import ONE_ROUND, ShowdownGame
+from cardgames.backend.showdown.rules import BLIND_SIZE, HAND_SIZE, NOTHING, ONE_CARD, TURNS
+from cardgames.backend.showdown.state import ShowdownState
+from cardgames.backend.showdown.zones import DISCARD, Holding, blind_of, hand_of, tray_of
 from cardserver.sessions import TableSession
 from cardwork.decks.deck import Deck
 from cardwork.decks.standard import standard_deck
@@ -26,7 +26,7 @@ STILL_TO_COMMIT: Final[list[int]] = [1, 2]
 
 
 def a_showdown_table() -> ShowdownGame:
-    """A three-seat match over one round, which is the game as `cardgames.showdown` plays it."""
+    """A three-seat match over one round, which is the game as `cardgames.backend.showdown` plays it."""
     return ShowdownGame(players=SEATS, deck=DECK, rounds=ONE_ROUND, rng=Random(SEED))
 
 

@@ -50,6 +50,9 @@ known_first_party = ["cardwork", "cardserver", "cardgames"]
 extension-pkg-allow-list = ["pydantic"]
 load-plugins = ["pylint_pydantic"]
 
+[tool.pylint.similarities]
+min-similarity-lines = 10
+
 [tool.pylint."messages control"]
 disable = [
     "missing-module-docstring",
@@ -122,9 +125,22 @@ source_modules = ["cardwork", "cardserver"]
 forbidden_modules = ["cardgames"]
 
 [[tool.importlinter.contracts]]
-name = "Games stand apart"
-type = "independence"
-modules = ["cardgames.passing", "cardgames.showdown"]
+name = "Rules know no presentation"
+type = "layers"
+containers = ["cardgames"]
+layers = ["frontend", "backend"]
+
+[[tool.importlinter.contracts]]
+name = "Passing stands apart"
+type = "forbidden"
+source_modules = ["cardgames.*.passing"]
+forbidden_modules = ["cardgames.*.showdown"]
+
+[[tool.importlinter.contracts]]
+name = "Showdown stands apart"
+type = "forbidden"
+source_modules = ["cardgames.*.showdown"]
+forbidden_modules = ["cardgames.*.passing"]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib --strict-markers"

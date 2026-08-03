@@ -1,0 +1,76 @@
+from typing import Final
+
+import pytest
+from pydantic import ValidationError
+
+from cardwork.presentation.scene import SEAT_NAME
+
+from .demo import OTHER, OWNER, SCENE, SEATS, SHARED, a_layout, counts_of, gestures_of, hand_of, slots_of
+
+BIGGER_TABLE: Final[int] = 5
+UNSEATED: Final[int] = SEATS
+
+
+def test_a_scene_laid_out_for_a_seat_is_the_layout_of_that_seat() -> None:
+    assert SCENE.layout(SEATS, OWNER) == a_layout()
+
+
+def test_a_scene_lays_out_the_zones_of_the_seat_it_is_read_at() -> None:
+    layout = SCENE.layout(SEATS, OTHER)
+
+    assert layout.slots == slots_of(OTHER) + SHARED
+
+
+def test_a_scene_offers_the_gestures_of_the_seat_it_is_read_at() -> None:
+    layout = SCENE.layout(SEATS, OTHER)
+
+    assert layout.gestures == gestures_of(OTHER)
+
+
+def test_a_spectator_reads_the_zones_the_table_shares() -> None:
+    layout = SCENE.layout(SEATS, None)
+
+    assert layout.slots == SHARED
+
+
+def test_a_spectator_makes_no_move() -> None:
+    layout = SCENE.layout(SEATS, None)
+
+    assert layout.gestures == ()
+
+
+def test_every_seat_takes_a_plaque_named_by_where_it_sits() -> None:
+    layout = SCENE.layout(SEATS, OWNER)
+
+    assert [plaque.name for plaque in layout.plaques] == [SEAT_NAME.format(seat=seat) for seat in range(SEATS)]
+
+
+def test_a_plaque_counts_the_zones_of_the_seat_it_belongs_to() -> None:
+    layout = SCENE.layout(SEATS, OWNER)
+
+    assert [plaque.counts for plaque in layout.plaques] == [counts_of(seat) for seat in range(SEATS)]
+
+
+def test_a_plaque_counts_a_seat_whose_cards_no_slot_lays_out() -> None:
+    layout = SCENE.layout(SEATS, OWNER)
+
+    assert hand_of(OTHER) in {tally.zone for plaque in layout.plaques for tally in plaque.counts}
+    assert hand_of(OTHER) not in {slot.zone for slot in layout.slots}
+
+
+def test_a_scene_lays_out_a_table_of_any_size_it_is_read_for() -> None:
+    layout = SCENE.layout(BIGGER_TABLE, OWNER)
+
+    assert (len(layout.plaques), layout.players) == (BIGGER_TABLE, BIGGER_TABLE)
+
+
+def test_a_scene_carries_the_title_the_readouts_and_the_captions_to_every_observer() -> None:
+    seated = SCENE.layout(SEATS, OWNER)
+    watching = SCENE.layout(SEATS, None)
+
+    assert (seated.title, seated.readouts, seated.phases) == (watching.title, watching.readouts, watching.phases)
+
+
+def test_a_scene_refuses_a_layout_for_a_seat_the_table_does_not_hold() -> None:
+    with pytest.raises(ValidationError, match=f"Seat {UNSEATED} stands outside the {SEATS} seats"):
+        SCENE.layout(SEATS, UNSEATED)

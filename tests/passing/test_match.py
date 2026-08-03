@@ -6,9 +6,9 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from cardgames.passing.game import BEST, NEXT_BEST, PassingGame
-from cardgames.passing.rules import NOTHING, WINNING_LEAD
-from cardgames.passing.state import PassingPhase
+from cardgames.backend.passing.game import BEST, NEXT_BEST, PassingGame
+from cardgames.backend.passing.rules import NOTHING, WINNING_LEAD
+from cardgames.backend.passing.state import PassingPhase
 from cardwork.decks.deck import Deck
 from cardwork.effects.fold import fold
 from cardwork.moves.actions import Give

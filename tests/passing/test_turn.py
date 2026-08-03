@@ -3,9 +3,9 @@ from typing import Final
 
 import pytest
 
-from cardgames.passing.game import PassingGame
-from cardgames.passing.rules import HAND_ON_TURN, HAND_SIZE
-from cardgames.passing.zones import PILE, STACK, TOP_OF_THE_PILE, hand_of
+from cardgames.backend.passing.game import PassingGame
+from cardgames.backend.passing.rules import HAND_ON_TURN, HAND_SIZE
+from cardgames.backend.passing.zones import PILE, STACK, TOP_OF_THE_PILE, hand_of
 from cardwork.exceptions import IllegalMove, NotYourTurn
 from cardwork.moves.actions import Give, Play, Take
 from cardwork.moves.move import Move

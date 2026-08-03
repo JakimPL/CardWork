@@ -4,9 +4,9 @@ from typing import Final
 
 import pytest
 
-from cardgames.passing.rules import NOTHING, ROUND_POINT, declares, four_read_alike, three_read_alike
-from cardgames.passing.state import PassingPhase
-from cardgames.passing.zones import hand_of
+from cardgames.backend.passing.rules import NOTHING, ROUND_POINT, declares, four_read_alike, three_read_alike
+from cardgames.backend.passing.state import PassingPhase
+from cardgames.backend.passing.zones import hand_of
 from cardwork.cards.cards import (
     BLACK_JOKER,
     FIVE_OF_HEARTS,

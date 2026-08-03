@@ -1,7 +1,7 @@
 from random import Random
 from typing import Final
 
-from cardgames.passing.rules import (
+from cardgames.backend.passing.rules import (
     HAND_ON_TURN,
     HAND_SIZE,
     NOTHING,
@@ -9,8 +9,8 @@ from cardgames.passing.rules import (
     WINNING_LEAD,
     declares,
 )
-from cardgames.passing.state import PassingPhase, PassingState
-from cardgames.passing.zones import PILE, STACK, TOP_OF_THE_PILE, hand_of, passing_zones
+from cardgames.backend.passing.state import PassingPhase, PassingState
+from cardgames.backend.passing.zones import PILE, STACK, TOP_OF_THE_PILE, hand_of, passing_zones
 from cardwork.decks.deck import Deck, Indices
 from cardwork.decks.standard import ONE_DECK, standard_multiplicity
 from cardwork.effects.effects import Effects, MoveCards, SetFace, SetState

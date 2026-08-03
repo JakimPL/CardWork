@@ -10,16 +10,15 @@ game whether or not anybody is watching. It names three layers below — `zones`
 for a kind of move to make, `states` for a field of the cursor to show — and stops there.
 
 ```python
-Layout(
+Scene(
     title="Passing",
-    observer=1,
-    players=3,
-    slots=(...),        # the zones this seat sees, and where
-    gestures=(...),     # the moves this seat makes, and how
-    plaques=(...),      # every player, and the counts the table reads of them
+    shared=(...),       # the zones every observer reads alike
+    held=slots_of,      # seat -> the zones it holds of its own
+    gestures=...,       # seat -> the moves it makes, and how
+    counts=...,         # seat -> the zones of its own the table counts
     readouts=(...),     # the fields of the cursor worth showing
     phases={...},       # what each phase is called in words
-)
+).layout(players=3, observer=1)
 ```
 
 ---
@@ -57,6 +56,7 @@ same question asked of zones and seats rather than of moves.
 | `Tally` | one of those counts, under the word the game calls that zone by |
 | `Readout` | one field of the cursor shown, under a word, speaking about the table or about each seat |
 | `Layout` | the whole of it for one observer, checked against itself as it is built |
+| `Scene` | the whole of it for a table: what every observer reads alike, and what each seat holds |
 
 Four closed vocabularies carry the choices:
 
@@ -77,19 +77,38 @@ arrives as an argument to the constructor and stays off the model: a `Readout` o
 
 **A count is what another seat's zone says about itself.** The cards in an opponent's hand are theirs to read
 and the size of it is the table's to know, so a zone belonging to another seat reaches the screen as a `Tally`
-on their plaque, and a zone of the observer's own reaches it as a `Slot` holding cards.
+on their plaque. A zone of the observer's own reaches it as a `Slot` holding cards, and as a count on its own
+plaque besides, so the row of plaques reads across the table without a gap where the reader sits.
+
+**`presets` names the two arrangements every game reaches for**, as `zones.presets` names the visibility
+policies: `presets.hand(zone, label, place=...)` is a holding in the observer's own region, overlapped and
+showing its cards, and `presets.heap(zone, label, place=...)` is a stack on the shared table, read by its top
+card and its size. Both fix a `counted` a game would otherwise decide twice. Anything else is spelled out as a
+`Slot`, and becomes a preset when a second game wants the same arrangement.
 
 ---
 
-## 3. A layout is built for one seat
+## 3. A layout is built for one seat, from a scene built for the table
 
-`observer` is a seat or a spectator, and every zone id in the layout is concrete for that observer:
-`picked="hand:1"` rather than a stand-in resolved on arrival. A game builds a layout per observer, so the
-interface looks nothing up.
+`observer` is a seat or a spectator, and every zone id in a layout is concrete for that observer:
+`picked="hand:1"` rather than a stand-in resolved on arrival. So the interface looks nothing up, and the
+layout falls in step with the projection (`architecture.md` §7), which is also per observer, and with the
+moves a view carries, which are that seat's own.
 
-This falls in step with the projection (`architecture.md` §7), which is also per observer, and with the moves a
-view carries, which are that seat's own. A spectator's layout states the slots and plaques of the shared table
-and no gestures at all, which is exactly the seat's entitlement written in the same place its cards are.
+A game states one `Scene` all the same, because a table has one arrangement and its observers differ only in
+where they sit. A scene holds the zones every observer reads alike, and three functions of a seat — the zones
+it holds, the gestures it makes, the counts the table reads of it:
+
+```python
+PASSING_SCENE.layout(players=3, observer=1)     # -> Layout(observer=1, ...)
+PASSING_SCENE.layout(players=3, observer=None)  # -> the shared table, and no gesture
+```
+
+What `Scene.layout` states so that no game states it again: a seat reads the zones it holds beside the shared
+ones and is offered the gestures of its own turn; a spectator reads the shared zones and makes no move; every
+seat of the table takes a plaque, named by where it sits until a host holds a name for it. That is the same
+entitlement the projection gives an observer over the cards, and it now lives in one place rather than in
+every game that would have to remember it.
 
 ---
 
@@ -115,8 +134,13 @@ Every claim a layout makes is checked as it is built, which leaves an interface 
 An interface holds the moves the view served it (`architecture.md` §7) and matches each one:
 
 ```
-a move matches the gesture whose kind is its kind, and whose group is its group or is stated for every group
+a move is made by the gesture whose kind is its kind, and whose group is its group or is stated for every group
 ```
+
+`Gesture.matches(action)` is that rule, and `moves.group_of(action)` is the group read off an intent — a play,
+an exchange and a discard name one, and the three intents beside them carry a word of their own or none. A
+layout admits no second answer, so an interface calling it reads one gesture or a bug in the game that stated
+the layout.
 
 The gesture then says the rest: `picked` is the zone whose cards the player selects, the move's own `indices`
 are which of them, and `commit` with `target` is where the click that sends it lands — a zone the gesture
@@ -142,3 +166,17 @@ Three places where the vocabulary stops at what the games ask for, each followin
   faces up arrives with the first game that deals readable cards from position zero.
 - **`Region` names two places**, because a game states which zones a player owns and the interface states where
   the page puts them. A third region arrives with a game that wants one.
+
+---
+
+## 7. The two worked examples
+
+`cardgames.frontend.passing` and `cardgames.frontend.showdown` state a layout apiece, each one function over
+`(players, observer)` returning a `Layout` whose every zone id is concrete. Between them they exercise both
+addressings §1 sets out, and `docs/games/passing.md` §5 and `docs/games/showdown.md` §5 read them out zone by
+zone.
+
+They are held to their own rules by test: every move a game's `legal_moves` offers a seat is matched against
+the layout that seat is served, and the gesture it resolves to has to pick in a zone the projection holds and
+commit onto one the observer reads. So a layout naming a zone the rules dropped, or missing a gesture for a
+move the rules admit, fails as a broken game rather than as a blank on a screen.

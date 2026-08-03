@@ -2,10 +2,10 @@ from http import HTTPStatus
 from random import Random
 from typing import Final
 
-from cardgames.passing.game import PassingGame
-from cardgames.passing.rules import HAND_ON_TURN, HAND_SIZE, NOTHING
-from cardgames.passing.state import PassingPhase, PassingState
-from cardgames.passing.zones import PILE, STACK, hand_of
+from cardgames.backend.passing.game import PassingGame
+from cardgames.backend.passing.rules import HAND_ON_TURN, HAND_SIZE, NOTHING
+from cardgames.backend.passing.state import PassingPhase, PassingState
+from cardgames.backend.passing.zones import PILE, STACK, hand_of
 from cardserver.sessions import TableSession
 from cardwork.decks.deck import Deck
 from cardwork.decks.standard import standard_decks
@@ -24,7 +24,7 @@ ONE_CARD: Final[int] = 1
 
 
 def a_passing_table() -> PassingGame:
-    """A three-seat match over one jokered deck, which is the game as `cardgames.passing` plays it."""
+    """A three-seat match over one jokered deck, which is the game as `cardgames.backend.passing` plays it."""
     return PassingGame(players=SEATS, deck=DECK, rng=Random(SEED))
 
 

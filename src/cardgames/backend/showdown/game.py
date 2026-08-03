@@ -1,7 +1,7 @@
 from random import Random
 from typing import Final
 
-from cardgames.showdown.rules import (
+from cardgames.backend.showdown.rules import (
     BLIND_SIZE,
     FIRST_TURN,
     HAND_SIZE,
@@ -12,8 +12,8 @@ from cardgames.showdown.rules import (
     taken_by,
     turn_points,
 )
-from cardgames.showdown.state import ShowdownPhase, ShowdownState
-from cardgames.showdown.zones import (
+from cardgames.backend.showdown.state import ShowdownPhase, ShowdownState
+from cardgames.backend.showdown.zones import (
     DISCARD,
     HOLDINGS,
     SEALED_CARD,

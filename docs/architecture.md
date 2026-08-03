@@ -6,8 +6,9 @@ only what they are entitled to know. Three packages divide the work:
 - **`cardwork`** — the engine. Synchronous and pure: a position is a value, a move produces another
   value, and every commit is recorded as data that replays exactly.
 - **`cardserver`** — an adapter that puts tables into service over HTTP and server-sent events.
-- **`cardgames`** — the games written on the framework, one package apiece, which is where every claim
-  this document makes is answerable.
+- **`cardgames`** — the games written on the framework, each stated twice over: `backend` holds its rules
+  and `frontend` the layout a player reads them through. This is where every claim this document makes is
+  answerable.
 
 A game is a subclass of `Game` that fills in rules hooks: the zone layout, the deal, what a move means,
 and how the turn advances. Everything else — journalling, projection, concurrency, reconnection, replay —
@@ -104,7 +105,7 @@ the server enforces.
 
 | Layer | Holds | Answers |
 |---|---|---|
-| `presentation` | `Layout`, `Slot`, `Gesture`, `Plaque`, `Readout` | how a game is laid out for a player |
+| `presentation` | `Scene`, `Layout`, `Slot`, `Gesture`, `Plaque`, `Readout` | how a game is laid out for a player |
 | `rounds` | `RoundGame`, `RoundState`, `Redeal`, seating | how a match of rounds runs |
 | `games` | `Game`: setup hooks, rules hooks, and the concrete engine | how a table plays |
 | `views` | `PositionView`, `EventView`, per-observer projection | what an observer is told |
@@ -139,12 +140,19 @@ stay where they already were (`docs/rounds.md` §1).
 is a vocabulary for stating how a game is laid out on a screen: `zones` names a zone to lay out, `moves` a kind
 of move to make, `states` a field of the cursor to show, and those three are the whole of what it reaches for. A
 layout is data a game states and an interface reads, so the geometry stays with the interface and the game names
-no measurement (`docs/presentation.md`).
+no measurement. A game states one `Scene` and the layer lays out every observer from it, which is what keeps the
+entitlement of a spectator out of each game's hands (`docs/presentation.md`).
 
 **`cardgames` is a distribution of its own, and the import goes one way.** A game imports the framework,
-which is what keeps every mechanism here general enough for the game after these two. Each game package
-stands apart from the other besides, so a rule both of them want is a rule that has moved down into
-`cardwork`.
+which is what keeps every mechanism here general enough for the game after these two. Each game stands
+apart from the other besides, so a rule both of them want is a rule that has moved down into `cardwork`.
+
+**A game is stated before it is shown.** `cardgames.backend.<game>` holds the rules — the zones, the cursor,
+the moves, the scoring — and `cardgames.frontend.<game>` holds the `Layout` those rules are read through.
+The layout names the backend for its zone ids and its phases, so no string is written twice; the rules name
+the layout nowhere, which is what keeps a game playable with no screen attached and keeps a change of
+presentation from reaching the journal. Every one of these four modules stands on the framework and on its
+own game alone.
 
 `cardwork.exceptions` sits outside the stack deliberately. The refusals of §6 are raised at four
 different heights — journal truncation, the engine's concurrency check, a game's `authorize`, a game's
@@ -152,7 +160,7 @@ different heights — journal truncation, the engine's concurrency check, a game
 
 ### The contract is checked
 
-import-linter holds five contracts over the three packages, so the boundaries are mechanical rather than
+import-linter holds seven contracts over the three packages, so the boundaries are mechanical rather than
 aspirational:
 
 1. **Layered architecture** — the core order above.
@@ -165,8 +173,12 @@ aspirational:
    keeps a mechanism general and an adapter game-agnostic.
 4. **Adapter layers** — `cardserver` layers in its own right, high to low: `app`, `streams`,
    `registry`, `sessions`, `identity`, `errors`, `schemas`, `protocol`.
-5. **Games stand apart** — each game package stands on the framework alone, so whatever two games share
-   lives in `cardwork` where the third will find it.
+5. **Rules know no presentation** — within `cardgames`, `frontend` stands above `backend`, so a game's rules
+   are playable with no layout in sight and a layout is free to name the rules it lays out.
+6. **Passing stands apart** and 7. **Showdown stands apart** — neither game names the other at either
+   height, so whatever two games share lives in `cardwork` where the third will find it. Two contracts state
+   what one used to, because the modules of a game are no longer independent of each other: a layout names
+   its own rules, and only its own.
 
 ---
 
@@ -540,7 +552,7 @@ covers everything the seat holds.
 
 Neither game here sends one, and the reason is worth stating: a declaration earns an intent where the seat's
 word decides something. A win the cards already read decides nothing — a seat holding one gains nothing by
-withholding it — so `cardgames.passing` awards it instead of asking for it (`docs/games/passing.md` §1).
+withholding it — so `cardgames.backend.passing` awards it instead of asking for it (`docs/games/passing.md` §1).
 
 Actions address cards **positionally**: "the first, third and sixth cards of my hand". Positional
 addressing is the right choice under partial knowledge, because it lets a client reference a card it
@@ -1018,8 +1030,8 @@ The two games in `cardgames` are the worked examples, and between them they exer
 
 | the game | plays | reads for |
 |---|---|---|
-| `cardgames.passing` | a sequential turn: one exchange with the pile, then a pass round the table | an outcome a rules question over `combinations` decides, and a match the standing ends |
-| `cardgames.showdown` | a simultaneous turn: every seat commits one sealed card, and they turn over together | `to_act` holding every seat, `HIDDEN` zones, and a turn settled behind no move at all |
+| `cardgames.backend.passing` | a sequential turn: one exchange with the pile, then a pass round the table | an outcome a rules question over `combinations` decides, and a match the standing ends |
+| `cardgames.backend.showdown` | a simultaneous turn: every seat commits one sealed card, and they turn over together | `to_act` holding every seat, `HIDDEN` zones, and a turn settled behind no move at all |
 
 ---
 
@@ -1352,6 +1364,7 @@ play was good **given what the player knew**.
 | Adapter layers | the `Adapter layers` contract over `cardserver` | `sessions` imports `registry`, or `protocol` imports anything above it |
 | Framework vs. games | the `The framework knows no game` contract; `cardgames` is a distribution of its own | a mechanism under `cardwork/` names a game, or a handler branches on which game it serves |
 | What a game states vs. how it looks | `presentation` holds zone ids, kinds of move and fields of the cursor | a layout carries a measurement, or an interface branches on a zone id or a phase |
+| A game's rules vs. its layout | the `Rules know no presentation` contract; `backend` and `frontend` per game | a rules module names a slot or a caption, or a zone id is written twice |
 | A round vs. a match | `rounds` sits above `games`; a game states one round and the layer states the match | a game deals its own next round, or adds its own tally into the standing |
 
 ---

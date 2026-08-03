@@ -1,6 +1,6 @@
 # Showdown
 
-`cardgames.showdown` is a game of ten sealed turns: five cards a seat reads, five that lie face down to the
+`cardgames.backend.showdown` is a game of ten sealed turns: five cards a seat reads, five that lie face down to the
 whole table its owner included, and one card from every seat committed at once each turn and turned over
 together. It seats two to five, plays over one standard deck, and runs the number of rounds it was built for.
 
@@ -140,7 +140,37 @@ next leader — is `cardwork.rounds`, written once for every game.
 
 ---
 
-## 5. What it asked the framework for
+## 5. The table on screen
+
+`cardgames.frontend.showdown` states the `Scene` a player reads this game through (`presentation.md`):
+
+| zone | lies | as |
+|---|---|---|
+| `hand:me` | in the observer's own region, fanned out | the five it reads and picks by what they are |
+| `blind:me` | beside it, in a row of whole cards | five backs it picks by where they lie |
+| `tray:me` | beside those, in a single place | the card it has sealed this turn |
+| another seat's three | on that seat's plaque, as three counts | what the table reads of a seat, the tray among it saying who has committed |
+| `stock` | on the shared table, a heap read by its count | what is still to be dealt |
+| `discard` | on the shared table, a heap read by its top card | every card the round has revealed |
+
+Both holdings commit the same way, one gesture apiece:
+
+| gesture | picks in | commits onto |
+|---|---|---|
+| `Play(group="hand")` | `hand:p` | `tray:p` |
+| `Play(group="blind")` | `blind:p` | `tray:p` |
+
+The positions either intent names address the zone the intent names, which is the other way round from the
+game before this one, where they address a zone no move mentions. That pair of games is the reason a layout
+states the pairing rather than a rule deriving it (`presentation.md` §1).
+
+**The blind is playable because the projection keeps positions.** A blind card reaches its own seat as a
+placeholder standing at its true index (`architecture.md` §7), so a player picks the third of five backs and
+the commitment lands on the card lying there.
+
+---
+
+## 6. What it asked the framework for
 
 Two primitives this game shares with the one before it, lifted into the layers below rather than written
 twice:

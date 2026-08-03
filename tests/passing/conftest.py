@@ -1,6 +1,6 @@
 import pytest
 
-from cardgames.passing.game import PassingGame
+from cardgames.backend.passing.game import PassingGame
 
 from .driving import JOKERED_DECK, PLAIN_DECK, SEATS, SEED, TWO_SEATS, a_match
 

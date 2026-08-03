@@ -3,9 +3,9 @@ from typing import Final
 
 import pytest
 
-from cardgames.showdown.game import ShowdownGame
-from cardgames.showdown.rules import BLIND_SIZE, HAND_SIZE, NOTHING, ONE_CARD, TURNS
-from cardgames.showdown.zones import DISCARD, Holding, blind_of, tray_of
+from cardgames.backend.showdown.game import ShowdownGame
+from cardgames.backend.showdown.rules import BLIND_SIZE, HAND_SIZE, NOTHING, ONE_CARD, TURNS
+from cardgames.backend.showdown.zones import DISCARD, Holding, blind_of, tray_of
 from cardwork.exceptions import IllegalMove, NotYourTurn
 from cardwork.moves.actions import Play, Take
 from cardwork.moves.move import Move

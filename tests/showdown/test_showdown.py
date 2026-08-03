@@ -3,9 +3,9 @@ from typing import Final
 
 import pytest
 
-from cardgames.showdown.game import ShowdownGame
-from cardgames.showdown.rules import NOTHING, awarded, suited, taken_by, turn_points
-from cardgames.showdown.zones import DISCARD, Holding, tray_of
+from cardgames.backend.showdown.game import ShowdownGame
+from cardgames.backend.showdown.rules import NOTHING, awarded, suited, taken_by, turn_points
+from cardgames.backend.showdown.zones import DISCARD, Holding, tray_of
 from cardwork.cards.card import Cards
 from cardwork.cards.cards import (
     ACE_OF_CLUBS,
