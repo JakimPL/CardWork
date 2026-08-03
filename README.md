@@ -2,13 +2,17 @@
 
 A framework for server-authoritative, transactional playing-card games with partial knowledge.
 
-Two packages:
+Three packages:
 
 - **`cardwork`** — the engine. Synchronous and pure: a position is a value, a move produces another
   value, and every commit is recorded as data that replays exactly.
 - **`cardserver`** — a FastAPI adapter that puts tables into service over HTTP and server-sent events.
+- **`cardgames`** — the games written on it: `passing`, a game of four cards played in turn, and
+  `showdown`, a game of ten turns played at once.
 
-`docs/architecture.md` is the design and the reasoning behind it. What follows is enough to start.
+`docs/architecture.md` is the design and the reasoning behind it; `docs/combinations.md`, `docs/rounds.md`
+and `docs/games/` state the parts a game reaches for and the two games themselves. What follows is enough
+to start.
 
 ## Getting set up
 
@@ -55,7 +59,7 @@ class MyGame(Game[Trump]):
 
     def validate(self, position: Table, move: Move) -> None: ...   # raise IllegalMove
     def expand(self, position: Table, move: Move, rng: Random) -> Changes: ...  # intent -> effects
-    def advance(self, position: Table, move: Move | None) -> Changes: ...  # turn, phase, scoring
+    def advance(self, position: Table, move: Move | None, rng: Random) -> Changes: ...  # turn, phase, scoring
 ```
 
 Two hooks ship with a body and are overridden only to change a policy: `authorize`, which admits the seats
@@ -64,18 +68,40 @@ Two hooks ship with a body and are overridden only to change a policy: `authoriz
 Four rules of thumb, each explained at length in `docs/architecture.md`:
 
 1. **Randomness is recorded, not re-rolled.** A shuffle is a `Reorder` carrying the permutation that
-   `decks.draw.permutation(size, rng)` drew. `rng` reaches `_deal_cards` and `expand`, and nowhere else.
+   `decks.draw.permutation(size, rng)` drew. `rng` reaches `_deal_cards`, `expand` and `advance`, and
+   nowhere else.
 2. **The turn is a set.** `to_act == {p}` is sequential play; `to_act == {0, 1, 2}` is simultaneous, and the
    phase resolves when it empties. `advance` receives the move that led here, or `None` while the table
    settles on its own.
 3. **Secrecy comes from zones.** A card's `face_down` is physical; who that conceals it from is the zone's
    `Visibility`. Sealing a commitment is moving cards face-down into a `HAND` zone the seat owns — opponents
-   read the count and nothing else.
+   read the count and nothing else — and a `HIDDEN` zone seals it from its owner too.
 4. **Build the next cursor with `state.with_changes(...)`** and hand it to `SetState`, which validates it
    against your own declared fields.
 
-`tests/games/demo.py` is a small, complete exercise game: a simultaneous round with sealed commitments, a
-reveal, scoring and take-backs.
+## Three things a game reaches for
+
+Rules that more than one game wants live in the framework, each in a layer of its own:
+
+- **`cardwork.ordering` and `cardwork.cards`** answer which of two cards stands higher and what one is
+  worth. `Preorder[T]` places a value in an order and admits ties; `REGULAR_ORDER` is rank then ♠ ♥ ♦ ♣,
+  and `REGULAR_POINTS` scores a pip at its face and a jack through an ace at ten.
+- **`cardwork.combinations`** reads a run of cards: whether four cards hold three of a suit, whether seven
+  hold a full house, which of two hands wins. Jokers stand in, duplicates count or collapse per game, and
+  every query is answered from counters and bit masks. `docs/combinations.md`.
+- **`cardwork.rounds`** plays a match as a series of rounds, each dealt afresh from what the last left
+  where it lay, led by a seat in turn and scored into a standing. A game of rounds subclasses `RoundGame`
+  and states five hooks about one round; the layer states the match around it. `docs/rounds.md`.
+
+## Games to read
+
+| game | plays | reads for |
+|---|---|---|
+| `cardgames.passing` | a sequential turn: one exchange with the pile, then a pass or a claim of a win | a game whose rules ask a question about cards |
+| `cardgames.showdown` | a simultaneous turn: every seat commits one sealed card, and they turn over together | a game whose turn belongs to the whole table |
+
+`tests/games/demo.py` is a smaller exercise game: a simultaneous round with sealed commitments, a reveal,
+scoring and take-backs.
 
 ## Serving it
 

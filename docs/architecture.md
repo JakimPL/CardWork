@@ -1,11 +1,13 @@
 # CardWork Architecture
 
 CardWork runs multiplayer card games in which the server holds the whole truth and each player is told
-only what they are entitled to know. Two packages divide the work:
+only what they are entitled to know. Three packages divide the work:
 
 - **`cardwork`** — the engine. Synchronous and pure: a position is a value, a move produces another
   value, and every commit is recorded as data that replays exactly.
 - **`cardserver`** — an adapter that puts tables into service over HTTP and server-sent events.
+- **`cardgames`** — the games written on the framework, one package apiece, which is where every claim
+  this document makes is answerable.
 
 A game is a subclass of `Game` that fills in rules hooks: the zone layout, the deal, what a move means,
 and how the turn advances. Everything else — journalling, projection, concurrency, reconnection, replay —
@@ -14,6 +16,16 @@ is supplied.
 This document is organised as principles first, then the mechanisms each principle produces. §1 is the
 part to internalise: when a design question arises that the rest of the document leaves open, the six
 rules answer it.
+
+Four documents state the parts a game reaches for and the games themselves, and this one states what they
+all rest on:
+
+| document | states |
+|---|---|
+| `docs/combinations.md` | what a run of cards reads as: patterns, jokers, duplicates, rankings, points |
+| `docs/rounds.md` | a match played as a series of rounds, each dealt afresh and scored into a standing |
+| `docs/games/passing.md` | a game of four cards, in which a fourth circulates and a seat claims a win on three |
+| `docs/games/showdown.md` | a game of ten sealed turns, every seat committing one card at once |
 
 ---
 
@@ -91,6 +103,7 @@ the server enforces.
 
 | Layer | Holds | Answers |
 |---|---|---|
+| `rounds` | `RoundGame`, `RoundState`, `Redeal`, seating | how a match of rounds runs |
 | `games` | `Game`: setup hooks, rules hooks, and the concrete engine | how a table plays |
 | `views` | `PositionView`, `EventView`, per-observer projection | what an observer is told |
 | `transactions` | `Transaction`, `Journal`, `replay` | what happened |
@@ -101,7 +114,9 @@ the server enforces.
 | `moves` | `Action`, `Move` | what a client asks for |
 | `zones` | `Zone`, `Visibility`, `Audience`, resolution | who sees what |
 | `decks` | `Deck`, index aliases, permutation draws | which cards exist |
-| `cards` | `Card`, `Joker`, `GameCard` | one card |
+| `combinations` | `Pattern`, `Evaluation`, `Combination`, the search, `Ranking` | what a run of cards reads as |
+| `cards` | `Card`, `Joker`, `GameCard`, the card orders and point tables | one card, and what it is worth |
+| `ordering` | `Preorder`, `Tiers`, `Composite` | which of two values stands higher |
 | `models` | `BaseFrozen` | how every model behaves |
 
 Two placements are worth explaining. `views` sits **above** `transactions` because projection applies to
@@ -110,23 +125,40 @@ works without knowing that views exist. `moves` is a leaf of pure data: actions 
 the rules translate into effects, and effects are what reach the board (P3), so nothing below `moves`
 points into it.
 
+Three of the layers are the ones the first two games asked for, and each sits where what it knows puts it.
+`ordering` is at the bottom because an order is a vocabulary about values of any kind: `Preorder[T]` names
+which of two stands higher and admits ties, and `cards` uses it to order a rank and a suit. `combinations`
+reads cards and jokers, so it stands above `cards` and below `decks`, and a game consults it as a question
+about cards alone. `rounds` stands **above** `games` because it is `Game` plus the bookkeeping of a match —
+the deal of a fresh round, the standing, the leader — while the cursor, the journal and the rules of play
+stay where they already were (`docs/rounds.md` §1).
+
+**`cardgames` is a distribution of its own, and the import goes one way.** A game imports the framework,
+which is what keeps every mechanism here general enough for the game after these two. Each game package
+stands apart from the other besides, so a rule both of them want is a rule that has moved down into
+`cardwork`.
+
 `cardwork.exceptions` sits outside the stack deliberately. The refusals of §6 are raised at four
 different heights — journal truncation, the engine's concurrency check, a game's `authorize`, a game's
 `validate` — and a shared vocabulary of refusals is the one thing every height may name.
 
 ### The contract is checked
 
-import-linter holds three contracts over both packages, so the boundaries are mechanical rather than
+import-linter holds five contracts over the three packages, so the boundaries are mechanical rather than
 aspirational:
 
 1. **Layered architecture** — the core order above.
-2. **Core is transport-free** — `cardwork` names none of `cardserver`, `fastapi`, `starlette`, `httpx`,
-   `asyncio`, `requests`. `asyncio` is on that list on purpose: the core is synchronous by P1, and the
-   moment a domain function becomes `async`, callers need an event loop and the pure-function property
-   holds on paper alone. `cardserver` is on it because the port belongs to the consumer (§10, *The
-   port*), so the arrow between the packages points one way.
-3. **Adapter layers** — `cardserver` layers in its own right, high to low: `app`, `streams`,
+2. **Rules are transport-free** — `cardwork` and `cardgames` name none of `cardserver`, `fastapi`,
+   `starlette`, `httpx`, `asyncio`, `requests`. `asyncio` is on that list on purpose: the core is
+   synchronous by P1, and the moment a domain function becomes `async`, callers need an event loop and the
+   pure-function property holds on paper alone. `cardserver` is on it because the port belongs to the
+   consumer (§10, *The port*), so the arrow between the packages points one way.
+3. **The framework knows no game** — neither `cardwork` nor `cardserver` names `cardgames`, which is what
+   keeps a mechanism general and an adapter game-agnostic.
+4. **Adapter layers** — `cardserver` layers in its own right, high to low: `app`, `streams`,
    `registry`, `sessions`, `identity`, `errors`, `schemas`, `protocol`.
+5. **Games stand apart** — each game package stands on the framework alone, so whatever two games share
+   lives in `cardwork` where the third will find it.
 
 ---
 
@@ -479,6 +511,24 @@ Replaying a `Reorder` a decade later reproduces the same order because the order
 rules translate it into effects in `expand`. Actions carry a `kind` tag apiece and union as `AnyAction` on
 the same grounds as the effects: a `Move` crosses the wire in both directions.
 
+Six intents cover the vocabulary a client sends, and a game reads the ones it is played with:
+
+| intent | carries | asks for |
+|---|---|---|
+| `Play(group, indices)` | a group and positions in the seat's own cards | these cards played to that group |
+| `Take(group, indices)` | a group and positions | cards taken from there |
+| `Give(target_player, indices)` | a seat and positions | cards handed to that seat |
+| `Reject(indices)` | positions | cards declined |
+| `Discard(group, indices)` | a group and positions | cards laid off |
+| `Declare(claim, indices)` | a word and the positions it is claimed of | those cards read as the claim names |
+
+**`Declare` is the one intent that carries a word.** Claiming a win — "these four cards are three of a
+rank" — names positions *and* what they are claimed to be, and the rules answer it by reading the cards
+themselves, so a claim stands once the rules have confirmed it. The word is a `str` on the wire and a
+`StrEnum` in the game that reads it, which keeps the vocabulary of one game closed while the action stays
+general. `indices` may be empty here alone, since a claim of a whole hand is a claim of everything the seat
+holds.
+
 Actions address cards **positionally**: "the first, third and sixth cards of my hand". Positional
 addressing is the right choice under partial knowledge, because it lets a client reference a card it
 cannot identify — an opponent's face-down card at index 3 — which stable card ids manage only by leaking
@@ -602,11 +652,12 @@ just acted owes more than a turn change: the reveal, the scoring, the deal that 
 of that belongs to the seat that happened to act last — an observer reading its event should see one
 seat's move.
 
-So the engine has a second entry point, `settle()`, which commits `advance(position, None)` repeatedly
+So the engine has a second entry point, `settle()`, which commits `advance(position, None, rng)` repeatedly
 until the rules ask for nothing more. Each round of it lands as its own transaction carrying `move=None`,
 which keeps what a seat did legible apart from what the rules did in answer, and a table already at rest
 yields an empty run. A `Final` cap bounds the loop, so an `advance` that carries the table in a circle
-raises rather than spinning.
+raises rather than spinning. The generator it hands on is the engine's own, which is what lets a round
+boundary shuffle where no seat has acted (§9, and `docs/rounds.md` §3).
 
 **Who calls it, and when, is the adapter's decision** — and the answer is "after the grace window", which
 is what makes a take-back possible (§4.4). The engine stays synchronous and knows nothing of the wait.
@@ -912,6 +963,23 @@ The same line explains why `zones` returns **populated** zones and why `_deal_ca
 Deciding which zone a deck starts in means knowing the game, so it belongs to the game rather than to a
 `Board` factory (P3); and turn logic in the dealer would write "who leads" twice.
 
+### A match is a game plus bookkeeping
+
+Most games worth writing are a series of rounds: dealt afresh, led by a seat in turn, scored into a
+standing until the standing decides the match. `cardwork.rounds` states that shape once. `RoundGame` fills
+in `advance` and leaves a game five hooks, every one of them about a single round; `RoundState` carries the
+standing beside the tally of the round in play; `Redeal` gathers, shuffles and deals out what the last
+round left where it lay. A round boundary is an ordinary settlement transaction, so projection, replay,
+events and the adapter need nothing new — which is the whole reason the layer is small. `docs/rounds.md`
+states it whole.
+
+The two games in `cardgames` are the worked examples, and between them they exercise both shapes of turn:
+
+| the game | plays | reads for |
+|---|---|---|
+| `cardgames.passing` | a sequential turn: one exchange with the pile, then a pass or a claim of a win | `Declare` answered by a rules question over `combinations`, and a match the standing ends |
+| `cardgames.showdown` | a simultaneous turn: every seat commits one sealed card, and they turn over together | `to_act` holding every seat, `HIDDEN` zones, and a turn settled behind no move at all |
+
 ---
 
 ## 10. Serving a table
@@ -1125,7 +1193,7 @@ Transaction(
         MoveCards(source="draw", indices={0, 1, 2}, target="hand:0", face_down=True),
         MoveCards(source="draw", indices={0, 1, 2}, target="hand:1", face_down=True),
         MoveCards(source="draw", indices={0, 1, 2}, target="hand:2", face_down=True),
-        # ---- above: _deal_cards.  below: advance(dealt position, None) ----
+        # ---- above: _deal_cards.  below: advance(dealt position, None, rng) ----
         SetState(state=GameState(phase="play", to_act=frozenset({0, 1, 2}))),
     ),
 )
@@ -1227,7 +1295,7 @@ play was good **given what the player knew**.
 | Boundary | Enforced by | Violated when |
 |---|---|---|
 | Rules vs. mechanism | `boards` sits below `effects`; `Board` has no game methods | a `Board` method cannot be written without knowing which game it is |
-| Domain vs. transport | the `forbidden` import contract; the `Table` protocol lives in `cardserver` | `cardserver`, `fastapi` or `asyncio` appears under `cardwork/` |
+| Domain vs. transport | the `Rules are transport-free` contract; the `Table` protocol lives in `cardserver` | `cardserver`, `fastapi` or `asyncio` appears under `cardwork/` or `cardgames/` |
 | Truth vs. knowledge | `project_position` and `project_transaction` are the only paths from a position to the wire | a handler serializes a `Position`, a `Board`, or a `Transaction` |
 | Truth vs. knowledge, in a game's own state | `GameState.project` narrows the cursor by the game's own rule | a game declares a private field and leaves `project` inherited |
 | Identity vs. seats | the adapter maps a credential to a seat and binds it to `move.player` | a handler passes a client's `move.player` through unchecked |
@@ -1241,6 +1309,8 @@ play was good **given what the player knew**.
 | Timeless rules vs. real latency | the grace period lives in the adapter; "too late" is a `validate` predicate | a rules hook reads a clock, or the window decides legality |
 | Engine vs. rules | rules take `position`; only engine methods read `self` | a rules method reads the cursor and search silently evaluates the wrong board |
 | Adapter layers | the `Adapter layers` contract over `cardserver` | `sessions` imports `registry`, or `protocol` imports anything above it |
+| Framework vs. games | the `The framework knows no game` contract; `cardgames` is a distribution of its own | a mechanism under `cardwork/` names a game, or a handler branches on which game it serves |
+| A round vs. a match | `rounds` sits above `games`; a game states one round and the layer states the match | a game deals its own next round, or adds its own tally into the standing |
 
 ---
 
@@ -1262,3 +1332,9 @@ The adapter's suite drives the real routes in-process — through an HTTP transp
 request/response endpoints and through a direct-ASGI harness for the streams (§10, *Why FastAPI*) — and
 covers the refusal table case by case, the idempotent retry, the take-back accepted inside the window, and
 the same take-back refused after the round has settled.
+
+Each game in `cardgames` carries a suite of its own, which plays full matches in-process and holds every
+position they pass through to card conservation and to `history[n] == journal.replay(n)`. Each is also put
+into service through `create_app` and played over the four endpoints: a game's own state fields reach a
+client's view, its own refusals arrive as the statuses of §6, and a blind holding stays unread by the seat
+that owns it over the wire as it does on the table.

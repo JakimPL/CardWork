@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from random import Random
 from typing import Final
 
@@ -8,6 +9,7 @@ from httpx import ASGITransport, AsyncClient
 
 from cardserver.app import create_app
 from cardserver.identity import SEAT_HEADER, TokenSeats
+from cardserver.protocol import Table
 from cardserver.registry import TableRegistry
 from cardserver.schemas import MoveRequest
 from cardserver.sessions import TableSession
@@ -24,6 +26,7 @@ NO_GRACE: Final[float] = 0.0
 LONG_GRACE: Final[float] = 30.0
 FIRST_CARD: Final[frozenset[int]] = frozenset({0})
 DEAL: Final[int] = 1
+BASE_URL: Final[str] = "http://cardwork"
 
 MOVES: Final[str] = f"/tables/{TABLE}/moves"
 VIEW: Final[str] = f"/tables/{TABLE}/view"
@@ -52,6 +55,27 @@ def sealing(seat: int, base_seq: int, key: str) -> dict[str, object]:
 def reclaiming(seat: int, base_seq: int, key: str) -> dict[str, object]:
     """A command lifting a seat's sealed card back into its hand."""
     return command(Move(player=seat, action=Take(group="sealed", indices=FIRST_CARD)), base_seq, key)
+
+
+@asynccontextmanager
+async def served[StateT: GameState](
+    table: Table[StateT],
+    players: int,
+) -> AsyncIterator[tuple[AsyncClient, TableSession[StateT]]]:
+    """One game in service under `TABLE`, answering as the client a seat speaks through and the session behind it.
+
+    A game arrives with a state type of its own, and the registry, the application and the projection carry
+    that type out to the wire, which is what a real game served in its own module reads for. The window is
+    left at nothing, so a round closed by the last seat to act settles as soon as the session is drained.
+    """
+    registry = TableRegistry[StateT](NO_GRACE)
+    session = registry.open(TABLE, table)
+    app = create_app(registry, TokenSeats({TABLE: {token_of(seat): seat for seat in range(players)}}))
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as client:
+            yield client, session
+    finally:
+        await registry.close()
 
 
 async def close_the_round(client: AsyncClient, session: TableSession[GameState]) -> None:
@@ -92,5 +116,5 @@ def app_fixture(registry: TableRegistry[GameState]) -> FastAPI:
 
 @pytest.fixture(name="client")
 async def client_fixture(app: FastAPI) -> AsyncIterator[AsyncClient]:
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://cardwork") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as client:
         yield client
