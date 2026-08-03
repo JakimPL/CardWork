@@ -6,10 +6,11 @@ import uvicorn
 from fastapi import FastAPI
 from pydantic import ValidationError
 
-from cardtable.cli import announcement, configured, main, parser
+from cardtable.cli import address, announcement, configured, main, parser
 from cardtable.config import Configuration
 from cardtable.games import GameName
 from cardtable.hosting import Hosted
+from cardtable.interface import joining
 from cardtable.paths import CONFIGURATION, INTERFACE
 from cardtable.service import LogLevel, Service
 from cardtable.settings import Settings
@@ -109,7 +110,7 @@ def test_a_run_told_to_read_a_file_that_stands_nowhere_says_so(tmp_path: Path) -
 def test_the_announcement_names_the_address_a_browser_reaches_the_table_at() -> None:
     announced = announcement(a_hosted_table(BUILT), SERVICE)
 
-    assert f"http://{SERVICE.host}:{SERVICE.port}" in announced.splitlines()[0]
+    assert address(SERVICE) in announced.splitlines()[0]
 
 
 def test_the_announcement_names_the_table_and_a_token_for_every_seat() -> None:
@@ -117,6 +118,19 @@ def test_the_announcement_names_the_table_and_a_token_for_every_seat() -> None:
 
     assert TABLE in announced
     assert all(token in announced for token in TOKENS.values())
+
+
+def test_the_announcement_hands_each_seat_the_address_that_takes_it() -> None:
+    """One line per seat, which is the whole of what a player is handed: the address opens the table as them."""
+    announced = announcement(a_hosted_table(BUILT), SERVICE).splitlines()
+
+    assert all(joining(address(SERVICE), TABLE, token) in announced[seat + 1] for seat, token in TOKENS.items())
+
+
+def test_the_announcement_hands_a_tab_the_address_that_watches_the_table() -> None:
+    announced = announcement(a_hosted_table(BUILT), SERVICE)
+
+    assert joining(address(SERVICE), TABLE, None) in announced
 
 
 def test_the_announcement_says_where_a_page_would_be_read_from_when_none_is_built() -> None:

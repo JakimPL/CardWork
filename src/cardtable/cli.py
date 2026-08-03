@@ -9,6 +9,7 @@ from cardtable.catalogue import opened
 from cardtable.config import Configuration
 from cardtable.games import GameName
 from cardtable.hosting import Hosted
+from cardtable.interface import joining
 from cardtable.paths import CONFIGURATION, INTERFACE
 from cardtable.service import LogLevel, Service
 from cardtable.settings import Settings
@@ -98,14 +99,23 @@ def configured(arguments: Namespace) -> Configuration:
     )
 
 
-def announcement(hosted: Hosted, service: Service) -> str:
-    """The lines a person reads once a table is open: where to point a browser, and as whom.
+def address(service: Service) -> str:
+    """Where the table answers, as a browser reaches it."""
+    return f"http://{service.host}:{service.port}"
 
-    A seat is held by whoever offers its token, so one of these lines is the whole of what a player needs,
-    and a tab opened holding none watches the table.
+
+def announcement(hosted: Hosted, service: Service) -> str:
+    """The lines a person reads once a table is open: which address takes which seat, and which watches it.
+
+    A seat is held by whoever opens its own address, so one of these lines is the whole of what a player is
+    handed, and the line holding no token watches the table.
     """
-    lines = [f"Table {hosted.table!r} is open at http://{service.host}:{service.port}"]
-    lines.extend(f"  seat {seat}: {token}" for seat, token in sorted(hosted.tokens.items()))
+    reached = address(service)
+    lines = [f"Table {hosted.table!r} is open at {reached}"]
+    lines.extend(
+        f"  seat {seat}: {joining(reached, hosted.table, token)}" for seat, token in sorted(hosted.tokens.items())
+    )
+    lines.append(f"  watching: {joining(reached, hosted.table, None)}")
     if hosted.interface is None:
         lines.append(f"  the endpoints answer on their own, since no interface is built at {INTERFACE}")
 

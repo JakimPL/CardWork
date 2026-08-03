@@ -6,13 +6,17 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from cardtable.games import GameName
-from cardtable.interface import serve_interface
+from cardtable.interface import TABLE_FIELD, TOKEN_FIELD, joining, serve_interface
 
-from .tables import BASE_URL, LAYOUT, playing
+from .tables import BASE_URL, LAYOUT, TABLE, playing
 
-PAGE: Final[str] = "<!doctype html><title>CardWork</title>"
+DOCTYPE: Final[str] = "<!doctype html>"
+PAGE: Final[str] = f"{DOCTYPE}<title>CardWork</title>"
 BUILD: Final[str] = "dist"
 ROOT: Final[str] = "/"
+ADDRESS: Final[str] = "http://127.0.0.1:8000"
+TOKEN: Final[str] = "a-token"
+SPACED: Final[str] = "green baize"
 
 
 def a_build(root: Path) -> Path:
@@ -46,12 +50,45 @@ def test_a_build_that_is_a_file_rather_than_a_directory_serves_no_page(tmp_path:
     assert serve_interface(FastAPI(), standing_in) is None
 
 
+def test_the_address_of_a_seat_names_the_table_and_the_token_holding_it() -> None:
+    assert joining(ADDRESS, TABLE, TOKEN) == f"{ADDRESS}/#{TABLE_FIELD}={TABLE}&{TOKEN_FIELD}={TOKEN}"
+
+
+def test_the_address_of_a_tab_watching_a_table_offers_no_token() -> None:
+    watching = joining(ADDRESS, TABLE, None)
+
+    assert watching == f"{ADDRESS}/#{TABLE_FIELD}={TABLE}"
+    assert TOKEN_FIELD not in watching
+
+
+def test_a_table_whose_name_holds_a_space_is_named_in_an_address_a_browser_reads() -> None:
+    assert joining(ADDRESS, SPACED, None) == f"{ADDRESS}/#{TABLE_FIELD}=green+baize"
+
+
+def test_the_token_stands_in_the_fragment_of_an_address_rather_than_the_part_a_server_reads() -> None:
+    """The whole of why a seat is joined through a fragment: a browser sends the server nothing of one.
+
+    A token in a query would reach the endpoints on every request and stand in whatever they log, so the
+    interface reads it out of the fragment and offers it in a header from then on.
+    """
+    reached, held = joining(ADDRESS, TABLE, TOKEN).split("#")
+
+    assert TOKEN not in reached
+    assert TOKEN in held
+
+
 async def test_a_table_answers_its_own_endpoints_ahead_of_the_page(tmp_path: Path) -> None:
+    """A page mounted at the root leaves every endpoint of the table matching ahead of it.
+
+    The host serves whichever build its checkout holds, so a table opened where none stands is handed one
+    here. Either way the mount goes on after the endpoints, and the table answers for itself.
+    """
     async with playing(GameName.PASSING) as (client, hosted):
-        serve_interface(hosted.app, a_build(tmp_path))
+        served = hosted.interface or serve_interface(hosted.app, a_build(tmp_path))
 
         answered = await client.get(LAYOUT)
         page = await client.get(ROOT)
 
+    assert served is not None
     assert answered.status_code == HTTPStatus.OK
-    assert page.text == PAGE
+    assert page.text.startswith(DOCTYPE)

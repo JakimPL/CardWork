@@ -1,4 +1,4 @@
-.PHONY: install format lint typecheck imports test coverage check assets play
+.PHONY: install format lint typecheck imports test coverage check assets interface types play
 
 install:
 	uv sync --all-extras
@@ -28,6 +28,15 @@ check: lint typecheck imports coverage
 
 assets:
 	uv run python scripts/assets.py
+
+interface:
+	npm --prefix frontend install
+	npm --prefix frontend run test
+	npm --prefix frontend run build
+
+types:
+	uv run python scripts/openapi.py
+	npm --prefix frontend run types
 
 play:
 	uv run cardtable $(if $(GAME),--game $(GAME)) $(if $(PLAYERS),--players $(PLAYERS))

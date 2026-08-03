@@ -156,6 +156,13 @@ the layout nowhere, which is what keeps a game playable with no screen attached 
 presentation from reaching the journal. Every one of these four modules stands on the framework and on its
 own game alone.
 
+**The interface stands outside the import graph altogether.** `frontend/` is a page written in another
+language, so no contract can hold it to the packages above and two artefacts do it instead: the OpenAPI
+document the endpoints publish, which the layout vocabulary is generated from, and about ninety lines
+mirroring the projections by hand, since those carry a game's own state and publish no schema (§10, *The
+page*). Everything a game states about how it is read reaches the page as data, so the page holds the name of
+neither game.
+
 **`cardtable` names all three, and nothing names it.** A game class and FastAPI have to meet somewhere, and
 the two contracts above put that somewhere outside `cardgames` and outside `cardserver` alike: the host is
 the fourth package, it holds one module per concern of putting a table into service, and the arrows all
@@ -188,8 +195,9 @@ aspirational:
    its own rules, and only its own.
 8. **Nothing names the host** — none of `cardwork`, `cardserver` or `cardgames` names `cardtable`, so the
    composition root stays a leaf nothing depends on and a second host costs no change below it.
-9. **Host layers** — `cardtable` layers in its own right, high to low: `cli`, `catalogue`, `hosting`, and
-   then `settings`, `interface` and `seats` standing independent of one another at the bottom.
+9. **Host layers** — `cardtable` layers in its own right, high to low: `cli`, `catalogue`, `hosting`,
+   `config`, then `settings`, `service`, `interface` and `seats` standing independent of one another, and
+   `games` beside `paths` at the foot.
 
 ---
 
@@ -1303,6 +1311,54 @@ and a checkout holding no build serves the endpoints alone.
 the host runs under no reloader and `uv run cardtable` is the whole of starting one. Ending the process ends
 the service through the application's own lifespan, which drops every timer still in hand.
 
+### The page
+
+`frontend/` is the interface a table is played through: React and TypeScript, built by Vite into the directory
+the host mounts. It holds three layers of its own, and each names only what is below it:
+
+| layer | states |
+|---|---|
+| `api` | what a table answers and what a client sends: the layout vocabulary, the projections, the seat, the refusals, and the calls that read them |
+| `play` | what a client makes of those answers: the seat an address names, the view a commit leaves, the figures a readout reads |
+| `table` | what appears on screen: the standing, the two regions of zones, a slot, a card, the line saying where play stands |
+
+**The types come from the document where a document exists, and by hand where one cannot.** `/layout` is the
+one answer that stands apart from a game's own state, so it publishes a schema and `openapi-typescript`
+generates the whole layout vocabulary from it — a slot, a gesture, a plaque, a readout, a move and the four
+closed vocabularies besides. `/view` and `/events` are generic in the state a game declares, which leaves
+FastAPI nothing to build a schema from, so `api/views.ts` mirrors them: a page reading a game's own cursor
+reads fields the framework never declared, which is exactly what a readout names for it. `make types` writes
+the document and regenerates the vocabulary, so a field added to a layout reaches the page as a compile error
+rather than as a blank space.
+
+**A projection is drawn by index, and a placeholder is a card in every way but its face.** `ZoneView.cards`
+holds `null` at the true position of each card the observer may not read (§7), so a slot draws a back there
+and a move addressing that position still lands where the player aimed — which is what makes showdown's
+blind holding playable at all. A card an observer *is* served draws its face whichever way up it lies, since
+being served it is the entitlement: a hand of four dealt face down is four cards its owner reads and four
+counts to everybody else, and the interface marks the face-down lie rather than concealing what the projection
+already disclosed.
+
+**The stream is read over `fetch`, not through an `EventSource`.** A seat is held by the `X-Seat-Token`
+header and an `EventSource` sends no headers, so putting the token in a query string is the only way to use
+the browser's own stream — and a token in a query string is a token in every log the request passes through.
+`@microsoft/fetch-event-source` carries what is given up in exchange: the retry, and the `Last-Event-ID` that
+`streams.py` already resumes from. A client joins at `?since=<view.seq>` and resumes from the header
+thereafter, so the position on screen and the sequence a move quotes stay in step whether the stream held or
+dropped. A commit carries the cursor and the moves it opened alongside the zones it changed, so applying one
+takes no further request.
+
+**A tab is told which table it plays at, and as whom, in the fragment of its own address.** The host prints
+one address per seat as it opens a table, and a browser sends a fragment to nobody: the page reads the table
+and the token out of it as it loads, and offers the token in a header from then on. So a player joins by
+opening the line they were handed, a tab holding no token watches the table, and no address the server writes
+down holds a credential.
+
+**The page fits the window.** One screen high, `overflow: hidden`, three rows of `auto 1fr auto`: the
+standing of every seat across the top, the shared cards in the middle, the seat's own holdings and the line
+saying where play stands at the bottom. Every card is measured from a single height that follows the viewport,
+at the proportions of a real one, so the same table reads at any size without a scrollbar anywhere.
+
 ---
 
 ## 11. A round, end to end
@@ -1445,6 +1501,8 @@ play was good **given what the player knew**.
 | What a game states vs. how it looks | `presentation` holds zone ids, kinds of move and fields of the cursor | a layout carries a measurement, or an interface branches on a zone id or a phase |
 | A game's rules vs. its layout | the `Rules know no presentation` contract; `backend` and `frontend` per game | a rules module names a slot or a caption, or a zone id is written twice |
 | A mechanism vs. the choice of game | the `Nothing names the host` contract; `cardtable.catalogue` is the only module naming `cardgames` | a registry, a handler or a scene is reached for by a game's name outside the catalogue |
+| A shape stated once vs. a shape restated | the layout vocabulary is generated from the published document; only the projections carrying a game's own state are written by hand | a field of a slot, a gesture or a move is typed in TypeScript by hand |
+| A credential vs. an address | the table and the token ride in the fragment; the token reaches the endpoints in a header | a seat token appears in a path, a query string or a log line |
 | A value a person turns vs. one the code settles | `config.yaml` states a run; `Configuration` asks for each field outright | a default sits in a flag, a Makefile and a file at once, and a run reads whichever was edited last |
 | A round vs. a match | `rounds` sits above `games`; a game states one round and the layer states the match | a game deals its own next round, or adds its own tally into the standing |
 

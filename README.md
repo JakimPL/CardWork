@@ -23,6 +23,7 @@ follows is enough to start.
 make install      # uv sync --all-extras
 make check        # lint, mypy --strict, import contracts, coverage
 make test         # pytest -n auto
+make interface    # install, test and build the player interface
 make play         # open the table config.yaml states; GAME=showdown PLAYERS=4 to depart from it
 ```
 
@@ -201,11 +202,51 @@ service:
   log_level: info
 ```
 
-It prints the address and one token per seat. Each player opens the address in a tab of their own and
-offers their token; a tab offering none watches the table. The page comes out of the same application the
-endpoints do, so nothing is cross-origin and the token stays in a header.
+It prints one address per seat, and one that watches the table:
+
+```
+Table 'green-baize' is open at http://127.0.0.1:8000
+  seat 0: http://127.0.0.1:8000/#table=green-baize&token=Ux9-tKPqf1A
+  seat 1: http://127.0.0.1:8000/#table=green-baize&token=x2mE7Rl0aQs
+  seat 2: http://127.0.0.1:8000/#table=green-baize&token=Kd4pT1nWqZ8
+  watching: http://127.0.0.1:8000/#table=green-baize
+```
+
+Each player opens the line they were handed in a tab of their own, and that is the whole of joining: the
+table and the token stand in the fragment, which a browser sends to nobody, and the page offers the token in
+a header from then on. The page comes out of the same application the endpoints do, so nothing is
+cross-origin and no address holds a credential.
 
 A table lives as long as the process: the position is held in memory, and a restart deals a fresh one.
+
+## The interface
+
+`frontend/` is the page a table is played through — React and TypeScript, built by Vite into
+`frontend/dist`, which the host mounts at the root of the same application:
+
+```bash
+make interface                    # install, test and build it
+make types                        # regenerate its API types from the endpoints
+npm --prefix frontend run dev     # a development server, proxying /tables to the table config.yaml opens
+```
+
+A game states how it is read and the page draws whatever it is handed: the layout names the zones, where
+they sit and how their cards lie, the plaques and the words for each phase, so the page holds the name of
+neither game. What it is served is what its seat may know — a card it may not read arrives as a placeholder
+at that card's own position, and draws as a back.
+
+The layout vocabulary is generated from the OpenAPI document the endpoints publish, since `/layout` is the
+one answer standing apart from a game's own state. A view and an event are generic in the state a game
+declares and publish no schema, so `src/api/views.ts` mirrors those two by hand. Commits arrive over
+server-sent events read through `fetch`, which is what lets a seat token stay in a header:
+
+```
+GET /layout, GET /view   as the page loads
+GET /events?since=<seq>  from there onward, resumed by Last-Event-ID
+```
+
+`make interface` is the gate for it — `tsc` under `strict`, and the client's own tests — and building it is
+what turns `uv run cardtable` from a set of endpoints into a table you can look at.
 
 Card artwork is fetched rather than kept here:
 

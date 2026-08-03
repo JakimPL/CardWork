@@ -16,3 +16,4 @@ __pycache__/
 assets/
 frontend/dist/
 frontend/node_modules/
+frontend/openapi.json

@@ -1,0 +1,46 @@
+import { describe, expect, it } from "vitest";
+
+import { applyCommit } from "../src/play/commits";
+import { aCommit, aView, card, HAND, PILE, SEATED, STACK } from "./tables";
+
+describe("a commit applied to the view a client holds", () => {
+  it("stands the client one commit further on than the number the commit took", () => {
+    const held = aView({ [HAND]: [card("9", "♦")] }, 4);
+
+    expect(applyCommit(held, aCommit(4, [])).seq).toBe(5);
+  });
+
+  it("leaves every zone it read the same way as it stood", () => {
+    const held = aView({ [HAND]: [card("9", "♦")], [STACK]: [] }, 4);
+
+    const after = applyCommit(held, aCommit(4, [{ zone: STACK, before: [], after: [card("8", "♠")] }]));
+
+    expect(after.zones[HAND]).toEqual(held.zones[HAND]);
+    expect(after.zones[STACK]?.cards).toEqual([card("8", "♠")]);
+  });
+
+  it("takes the cursor and the moves it carries in place of the ones held", () => {
+    const held = aView({ [HAND]: [] }, 4);
+    const settled = { ...SEATED, phase: "decided", to_act: [], winner: 1 };
+
+    const after = applyCommit(held, aCommit(4, [], settled));
+
+    expect(after.state).toEqual(settled);
+    expect(after.observer).toBe(held.observer);
+  });
+
+  it("holds a zone the client had not seen where a change names one", () => {
+    const held = aView({ [HAND]: [] }, 4);
+
+    const after = applyCommit(held, aCommit(4, [{ zone: PILE, before: [], after: [null, null] }]));
+
+    expect(after.zones[PILE]).toEqual({ id: PILE, owner: null, cards: [null, null] });
+  });
+
+  it("reads the same either way round, so a commit met twice changes nothing the second time", () => {
+    const held = aView({ [HAND]: [card("9", "♦")] }, 4);
+    const commit = aCommit(4, [{ zone: HAND, before: [card("9", "♦")], after: [card("2", "♣")] }]);
+
+    expect(applyCommit(applyCommit(held, commit), commit)).toEqual(applyCommit(held, commit));
+  });
+});
