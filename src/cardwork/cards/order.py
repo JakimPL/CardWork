@@ -2,13 +2,13 @@ from collections.abc import Sequence
 from typing import Final
 
 from cardwork.cards.card import Card
-from cardwork.cards.rank import Rank
-from cardwork.cards.suit import Suit
+from cardwork.cards.rank import Rank, Ranks
+from cardwork.cards.suit import Suit, Suits
 from cardwork.ordering.preorder import Composite, Key, Preorder, Tiers
 
-RANK_SEQUENCE: Final[tuple[Rank, ...]] = tuple(Rank)
-ACE_LOW_RANKS: Final[tuple[Rank, ...]] = (Rank.ACE, *RANK_SEQUENCE[:-1])
-SUIT_SEQUENCE: Final[tuple[Suit, ...]] = (Suit.CLUB, Suit.DIAMOND, Suit.HEART, Suit.SPADE)
+RANK_SEQUENCE: Final[Ranks] = tuple(Rank)
+ACE_LOW_RANKS: Final[Ranks] = (Rank.ACE, *RANK_SEQUENCE[:-1])
+SUIT_SEQUENCE: Final[Suits] = (Suit.CLUB, Suit.DIAMOND, Suit.HEART, Suit.SPADE)
 
 
 class ByRank(Preorder[Card]):

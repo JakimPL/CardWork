@@ -3,12 +3,12 @@ from typing import Annotated
 
 from pydantic import Field
 
-from cardwork.cards.game import CardOrJoker, GameCard
+from cardwork.cards.game import CardOrJoker, CardsOrJokers, GameCard
 
-Deck = tuple[CardOrJoker, ...]
-GameDeck = Iterable[CardOrJoker] | Iterable[GameCard]
+type Deck = CardsOrJokers
+type GameDeck = Iterable[CardOrJoker] | Iterable[GameCard]
 
-CardIndex = Annotated[int, Field(ge=0)]
-Indices = frozenset[CardIndex]
-NonEmptyIndices = Annotated[Indices, Field(min_length=1)]
-GameCards = tuple[GameCard, ...]
+type CardIndex = Annotated[int, Field(ge=0)]
+type Indices = frozenset[CardIndex]
+type NonEmptyIndices = Annotated[Indices, Field(min_length=1)]
+type GameCards = tuple[GameCard, ...]

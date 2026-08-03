@@ -43,4 +43,7 @@ class Discard(Action):
     indices: NonEmptyIndices
 
 
-type AnyAction = Annotated[Play | Take | Give | Reject | Discard, Field(discriminator="kind")]
+type AnyAction = Annotated[
+    Play | Take | Give | Reject | Discard,
+    Field(discriminator="kind"),
+]

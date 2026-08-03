@@ -1,19 +1,6 @@
-from typing import Final
-
-from cardwork.cards.card import Card
-from cardwork.cards.rank import Rank
-from cardwork.cards.suit import Suit
+from cardwork.cards.cards import STANDARD_CARDS
 from cardwork.decks.deck import Deck, GameDeck
 from cardwork.decks.decks import compare_decks, jokers
-
-STANDARD_DECK: Final[Deck] = tuple(
-    Card(
-        rank=rank,
-        suit=suit,
-    )
-    for rank in Rank
-    for suit in Suit
-)
 
 
 def standard_deck(
@@ -22,7 +9,7 @@ def standard_deck(
     red_jokers: int = 0,
 ) -> Deck:
     return (
-        *STANDARD_DECK,
+        *STANDARD_CARDS,
         *jokers(
             black=black_jokers,
             red=red_jokers,

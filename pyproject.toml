@@ -79,6 +79,7 @@ layers = [
     "cardwork.moves",
     "cardwork.zones",
     "cardwork.decks",
+    "cardwork.combinations",
     "cardwork.cards",
     "cardwork.ordering",
     "cardwork.models",

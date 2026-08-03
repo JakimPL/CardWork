@@ -61,7 +61,15 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
 
         deal = self._deal_cards(origin, self._rng)
         self._commit(
-            Transaction(seq=0, move=None, effects=deal + self.advance(fold(deal, origin), None)),
+            Transaction(
+                seq=0,
+                move=None,
+                effects=deal
+                + self.advance(
+                    fold(deal, origin),
+                    None,
+                ),
+            ),
         )
 
         self._basic_final_validation(self.position)

@@ -16,7 +16,7 @@ JOKER_POINTS: Final[int] = 0
 class PointTable(BaseFrozen):
     """What each rank is worth to a game that counts its cards, beside the worth of a joker.
 
-    Scoring is a game's own affair, so this is vocabulary rather than rule: the tables below carry the
+    Scoring is a game's own affair, so a table is vocabulary a game reaches for: the ones below carry the
     common reading, and a game that counts differently states its own.
     """
 

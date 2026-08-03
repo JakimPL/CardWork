@@ -10,3 +10,6 @@ class Suit(StrEnum):
     @property
     def red(self) -> bool:
         return self in {Suit.HEART, Suit.DIAMOND}
+
+
+type Suits = tuple[Suit, ...]

@@ -15,6 +15,7 @@ from cardwork.cards.cards import (
     QUEEN_OF_SPADES,
     SEVEN_OF_HEARTS,
     SEVEN_OF_SPADES,
+    STANDARD_CARDS,
     THREE_OF_CLUBS,
     TWO_OF_CLUBS,
     TWO_OF_SPADES,
@@ -22,7 +23,6 @@ from cardwork.cards.cards import (
 from cardwork.cards.order import ACE_LOW_RANKS, BY_RANK, BY_RANK_ACE_LOW, BY_SUIT, RANK_SEQUENCE, REGULAR_ORDER
 from cardwork.cards.rank import Rank
 from cardwork.cards.suit import Suit
-from cardwork.decks.standard import STANDARD_DECK
 
 from ..cases import Case, descriptions
 
@@ -103,9 +103,9 @@ def test_the_suit_order_raises_the_spade_above_every_other_suit() -> None:
 
 
 def test_the_regular_order_places_every_card_of_a_standard_deck_apart() -> None:
-    places = {REGULAR_ORDER.key(card) for card in STANDARD_DECK if isinstance(card, Card)}
+    places = {REGULAR_ORDER.key(card) for card in STANDARD_CARDS}
 
-    assert len(places) == len(STANDARD_DECK)
+    assert len(places) == len(STANDARD_CARDS)
 
 
 def test_the_regular_order_settles_a_tie_of_rank_by_the_suit() -> None:
