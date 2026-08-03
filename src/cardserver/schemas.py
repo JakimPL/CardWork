@@ -17,7 +17,11 @@ class MoveRequest(BaseFrozen):
 
 
 class MoveAccepted(BaseFrozen):
-    """The sequence a command was committed at, which the client quotes as `base_seq` for its next one."""
+    """The sequence a command was committed at, which the table stands one commit past.
+
+    A client holding this commit stands at `seq + 1` commits, and that count is what its next command quotes
+    as `base_seq`.
+    """
 
     seq: int
 

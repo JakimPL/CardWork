@@ -1,7 +1,9 @@
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 
 import type { Layout } from "./layout";
-import { reasonOf, Refused, refusalOf } from "./refusal";
+import type { MoveAccepted, MoveRequest } from "./moves";
+import { bodyOf, parsed } from "./parsing";
+import { reasonOf, refusalOf, Refused } from "./refusal";
 import { credentials, type Seat } from "./seat";
 import type { EventView, PositionView } from "./views";
 
@@ -9,7 +11,12 @@ const TABLES = "/tables";
 const LAYOUT = "layout";
 const VIEW = "view";
 const EVENTS = "events";
+const MOVES = "moves";
 const SINCE = "since";
+
+const SENDING = "POST";
+const CONTENT_TYPE = "content-type";
+const JSON_BODY = "application/json";
 
 /** The name a commit arrives under on the stream, which mirrors `cardserver.streams.COMMIT_EVENT`. */
 const COMMIT = "commit";
@@ -36,8 +43,7 @@ async function read<AnswerT>(seat: Seat, answer: string): Promise<AnswerT> {
     throw await refusalOf(response);
   }
 
-  const body: AnswerT = await response.json();
-  return body;
+  return bodyOf<AnswerT>(response);
 }
 
 /** How this seat lays the table out, which answers for the match and is read once as a client joins. */
@@ -48,6 +54,27 @@ export function readLayout(seat: Seat): Promise<Layout> {
 /** The table as this seat is entitled to see it, which is the position a client joins on. */
 export function readView(seat: Seat): Promise<PositionView> {
   return read<PositionView>(seat, VIEW);
+}
+
+/**
+ * Send one command up to a table, answering with the sequence the commit took.
+ *
+ * The command carries the position it was weighed against and a name for the attempt, so a table that has
+ * moved on refuses it and a request sent twice under one name lands once.
+ *
+ * @throws Refused when the table turns the command down, which the status tells the kind of.
+ */
+export async function sendMove(seat: Seat, command: MoveRequest): Promise<MoveAccepted> {
+  const response = await fetch(endpoint(seat, MOVES), {
+    method: SENDING,
+    headers: { ...credentials(seat), [CONTENT_TYPE]: JSON_BODY },
+    body: JSON.stringify(command),
+  });
+  if (!response.ok) {
+    throw await refusalOf(response);
+  }
+
+  return bodyOf<MoveAccepted>(response);
 }
 
 /**
@@ -79,8 +106,7 @@ export function followCommits(seat: Seat, since: number, following: Following): 
     },
     onmessage(message): void {
       if (message.event === COMMIT) {
-        const event: EventView = JSON.parse(message.data);
-        following.onCommit(event);
+        following.onCommit(parsed<EventView>(message.data));
       }
     },
     onerror(trouble: unknown): void {

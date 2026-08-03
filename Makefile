@@ -2,29 +2,35 @@
 
 install:
 	uv sync --all-extras
+	npm --prefix frontend install
 
 format:
 	uv run isort src tests scripts
 	uv run black src tests scripts
+	npm --prefix frontend run format
 
 lint:
 	uv run isort --check-only src tests scripts
 	uv run black --check src tests scripts
 	uv run pylint src scripts
+	npm --prefix frontend run lint
 
 typecheck:
 	uv run mypy
+	npm --prefix frontend run typecheck
 
 imports:
 	uv run lint-imports
 
 test:
 	uv run pytest -n auto
+	npm --prefix frontend run test
 
 coverage:
 	uv run pytest --cov --cov-report=term-missing
 
 check: lint typecheck imports coverage
+	npm --prefix frontend run test
 
 assets:
 	uv run python scripts/assets.py

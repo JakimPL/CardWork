@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { applyCommit } from "../src/play/commits";
+import { advanced, applyCommit } from "../src/play/commits";
 import { aCommit, aView, card, HAND, PILE, SEATED, STACK } from "./tables";
 
 describe("a commit applied to the view a client holds", () => {
@@ -42,5 +42,21 @@ describe("a commit applied to the view a client holds", () => {
     const commit = aCommit(4, [{ zone: HAND, before: [card("9", "♦")], after: [card("2", "♣")] }]);
 
     expect(applyCommit(applyCommit(held, commit), commit)).toEqual(applyCommit(held, commit));
+  });
+});
+
+describe("a commit off the stream", () => {
+  it("is taken up where it is the one the client stands waiting for", () => {
+    const held = aView({ [HAND]: [card("9", "♦")] }, 4);
+
+    expect(advanced(held, aCommit(4, [])).seq).toBe(5);
+  });
+
+  it("leaves a position read afresh where it stands, since the commit is already in hand", () => {
+    const read = aView({ [HAND]: [card("2", "♣")] }, 6);
+
+    const after = advanced(read, aCommit(4, [{ zone: HAND, before: [], after: [card("9", "♦")] }]));
+
+    expect(after).toBe(read);
   });
 });

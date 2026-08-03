@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { followCommits, readLayout, readView } from "../api/client";
 import type { Layout } from "../api/layout";
 import { reasonOf } from "../api/refusal";
 import type { Seat } from "../api/seat";
 import type { PositionView } from "../api/views";
-import { applyCommit } from "./commits";
+import { advanced } from "./commits";
 
 /** How a client stands with the table it is watching. */
 export type Connection = "joining" | "following" | "resuming" | "refused";
@@ -16,6 +16,7 @@ export interface Watched {
   view: PositionView | null;
   connection: Connection;
   trouble: string | null;
+  refresh: () => void;
 }
 
 /**
@@ -26,6 +27,9 @@ export interface Watched {
  * cursor and the moves a seat may make alongside each change, so the table on screen is never a round trip
  * behind the table itself.
  *
+ * `refresh` reads the position again, which is what a client does when it learns the table has moved past
+ * where it thought it stood.
+ *
  * @param seat - the table watched and the token it is watched as.
  */
 export function useTable(seat: Seat): Watched {
@@ -33,6 +37,14 @@ export function useTable(seat: Seat): Watched {
   const [view, setView] = useState<PositionView | null>(null);
   const [connection, setConnection] = useState<Connection>("joining");
   const [trouble, setTrouble] = useState<string | null>(null);
+
+  const refresh = useCallback(() => {
+    readView(seat)
+      .then(setView)
+      .catch((refusal: unknown) => {
+        setTrouble(reasonOf(refusal));
+      });
+  }, [seat]);
 
   useEffect(() => {
     const watching = { held: true };
@@ -53,7 +65,9 @@ export function useTable(seat: Seat): Watched {
           setConnection("following");
           setTrouble(null);
         },
-        onCommit: (event) => setView((held) => (held === null ? held : applyCommit(held, event))),
+        onCommit: (event) => {
+          setView((held) => (held === null ? held : advanced(held, event)));
+        },
         onDropped: (reason) => {
           setConnection("resuming");
           setTrouble(reason);
@@ -65,7 +79,6 @@ export function useTable(seat: Seat): Watched {
       });
     };
 
-    setConnection("joining");
     join().catch((refusal: unknown) => {
       if (watching.held) {
         setConnection("refused");
@@ -77,7 +90,7 @@ export function useTable(seat: Seat): Watched {
       watching.held = false;
       stop?.();
     };
-  }, [seat.table, seat.token]);
+  }, [seat]);
 
-  return { layout, view, connection, trouble };
+  return { layout, view, connection, trouble, refresh };
 }

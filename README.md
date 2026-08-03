@@ -20,9 +20,9 @@ follows is enough to start.
 ## Getting set up
 
 ```bash
-make install      # uv sync --all-extras
-make check        # lint, mypy --strict, import contracts, coverage
-make test         # pytest -n auto
+make install      # uv sync --all-extras, and the page's own dependencies
+make check        # lint, mypy --strict, import contracts, coverage, the page's tests
+make test         # pytest -n auto, and the page's tests
 make interface    # install, test and build the player interface
 make play         # open the table config.yaml states; GAME=showdown PLAYERS=4 to depart from it
 ```
@@ -235,6 +235,13 @@ they sit and how their cards lie, the plaques and the words for each phase, so t
 neither game. What it is served is what its seat may know — a card it may not read arrives as a placeholder
 at that card's own position, and draws as a back.
 
+A move is made by pointing. The cards some move names light up; clicking one picks it up and the highlight
+narrows to the cards a longer move could still name; the places the cards in hand can be sent to — a zone of
+the table, or another player — light up in turn, and clicking one of those is what sends the move. So a click
+on a card commits nothing, a card in hand goes back down by clicking it again, and the line under the cards
+says in the game's own words what the selection would do. Every bit of it comes from the moves the table
+reports as open, which is why the page needs to know nothing about a rank or a count.
+
 The layout vocabulary is generated from the OpenAPI document the endpoints publish, since `/layout` is the
 one answer standing apart from a game's own state. A view and an event are generic in the state a game
 declares and publish no schema, so `src/api/views.ts` mirrors those two by hand. Commits arrive over
@@ -243,10 +250,14 @@ server-sent events read through `fetch`, which is what lets a seat token stay in
 ```
 GET /layout, GET /view   as the page loads
 GET /events?since=<seq>  from there onward, resumed by Last-Event-ID
+POST /moves              a move armed by a selection, pinned to the sequence it was weighed against
 ```
 
-`make interface` is the gate for it — `tsc` under `strict`, and the client's own tests — and building it is
-what turns `uv run cardtable` from a set of endpoints into a table you can look at.
+The page answers the same standard as the Python: Prettier for the formatting, ESLint reading it with the
+types in hand, Stylelint for the sheet, `tsc --noEmit`, and Vitest. `make format`, `make lint`, `make
+typecheck` and `make test` each cover both languages, and the pre-commit hooks run the page's formatter and
+type check on a commit touching `frontend/`, with its tests at push. Building it is what turns
+`uv run cardtable` from a set of endpoints into a table you can look at.
 
 Card artwork is fetched rather than kept here:
 

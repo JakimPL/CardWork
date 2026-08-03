@@ -3,10 +3,11 @@ import { describe, expect, it } from "vitest";
 
 import type { Layout, Readout, Slot } from "../src/api/layout";
 import type { Cursor, PositionView } from "../src/api/views";
+import { prospect } from "../src/play/selection";
 import { Header } from "../src/table/Header";
 import { StatusLine } from "../src/table/StatusLine";
 import { Zones } from "../src/table/Zones";
-import { aLayout, aView, card, HAND, PILE, STACK } from "./tables";
+import { aLayout, aPlaying, aView, card, HAND, PILE, STACK } from "./tables";
 
 /** The table `passing` lays out for the seat in the middle of three, as the game's own module states it. */
 const HELD: Slot = { zone: HAND, label: "Your hand", region: "seat", spread: "fan", place: 0, counted: false };
@@ -38,11 +39,14 @@ const DEALT: PositionView = aView(
   1,
 );
 
+/** A table nothing is being played on, since what these tests read is the drawing of it. */
+const RESTING = aPlaying(prospect([], null));
+
 const drawn = (element: Parameters<typeof renderToStaticMarkup>[0]): string => renderToStaticMarkup(element);
 
 describe("the table one seat reads", () => {
   it("draws every card of its own hand, whichever way up the cards lie", () => {
-    const page = drawn(<Zones region="seat" layout={LAYOUT} view={DEALT} />);
+    const page = drawn(<Zones region="seat" layout={LAYOUT} view={DEALT} playing={RESTING} />);
 
     expect(page).toContain("Your hand");
     expect([...page.matchAll(/class="card face/g)]).toHaveLength(3);
@@ -51,22 +55,22 @@ describe("the table one seat reads", () => {
   });
 
   it("draws a heap it may not read as the back of one card, under the count of them all", () => {
-    const page = drawn(<Zones region="table" layout={LAYOUT} view={DEALT} />);
+    const page = drawn(<Zones region="table" layout={LAYOUT} view={DEALT} playing={RESTING} />);
 
     expect([...page.matchAll(/class="card back"/g)]).toHaveLength(1);
     expect(page).toContain(">4</span>");
   });
 
   it("draws a heap lying face up by the card laid on it", () => {
-    const page = drawn(<Zones region="table" layout={LAYOUT} view={DEALT} />);
+    const page = drawn(<Zones region="table" layout={LAYOUT} view={DEALT} playing={RESTING} />);
 
     expect(page).toContain(">2</span>");
     expect(page).toContain(">♣</span>");
   });
 
   it("lays out no zone another seat holds, and counts it on that seat's plaque instead", () => {
-    const cards = drawn(<Zones region="seat" layout={LAYOUT} view={DEALT} />);
-    const standing = drawn(<Header layout={LAYOUT} view={DEALT} />);
+    const cards = drawn(<Zones region="seat" layout={LAYOUT} view={DEALT} playing={RESTING} />);
+    const standing = drawn(<Header layout={LAYOUT} view={DEALT} playing={RESTING} />);
 
     expect(cards).not.toContain("hand:0");
     expect(standing).toContain("Cards");
@@ -75,7 +79,7 @@ describe("the table one seat reads", () => {
 
 describe("the standing across the top", () => {
   it("names every seat of the table, and which of them is reading the page", () => {
-    const standing = drawn(<Header layout={LAYOUT} view={DEALT} />);
+    const standing = drawn(<Header layout={LAYOUT} view={DEALT} playing={RESTING} />);
 
     expect(standing).toContain("Seat 0");
     expect(standing).toContain("Seat 1 (you)");
@@ -83,13 +87,15 @@ describe("the standing across the top", () => {
   });
 
   it("marks the seat the turn belongs to", () => {
-    const standing = drawn(<Header layout={LAYOUT} view={DEALT} />);
+    const standing = drawn(<Header layout={LAYOUT} view={DEALT} playing={RESTING} />);
 
     expect([...standing.matchAll(/plaque acting/g)]).toHaveLength(1);
   });
 
   it("reads a figure the game keeps per seat at the place each seat sits", () => {
-    const standing = drawn(<Header layout={LAYOUT} view={{ ...DEALT, state: { ...DEALT.state, points: [3, 5, 8] } }} />);
+    const standing = drawn(
+      <Header layout={LAYOUT} view={{ ...DEALT, state: { ...DEALT.state, points: [3, 5, 8] } }} playing={RESTING} />,
+    );
 
     expect(standing).toContain(">3</dd>");
     expect(standing).toContain(">5</dd>");

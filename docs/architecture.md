@@ -1354,6 +1354,35 @@ and the token out of it as it loads, and offers the token in a header from then 
 opening the line they were handed, a tab holding no token watches the table, and no address the server writes
 down holds a credential.
 
+**A move is built by pointing, and a selection alone sends nothing.** `play/selection.ts` reads each move the
+table says is open through the gesture matching it (§9), which yields the zone the move's positions address
+and the place it commits onto. From there, one selection resolves into what the player sees: with nothing
+picked up, every position any move names is *open* — the standing hint that these are the cards in play — and
+picking one narrows the open set to the positions a move holding it could still name, which is the further
+highlighting a two- and three-card discard needs. A move whose positions are exactly those in hand is *armed*,
+and the places the armed moves land on are the ones that light up. Clicking such a place is the whole of
+committing, so no click on a card can send anything by accident; clicking a card in hand puts it back down,
+clicking a card no move names puts the selection down, and clicking the page clears it. The renderer holds no
+count and no rank in any of it: multi-card selection is the general case and a one-card move is where it
+happens to stop.
+
+**A command is pinned to the position it was weighed against, and named so it lands once.** A commit sends
+`base_seq = view.seq` with a name of its own, so a table that has moved on refuses it under `409` and one
+request arriving twice commits a single time. A refusal a table answered stands, and a request that reached no
+answer at all is sent again under the same name — the two are told apart by whether the table spoke. A refused
+position is read afresh and the selection put down with it; a refused move keeps the cards in hand and the
+sentence the game phrased reaches the line under them. A selection is held against the sequence it was made
+at, so the table moving on — this seat's own move landing, or another's — leaves it behind rather than
+carrying it onto cards that have since shifted.
+
+**The page is held to the same standard as the Python.** Prettier formats it, ESLint reads it with the types
+in hand — the strict type-checked rules, the React and hook rules, and three house rules carried over from the
+guidelines: imports in a settled order, a signature stating its types, a figure that means something given a
+name — Stylelint reads the sheet, `tsc --noEmit` checks it, and Vitest runs it. `make format`, `make lint`,
+`make typecheck` and `make test` each run both languages, and pre-commit runs the page's formatter and type
+check on every commit touching `frontend/` with its tests at push, which is the shape the Python hooks already
+had.
+
 **The page fits the window.** One screen high, `overflow: hidden`, three rows of `auto 1fr auto`: the
 standing of every seat across the top, the shared cards in the middle, the seat's own holdings and the line
 saying where play stands at the bottom. Every card is measured from a single height that follows the viewport,
@@ -1503,6 +1532,8 @@ play was good **given what the player knew**.
 | A mechanism vs. the choice of game | the `Nothing names the host` contract; `cardtable.catalogue` is the only module naming `cardgames` | a registry, a handler or a scene is reached for by a game's name outside the catalogue |
 | A shape stated once vs. a shape restated | the layout vocabulary is generated from the published document; only the projections carrying a game's own state are written by hand | a field of a slot, a gesture or a move is typed in TypeScript by hand |
 | A credential vs. an address | the table and the token ride in the fragment; the token reaches the endpoints in a header | a seat token appears in a path, a query string or a log line |
+| Cards in hand vs. a move sent | a selection resolves through the gestures; only a click on an armed place submits | a card click sends a move, or a selection is read as a command |
+| What the table offers vs. what the page knows | `selection.ts` reads `view.legal` through `layout.gestures` and nothing else | the page counts cards, reads a rank, or names a zone to decide what may be picked |
 | A value a person turns vs. one the code settles | `config.yaml` states a run; `Configuration` asks for each field outright | a default sits in a flag, a Makefile and a file at once, and a run reads whichever was edited last |
 | A round vs. a match | `rounds` sits above `games`; a game states one round and the layer states the match | a game deals its own next round, or adds its own tally into the standing |
 

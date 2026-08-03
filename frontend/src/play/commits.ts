@@ -4,6 +4,17 @@ import type { EventView, PositionView, ZoneId, ZoneView } from "../api/views";
 const APPLIED = 1;
 
 /**
+ * The view a client holds once a commit off the stream has been reckoned with.
+ *
+ * A client stands at the number of commits it holds, so the commit it wants next is the one numbered that.
+ * One numbered lower is a commit already in hand — which a client that read the position afresh while the
+ * stream was catching up is served again — and the view it already holds is the later of the two.
+ */
+export function advanced(view: PositionView, event: EventView): PositionView {
+  return event.seq < view.seq ? view : applyCommit(view, event);
+}
+
+/**
  * The view a client holds once one commit has landed on it.
  *
  * A commit carries both sides of every zone it altered, the cursor it left and the moves it opened, so a

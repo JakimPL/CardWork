@@ -25,7 +25,7 @@ interface Configuration {
  * what lets a table opened on another port be reached by a page already running.
  */
 function served(): string {
-  const configuration: Configuration = parse(readFileSync(CONFIGURATION, "utf-8"));
+  const configuration = parse(readFileSync(CONFIGURATION, "utf-8")) as Configuration;
   return `http://${configuration.service.host}:${configuration.service.port}`;
 }
 

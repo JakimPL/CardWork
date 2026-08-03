@@ -257,7 +257,10 @@ export interface components {
         };
         /**
          * MoveAccepted
-         * @description The sequence a command was committed at, which the client quotes as `base_seq` for its next one.
+         * @description The sequence a command was committed at, which the table stands one commit past.
+         *
+         *     A client holding this commit stands at `seq + 1` commits, and that count is what its next command quotes
+         *     as `base_seq`.
          */
         MoveAccepted: {
             /** Seq */

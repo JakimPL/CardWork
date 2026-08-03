@@ -19,6 +19,7 @@
   --black: #1a1a1a;
   --acting: #f0c040;
   --live: #6fcf97;
+  --open: #8fd0ff;
   --gap: clamp(4px, 0.8vh, 12px);
   --card-height: clamp(48px, 13vh, 132px);
   --card-width: calc(var(--card-height) * 71 / 96);
@@ -84,6 +85,7 @@ body {
 }
 
 .plaque {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: calc(var(--gap) / 2);
@@ -183,16 +185,13 @@ body {
 }
 
 .cards {
+  position: relative;
   display: flex;
   align-items: flex-end;
 }
 
 .slot.row .cards {
   gap: calc(var(--gap) / 2);
-}
-
-.slot.fan .card + .card {
-  margin-left: calc(var(--card-width) * -0.42);
 }
 
 .slot.stack .cards,
@@ -243,7 +242,8 @@ body {
 .card.back {
   border: 1px solid var(--edge);
   background-color: #2f5d8a;
-  background-image: repeating-linear-gradient(45deg, rgb(255 255 255 / 22%) 0 2px, transparent 2px 5px),
+  background-image:
+    repeating-linear-gradient(45deg, rgb(255 255 255 / 22%) 0 2px, transparent 2px 5px),
     repeating-linear-gradient(-45deg, rgb(0 0 0 / 22%) 0 2px, transparent 2px 5px);
   box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
 }
@@ -253,8 +253,68 @@ body {
   background: rgb(0 0 0 / 12%);
 }
 
-.slot.fan .card:hover {
+/* Picking cards up, and the places they can be sent from there. */
+
+button.card {
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.landing {
+  position: absolute;
+  z-index: 1;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  inset: calc(var(--gap) / -2);
+}
+
+.page.sending .landing,
+.page.sending button.card {
+  cursor: progress;
+}
+
+.card.open {
+  box-shadow:
+    0 0 0 2px var(--open),
+    0 1px 3px rgb(0 0 0 / 35%);
+}
+
+.card.selected {
+  box-shadow:
+    0 0 0 2px var(--chalk),
+    0 6px 10px rgb(0 0 0 / 45%);
+  transform: translateY(calc(var(--card-height) * -0.12));
+}
+
+.slot.fan .card + .card {
+  margin-left: calc(var(--card-width) * -0.42);
+}
+
+.slot.fan button.card:hover {
   transform: translateY(calc(var(--card-height) * -0.06));
+}
+
+.slot.live .cards::after {
+  position: absolute;
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 2px var(--live);
+  content: "";
+  inset: calc(var(--gap) / -2);
+  pointer-events: none;
+}
+
+.plaque.live {
+  border-color: var(--live);
+}
+
+.guidance {
+  margin: 0;
+  color: var(--open);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* Where play stands, in one line under the cards. */

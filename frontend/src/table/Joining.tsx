@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactElement, useState } from "react";
+import { type ReactElement, type SyntheticEvent, useState } from "react";
 
 import { takeSeat } from "../play/useSeat";
 
@@ -13,7 +13,7 @@ export function Joining(): ReactElement {
   const [table, setTable] = useState("");
   const [token, setToken] = useState("");
 
-  const join = (event: FormEvent): void => {
+  const join = (event: SyntheticEvent): void => {
     event.preventDefault();
     takeSeat({ table: table.trim(), token: token.trim() === "" ? null : token.trim() });
   };

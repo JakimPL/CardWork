@@ -1,3 +1,8 @@
+import { bodyOf } from "./parsing";
+
+/** The status a position moved on is refused under, which mirrors `cardserver.errors.REFUSALS`. */
+const CONFLICTED = 409;
+
 /**
  * A refusal in the shape a client can act on: what kind it was, and what the server made of it.
  *
@@ -30,8 +35,18 @@ export class Refused extends Error {
  * stands in for the sentence and the caller has something to show either way.
  */
 export async function refusalOf(response: Response): Promise<Refused> {
-  const body: ErrorBody | null = await response.json().catch(() => null);
+  const body = await bodyOf<ErrorBody | null>(response).catch(() => null);
   return new Refused(response.status, body ?? { error: String(response.status), detail: response.statusText });
+}
+
+/**
+ * Whether a refusal says the table has moved past the position a command was built on.
+ *
+ * The status is what says it rather than the name of the rule, since the adapter answers a game's own
+ * refusal under the status of the rule it subclasses, and a client acting on this wants the whole family.
+ */
+export function movedOn(refusal: Refused): boolean {
+  return refusal.status === CONFLICTED;
 }
 
 /** What went wrong, in words, out of whatever a failure arrived as. */
