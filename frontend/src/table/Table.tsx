@@ -16,13 +16,21 @@ interface TableProps {
  * arrive says where the joining has got to and offers the way to another seat.
  */
 export function Table({ seat }: TableProps): ReactElement {
-  const { layout, view, connection, trouble, refresh } = useTable(seat);
+  const { layout, view, connection, trouble, arrivals, refresh } = useTable(seat);
 
   if (layout === null || view === null) {
     return <Waiting table={seat.table} connection={connection} trouble={trouble} />;
   }
 
   return (
-    <Playfield seat={seat} layout={layout} view={view} connection={connection} trouble={trouble} refresh={refresh} />
+    <Playfield
+      seat={seat}
+      layout={layout}
+      view={view}
+      connection={connection}
+      trouble={trouble}
+      arrivals={arrivals}
+      refresh={refresh}
+    />
   );
 }

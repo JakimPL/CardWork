@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Plaque as Standing, Readout, Slot } from "../src/api/layout";
 import type { PositionView } from "../src/api/views";
+import { NOTHING_LANDED } from "../src/play/arrivals";
 import type { Selection } from "../src/play/selection";
 import { offersOf, prospect } from "../src/play/selection";
 import { Header } from "../src/table/Header";
@@ -45,7 +46,9 @@ const A_TURN = offering(POSITION, [aTake([0]), aTake([2]), aGive(2, [0]), aGive(
 
 function drawn(view: PositionView, selection: Selection | null, region: "seat" | "table"): string {
   const playing = aPlaying(prospect(offersOf(LAYOUT, view), selection));
-  return renderToStaticMarkup(<Zones region={region} layout={LAYOUT} view={view} playing={playing} />);
+  return renderToStaticMarkup(
+    <Zones region={region} layout={LAYOUT} view={view} arrivals={NOTHING_LANDED} playing={playing} />,
+  );
 }
 
 function standing(view: PositionView, selection: Selection | null): string {
@@ -82,6 +85,7 @@ describe("the cards a player may press", () => {
         region="table"
         layout={WATCHING}
         view={A_TURN}
+        arrivals={NOTHING_LANDED}
         playing={aPlaying(prospect(offersOf(WATCHING, A_TURN), null))}
       />,
     );

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Layout, Readout, Slot } from "../src/api/layout";
 import type { Cursor, PositionView } from "../src/api/views";
+import { NOTHING_LANDED } from "../src/play/arrivals";
 import { prospect } from "../src/play/selection";
 import { Header } from "../src/table/Header";
 import { StatusLine } from "../src/table/StatusLine";
@@ -46,7 +47,9 @@ const drawn = (element: Parameters<typeof renderToStaticMarkup>[0]): string => r
 
 describe("the table one seat reads", () => {
   it("draws every card of its own hand, whichever way up the cards lie", () => {
-    const page = drawn(<Zones region="seat" layout={LAYOUT} view={DEALT} playing={RESTING} />);
+    const page = drawn(
+      <Zones region="seat" layout={LAYOUT} view={DEALT} arrivals={NOTHING_LANDED} playing={RESTING} />,
+    );
 
     expect(page).toContain("Your hand");
     expect([...page.matchAll(/class="card face/g)]).toHaveLength(3);
@@ -55,21 +58,27 @@ describe("the table one seat reads", () => {
   });
 
   it("draws a heap it may not read as the back of one card, under the count of them all", () => {
-    const page = drawn(<Zones region="table" layout={LAYOUT} view={DEALT} playing={RESTING} />);
+    const page = drawn(
+      <Zones region="table" layout={LAYOUT} view={DEALT} arrivals={NOTHING_LANDED} playing={RESTING} />,
+    );
 
     expect([...page.matchAll(/class="card back"/g)]).toHaveLength(1);
     expect(page).toContain(">4</span>");
   });
 
   it("draws a heap lying face up by the card laid on it", () => {
-    const page = drawn(<Zones region="table" layout={LAYOUT} view={DEALT} playing={RESTING} />);
+    const page = drawn(
+      <Zones region="table" layout={LAYOUT} view={DEALT} arrivals={NOTHING_LANDED} playing={RESTING} />,
+    );
 
     expect(page).toContain(">2</span>");
     expect(page).toContain(">♣</span>");
   });
 
   it("lays out no zone another seat holds, and counts it on that seat's plaque instead", () => {
-    const cards = drawn(<Zones region="seat" layout={LAYOUT} view={DEALT} playing={RESTING} />);
+    const cards = drawn(
+      <Zones region="seat" layout={LAYOUT} view={DEALT} arrivals={NOTHING_LANDED} playing={RESTING} />,
+    );
     const standing = drawn(<Header layout={LAYOUT} view={DEALT} playing={RESTING} />);
 
     expect(cards).not.toContain("hand:0");

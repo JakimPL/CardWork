@@ -235,6 +235,12 @@ they sit and how their cards lie, the plaques and the words for each phase, so t
 neither game. What it is served is what its seat may know — a card it may not read arrives as a placeholder
 at that card's own position, and draws as a back.
 
+The table fits one screen at any size and scrolls nowhere: cards are measured from the shorter side of the
+window, a hand closes up as it fills so a holding of any size reads by the corners, and a heap reads by the card
+on top with the depth of the rest beneath it. A heap opens for a moment on whatever the last commit laid there —
+one card per seat where a turn settles them all at once — and then closes over it, so a player reads what
+arrived without being asked to watch for it.
+
 A move is made by pointing. The cards some move names light up; clicking one picks it up and the highlight
 narrows to the cards a longer move could still name; the places the cards in hand can be sent to — a zone of
 the table, or another player — light up in turn, and clicking one of those is what sends the move. So a click

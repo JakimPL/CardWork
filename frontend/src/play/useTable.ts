@@ -5,6 +5,8 @@ import type { Layout } from "../api/layout";
 import { reasonOf } from "../api/refusal";
 import type { Seat } from "../api/seat";
 import type { PositionView } from "../api/views";
+import type { Arrivals } from "./arrivals";
+import { useArrivals } from "./arrivals";
 import { advanced } from "./commits";
 
 /** How a client stands with the table it is watching. */
@@ -16,6 +18,7 @@ export interface Watched {
   view: PositionView | null;
   connection: Connection;
   trouble: string | null;
+  arrivals: Arrivals;
   refresh: () => void;
 }
 
@@ -28,7 +31,8 @@ export interface Watched {
  * behind the table itself.
  *
  * `refresh` reads the position again, which is what a client does when it learns the table has moved past
- * where it thought it stood.
+ * where it thought it stood. `arrivals` is what the newest commit laid down, which the cards it landed on are
+ * drawn open for as long as that takes to read.
  *
  * @param seat - the table watched and the token it is watched as.
  */
@@ -37,6 +41,7 @@ export function useTable(seat: Seat): Watched {
   const [view, setView] = useState<PositionView | null>(null);
   const [connection, setConnection] = useState<Connection>("joining");
   const [trouble, setTrouble] = useState<string | null>(null);
+  const { arrivals, landed } = useArrivals();
 
   const refresh = useCallback(() => {
     readView(seat)
@@ -67,6 +72,7 @@ export function useTable(seat: Seat): Watched {
         },
         onCommit: (event) => {
           setView((held) => (held === null ? held : advanced(held, event)));
+          landed(event);
         },
         onDropped: (reason) => {
           setConnection("resuming");
@@ -90,7 +96,7 @@ export function useTable(seat: Seat): Watched {
       watching.held = false;
       stop?.();
     };
-  }, [seat]);
+  }, [seat, landed]);
 
-  return { layout, view, connection, trouble, refresh };
+  return { layout, view, connection, trouble, arrivals, refresh };
 }

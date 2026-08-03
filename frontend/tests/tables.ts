@@ -1,6 +1,7 @@
 import type { Gesture, Layout } from "../src/api/layout";
 import type { Move } from "../src/api/moves";
-import type { Cursor, EventView, PositionView, ProjectedCard, ZoneChange } from "../src/api/views";
+import type { Cursor, EventView, PositionView, ProjectedCard, ZoneChange, ZoneId } from "../src/api/views";
+import type { Arrivals } from "../src/play/arrivals";
 import type { Prospect } from "../src/play/selection";
 import type { Playing } from "../src/play/usePlay";
 
@@ -97,6 +98,11 @@ export function aGive(seat: number, indices: number[]): Move {
 
 export function aDiscard(indices: number[]): Move {
   return { player: SEAT, action: { kind: "discard", group: HAND, indices } };
+}
+
+/** Cards seen to land in one zone, as the commit that laid them there leaves the table reading. */
+export function landing(zone: ZoneId, cards: number): Arrivals {
+  return new Map([[zone, cards]]);
 }
 
 /** A click that does nothing, since what these tests read is the drawing rather than what follows one. */

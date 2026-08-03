@@ -1385,8 +1385,20 @@ had.
 
 **The page fits the window.** One screen high, `overflow: hidden`, three rows of `auto 1fr auto`: the
 standing of every seat across the top, the shared cards in the middle, the seat's own holdings and the line
-saying where play stands at the bottom. Every card is measured from a single height that follows the viewport,
-at the proportions of a real one, so the same table reads at any size without a scrollbar anywhere.
+saying where play stands at the bottom. Every card is measured from a single height that follows the shorter
+side of the viewport, at the proportions of a real one, so the same table reads at any size without a scrollbar
+anywhere. A card is read by its corner, which is the part of it the card lying over it leaves showing, and a fan
+closes up as it fills: a handful lies open enough to read every face and a holding of a dozen and more tightens
+to the width there is for it, so a hand of four and a hand of seventeen are the same drawing at two overlaps.
+
+**A heap reads by its top card, and opens for as long as an arrival takes to read.** `play/arrivals.ts` counts
+what one commit laid in each zone — the cards lying at the positions it grew by, which leaves a zone that gave
+cards up, traded one for another or had them shuffled reading as receiving none. A heap draws those cards
+beside the one they came to rest on, each arriving from the direction of the holding it was played out of, and
+a moment later closes back to the card on top and the count of those beneath. So showdown's settlement turns
+one card per seat over as the group it is and passing's exchange shows the card given up before the stack takes
+it, out of one rule and no game's name. The newest commit is the one that shows, since that is the arrival a
+player is watching, and a reader who asks for stillness is given the same table arrived at in one step.
 
 ---
 
@@ -1534,6 +1546,7 @@ play was good **given what the player knew**.
 | A credential vs. an address | the table and the token ride in the fragment; the token reaches the endpoints in a header | a seat token appears in a path, a query string or a log line |
 | Cards in hand vs. a move sent | a selection resolves through the gestures; only a click on an armed place submits | a card click sends a move, or a selection is read as a command |
 | What the table offers vs. what the page knows | `selection.ts` reads `view.legal` through `layout.gestures` and nothing else | the page counts cards, reads a rank, or names a zone to decide what may be picked |
+| A position vs. what has just happened to it | a view is the cards as they lie; `arrivals.ts` reads a commit for what it laid down | a heap is animated from a difference between two views, or a zone is drawn from a move's intent |
 | A value a person turns vs. one the code settles | `config.yaml` states a run; `Configuration` asks for each field outright | a default sits in a flag, a Makefile and a file at once, and a run reads whichever was edited last |
 | A round vs. a match | `rounds` sits above `games`; a game states one round and the layer states the match | a game deals its own next round, or adds its own tally into the standing |
 

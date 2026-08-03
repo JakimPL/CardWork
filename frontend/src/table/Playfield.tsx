@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import type { Layout } from "../api/layout";
 import type { Seat } from "../api/seat";
 import type { PositionView } from "../api/views";
+import type { Arrivals } from "../play/arrivals";
 import { usePlay } from "../play/usePlay";
 import type { Connection } from "../play/useTable";
 import { classes } from "./classes";
@@ -16,6 +17,7 @@ interface PlayfieldProps {
   view: PositionView;
   connection: Connection;
   trouble: string | null;
+  arrivals: Arrivals;
   refresh: () => void;
 }
 
@@ -28,16 +30,24 @@ interface PlayfieldProps {
  *
  * A click landing on the page itself is a click away from the cards, which puts a selection down.
  */
-export function Playfield({ seat, layout, view, connection, trouble, refresh }: PlayfieldProps): ReactElement {
+export function Playfield({
+  seat,
+  layout,
+  view,
+  connection,
+  trouble,
+  arrivals,
+  refresh,
+}: PlayfieldProps): ReactElement {
   const playing = usePlay(seat, layout, view, refresh);
   return (
     <div className={classes("page", playing.sending && "sending")} onClick={playing.clear} role="presentation">
       <Header layout={layout} view={view} playing={playing} />
       <main className="shared">
-        <Zones region="table" layout={layout} view={view} playing={playing} />
+        <Zones region="table" layout={layout} view={view} arrivals={arrivals} playing={playing} />
       </main>
       <footer className="controls">
-        <Zones region="seat" layout={layout} view={view} playing={playing} />
+        <Zones region="seat" layout={layout} view={view} arrivals={arrivals} playing={playing} />
         <p className="guidance">{playing.hint}</p>
         <StatusLine layout={layout} view={view} connection={connection} trouble={trouble} />
       </footer>

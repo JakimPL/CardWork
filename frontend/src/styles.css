@@ -21,10 +21,13 @@
   --live: #6fcf97;
   --open: #8fd0ff;
   --gap: clamp(4px, 0.8vh, 12px);
-  --card-height: clamp(48px, 13vh, 132px);
+  --card-height: clamp(48px, min(22vh, 11vw), 200px);
   --card-width: calc(var(--card-height) * 71 / 96);
   --radius: calc(var(--card-height) * 0.07);
-  --face: clamp(11px, calc(var(--card-height) * 0.3), 34px);
+  --depth: calc(var(--card-height) * 0.03);
+  --held: 5;
+  --face: clamp(14px, calc(var(--card-height) * 0.4), 74px);
+  --index: clamp(9px, calc(var(--card-height) * 0.17), 30px);
   --caption: clamp(10px, 1.5vh, 14px);
 }
 
@@ -190,12 +193,29 @@ body {
   align-items: flex-end;
 }
 
+/* What lies under the card a heap is read by, which is the depth of the heap itself. */
+
+.cards.deep::before {
+  position: absolute;
+  z-index: 0;
+  width: var(--card-width);
+  height: var(--card-height);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius);
+  background: var(--paper);
+  content: "";
+  inset: auto auto 0 0;
+  pointer-events: none;
+  transform: translate(var(--depth), var(--depth));
+}
+
 .slot.row .cards {
   gap: calc(var(--gap) / 2);
 }
 
 .slot.stack .cards,
 .slot.slot .cards {
+  gap: calc(var(--gap) / 2);
   min-width: var(--card-width);
 }
 
@@ -210,20 +230,34 @@ body {
 }
 
 .card.face {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   border: 1px solid var(--paper-edge);
   background: var(--paper);
   box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
-  font-size: var(--face);
   font-weight: 600;
   line-height: 1;
 }
 
-.card.face .suit {
-  font-size: calc(var(--face) * 0.9);
+.index {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: var(--index);
+  inset: calc(var(--card-height) * 0.05) auto auto calc(var(--card-height) * 0.03);
+  letter-spacing: -0.04em;
+}
+
+.index .suit {
+  font-size: calc(var(--index) * 0.85);
+}
+
+.pip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--face);
+  inset: 0;
 }
 
 .card.red {
@@ -288,12 +322,52 @@ button.card {
   transform: translateY(calc(var(--card-height) * -0.12));
 }
 
+/* A card coming to rest where it was played, which it reaches from the holding it was played out of. */
+
+.card.arriving {
+  animation: landing 200ms ease-out;
+}
+
+@keyframes landing {
+  from {
+    opacity: 0.35;
+    transform: translateY(calc(var(--card-height) * 0.5));
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+ * How far a fan overlaps itself, which follows the number of cards in it: a handful lies open enough to read
+ * every face, and a holding of a dozen and more closes up to the width the window has for it.
+ */
+
+.slot.fan .cards {
+  --overlap: clamp(
+    var(--card-width) * 0.42,
+    var(--card-width) * (0.42 + (var(--held) - 7) * 0.04),
+    var(--card-width) * 0.72
+  );
+}
+
 .slot.fan .card + .card {
-  margin-left: calc(var(--card-width) * -0.42);
+  margin-left: calc(var(--overlap) * -1);
 }
 
 .slot.fan button.card:hover {
   transform: translateY(calc(var(--card-height) * -0.06));
+}
+
+/* A reader who asks for stillness gets the same table, arrived at in one step. */
+
+@media (prefers-reduced-motion: reduce) {
+  .cards .card {
+    transition: none;
+    animation: none;
+  }
 }
 
 .slot.live .cards::after {

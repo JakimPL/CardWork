@@ -30,6 +30,7 @@ interface CardFaceProps {
   card: ProjectedCard;
   selected: boolean;
   open: boolean;
+  arriving: boolean;
   onPick: (() => void) | null;
 }
 
@@ -41,10 +42,11 @@ interface CardFaceProps {
  * and what the player holding it knows.
  *
  * A card some move names is drawn as a card the player can press, and reads as picked up while it is in hand.
- * A card no move names is drawn as a card and nothing more.
+ * A card no move names is drawn as a card and nothing more. A card that has just been laid where it lies comes
+ * in from the hand it was played out of, which is what a player watching the table sees happen.
  */
-export function CardFace({ card, selected, open, onPick }: CardFaceProps): ReactElement {
-  const marks = classes("card", ...drawing(card), selected && "selected", open && "open");
+export function CardFace({ card, selected, open, arriving, onPick }: CardFaceProps): ReactElement {
+  const marks = classes("card", ...drawing(card), selected && "selected", open && "open", arriving && "arriving");
   const label = card === null ? UNREAD : named(faceOf(card.card));
   const pips = card === null ? null : shown(faceOf(card.card));
 
@@ -86,12 +88,21 @@ function named(face: Face): string {
   return `${face.rank}${face.suit}`;
 }
 
-/** The two marks a face carries. */
+/**
+ * The two marks a face carries: the index in the corner, and the suit across the middle.
+ *
+ * A card is read by its corner, which is the part of it a card lying over it leaves showing, so a hand of any
+ * size reads by running an eye down the left edge of it. The middle says the same thing at the size a heap and
+ * a single card are read across a table at.
+ */
 function shown(face: Face): ReactElement {
   return (
     <>
-      <span className="rank">{face.rank}</span>
-      <span className="suit">{face.suit}</span>
+      <span className="index">
+        <span className="rank">{face.rank}</span>
+        <span className="suit">{face.suit}</span>
+      </span>
+      <span className="pip">{face.suit}</span>
     </>
   );
 }
