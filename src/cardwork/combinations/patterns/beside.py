@@ -29,7 +29,14 @@ class Beside(Compound):
                     yield Shape.beside(taken)
 
     def strength(self, reading: Reading, evaluation: Evaluation) -> Key:
-        return tuple(place for part, portion in self._portions(reading) for place in part.strength(portion, evaluation))
+        return tuple(
+            place
+            for part, portion in self._portions(reading)
+            for place in part.strength(
+                portion,
+                evaluation,
+            )
+        )
 
     def __str__(self) -> str:
         return " beside ".join(str(part) for part in self.parts)

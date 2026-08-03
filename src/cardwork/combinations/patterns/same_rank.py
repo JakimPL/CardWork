@@ -22,7 +22,10 @@ class SameRank(Simple):
 
     def shapes(self, evaluation: Evaluation) -> Iterator[Shape]:
         for rank in reversed(evaluation.ranks):
-            yield Shape(demands=(Demand.of_rank(rank),) * self.places, low_ace=False)
+            yield Shape(
+                demands=(Demand.of_rank(rank),) * self.places,
+                low_ace=False,
+            )
 
     def strength(self, reading: Reading, evaluation: Evaluation) -> Key:
         return (evaluation.rank_places()[reading[FIRST_PLACE].rank],)

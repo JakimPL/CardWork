@@ -48,4 +48,9 @@ class Pattern(BaseFrozen, ABC):
     def _descending_ranks(reading: Reading, evaluation: Evaluation) -> Key:
         """The places these ranks take from the highest down, which a rule naming no rank of its own keys on."""
         places = evaluation.rank_places()
-        return tuple(sorted((places[card.rank] for card in reading), reverse=True))
+        return tuple(
+            sorted(
+                (places[card.rank] for card in reading),
+                reverse=True,
+            )
+        )

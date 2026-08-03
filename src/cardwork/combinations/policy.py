@@ -54,7 +54,11 @@ class Evaluation(BaseFrozen):
         return Composite(ByRank(self.ranks), BySuit(self.suits))
 
     @staticmethod
-    def _placed[ValueT](listed: Sequence[ValueT], deck: Sequence[ValueT], subject: str) -> None:
+    def _placed[ValueT](
+        listed: Sequence[ValueT],
+        deck: Sequence[ValueT],
+        subject: str,
+    ) -> None:
         """Confirm the sequence gives each of the deck's values one place of its own.
 
         Raises:

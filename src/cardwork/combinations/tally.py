@@ -42,7 +42,10 @@ class Tally:
         )
 
     @staticmethod
-    def _available(cards: Iterable[CardOrJoker], evaluation: Evaluation) -> tuple[Cards, Jokers]:
+    def _available(
+        cards: Iterable[CardOrJoker],
+        evaluation: Evaluation,
+    ) -> tuple[Cards, Jokers]:
         """The natural cards a combination may draw on, beside the jokers free to stand in for one."""
         held = tuple(cards)
         if evaluation.duplicates is Duplicates.COLLAPSE:
@@ -53,7 +56,10 @@ class Tally:
         return naturals, jokers if evaluation.wild_jokers else ()
 
     @staticmethod
-    def _grouped[KeyT: Hashable](cards: Sequence[Card], named_by: Callable[[Card], KeyT]) -> Mapping[KeyT, Cards]:
+    def _grouped[KeyT: Hashable](
+        cards: Sequence[Card],
+        named_by: Callable[[Card], KeyT],
+    ) -> Mapping[KeyT, Cards]:
         """The cards indexed by the given reading of them, each group keeping the order it was given in."""
         groups: defaultdict[KeyT, list[Card]] = defaultdict(list)
         for card in cards:

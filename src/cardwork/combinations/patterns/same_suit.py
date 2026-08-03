@@ -19,7 +19,10 @@ class SameSuit(Simple):
 
     def shapes(self, evaluation: Evaluation) -> Iterator[Shape]:
         for suit in reversed(evaluation.suits):
-            yield Shape(demands=(Demand.of_suit(suit),) * self.places, low_ace=False)
+            yield Shape(
+                demands=(Demand.of_suit(suit),) * self.places,
+                low_ace=False,
+            )
 
     def strength(self, reading: Reading, evaluation: Evaluation) -> Key:
         return self._descending_ranks(reading, evaluation)

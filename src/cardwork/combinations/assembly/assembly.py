@@ -1,13 +1,13 @@
 from collections.abc import Container
-from dataclasses import dataclass
 from typing import Final
 
 from cardwork.cards.card import Card
-from cardwork.cards.game import CardOrJoker, CardsOrJokers
+from cardwork.cards.game import CardOrJoker
+from cardwork.combinations.assembly.filling import Filling
 from cardwork.combinations.combination import Combination
 from cardwork.combinations.demand import Demand
 from cardwork.combinations.matching import UNPLACED, Matching
-from cardwork.combinations.pattern import Pattern, Reading
+from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.shape import Shape
 from cardwork.combinations.tally import Tally
 from cardwork.ordering.preorder import Key
@@ -15,18 +15,6 @@ from cardwork.ordering.preorder import Key
 type Standing = list[Card | None]
 
 STRONGEST: Final[int] = 0
-
-
-@dataclass(frozen=True)
-class Filling:
-    """The cards a shape's places came to hold, beside what each of them reads as.
-
-    `cards` are the cards themselves, a joker standing where the held cards left a place open, and
-    `reading[place]` states what `cards[place]` reads as there.
-    """
-
-    cards: CardsOrJokers
-    reading: Reading
 
 
 class Assembly:

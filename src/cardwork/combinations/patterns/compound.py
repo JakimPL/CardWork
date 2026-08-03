@@ -24,16 +24,31 @@ class Compound(Pattern, ABC):
 
     parts: Parts
 
-    def _listings(self, evaluation: Evaluation) -> tuple[tuple[Shape, ...], ...]:
+    def _listings(
+        self,
+        evaluation: Evaluation,
+    ) -> tuple[tuple[Shape, ...], ...]:
         """The readings each part admits, each kept in the order that part gives them."""
         return tuple(tuple(part.shapes(evaluation)) for part in self.parts)
 
     @staticmethod
-    def _choices(listings: Sequence[Sequence[Shape]]) -> Iterator[tuple[int, ...]]:
+    def _choices(
+        listings: Sequence[Sequence[Shape]],
+    ) -> Iterator[tuple[int, ...]]:
         """Every way of taking one reading from each part, the strongest readings of the first part leading."""
         return product(*(range(len(listed)) for listed in listings))
 
     @staticmethod
-    def _taken(listings: Sequence[Sequence[Shape]], chosen: Sequence[int]) -> tuple[Shape, ...]:
+    def _taken(
+        listings: Sequence[Sequence[Shape]],
+        chosen: Sequence[int],
+    ) -> tuple[Shape, ...]:
         """The readings this choice names, one per part."""
-        return tuple(listed[place] for listed, place in zip(listings, chosen, strict=True))
+        return tuple(
+            listed[place]
+            for listed, place in zip(
+                listings,
+                chosen,
+                strict=True,
+            )
+        )

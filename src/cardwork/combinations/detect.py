@@ -1,7 +1,7 @@
 from collections.abc import Iterable, Iterator
 
 from cardwork.cards.game import CardOrJoker
-from cardwork.combinations.assembly import Assembly
+from cardwork.combinations.assembly.assembly import Assembly
 from cardwork.combinations.combination import BY_STRENGTH, Combination
 from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.policy import Evaluation

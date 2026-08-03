@@ -41,7 +41,10 @@ class Run(Simple):
     def __str__(self) -> str:
         return f"a run of {self.places}"
 
-    def _stretches(self, evaluation: Evaluation) -> Iterator[tuple[Ranks, bool]]:
+    def _stretches(
+        self,
+        evaluation: Evaluation,
+    ) -> Iterator[tuple[Ranks, bool]]:
         """Every stretch of that many consecutive ranks, the highest-topped first and each running upwards.
 
         Each stretch says whether it reads the highest rank as its lowest, which is what the wheel does.

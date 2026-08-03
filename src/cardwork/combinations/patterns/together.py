@@ -40,7 +40,14 @@ class Together(Compound):
                 yield shared
 
     def strength(self, reading: Reading, evaluation: Evaluation) -> Key:
-        return tuple(place for part in self.parts for place in part.strength(reading, evaluation))
+        return tuple(
+            place
+            for part in self.parts
+            for place in part.strength(
+                reading,
+                evaluation,
+            )
+        )
 
     def __str__(self) -> str:
         return " together with ".join(str(part) for part in self.parts)
