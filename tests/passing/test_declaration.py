@@ -4,7 +4,13 @@ from typing import Final
 
 import pytest
 
-from cardgames.backend.passing.rules import NOTHING, ROUND_POINT, declares, four_read_alike, three_read_alike
+from cardgames.backend.passing.rules import (
+    NOTHING,
+    ROUND_POINT,
+    declares,
+    four_read_alike,
+    three_read_alike,
+)
 from cardgames.backend.passing.state import PassingPhase
 from cardgames.backend.passing.zones import hand_of
 from cardwork.cards.cards import (
@@ -24,6 +30,7 @@ from cardwork.cards.cards import (
     TWO_OF_SPADES,
 )
 from cardwork.cards.game import CardsOrJokers
+from cardwork.rounds.state import BEFORE_THE_FIRST_ROUND
 
 from ..cases import Case, descriptions
 from .driving import (
@@ -236,15 +243,37 @@ def test_a_seat_offered_a_move_is_never_holding_a_win(passing: PassingGame) -> N
 
 
 @pytest.mark.parametrize("seed", SEEDS)
-def test_a_deal_reading_a_win_decides_its_round_before_a_seat_acts(seed: int) -> None:
-    """A table opens on a round with a turn to take, whatever the deal it was given.
+def test_a_table_opens_on_its_first_round_with_the_standing_at_nothing(seed: int) -> None:
+    """A table is read from its first round, whatever the deal it was given.
 
-    A fourth card dealt into three that read alike wins where no seat has yet acted, and the table settles that
-    round away as it is built, so every driver beyond this finds a seat on turn holding no win.
+    The deal is drawn again for as long as it hands the leader a win, so a round reaches the table with the win
+    still to be played for and the first thing a client reads is round one with every seat at nothing.
     """
     game = a_match(SEATS, JOKERED_DECK, seed)
 
+    assert game.state.round_number == FIRST_ROUND
+    assert game.state.points == (NOTHING,) * SEATS
     assert game.state.phase == PassingPhase.PASSING
     assert game.state.current is not None
     assert not declares(held_by(game, game.state.current))
     assert game.legal_moves(game.position) != ()
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_every_round_a_match_opens_is_dealt_with_its_win_still_to_be_reached(seed: int) -> None:
+    """Round after round, the four cards the leader is dealt read no win, so a seat plays for every round."""
+    game = a_match(SEATS, JOKERED_DECK, seed)
+    chooser = Random(seed)
+    opened = BEFORE_THE_FIRST_ROUND
+    while True:
+        if game.state.round_number > opened:
+            opened = game.state.round_number
+            assert not declares(held_by(game, game.state.led_by))
+
+        moves = game.legal_moves(game.position)
+        if moves:
+            game.submit(chooser.choice(moves), base_seq=game.head)
+        elif not game.settle():
+            break
+
+    assert opened > FIRST_ROUND

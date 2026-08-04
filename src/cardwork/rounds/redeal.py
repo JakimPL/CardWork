@@ -1,12 +1,17 @@
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from random import Random
-from typing import Generic
+from typing import Final, Generic
 
 from cardwork.decks.draw import permutation
 from cardwork.effects.effects import Effects, MoveCards, Reorder, SetFace
+from cardwork.effects.fold import fold
 from cardwork.positions.position import Position
-from cardwork.states.state import StateT
+from cardwork.states.state import GameState, StateT
 from cardwork.zones.zone import ZoneId
+
+DRAWS_MOST: Final[int] = 1000
+
+type Admits[S: GameState] = Callable[[Position[S]], bool]
 
 
 class Redeal(Generic[StateT]):
@@ -20,6 +25,8 @@ class Redeal(Generic[StateT]):
     `counts` states how many cards each zone is owed, and they leave the pile in the order it names them, so a
     game deals round the table from its leader by stating the zones in that order. The three steps stand on
     their own for a game that keeps part of the table standing between rounds.
+
+    `admitted` deals what a game asks of the round it opens on, drawing again for as long as a draw is refused.
     """
 
     def __init__(self, position: Position[StateT], pile: ZoneId, *, face_down: bool) -> None:
@@ -30,6 +37,38 @@ class Redeal(Generic[StateT]):
     def effects(self, counts: Mapping[ZoneId, int], rng: Random) -> Effects[StateT]:
         """Every card gathered into the pile, the pile shuffled, and each zone dealt the count it is owed."""
         return self.gather() + self.shuffle(rng) + self.distribute(counts)
+
+    def admitted(
+        self,
+        counts: Mapping[ZoneId, int],
+        rng: Random,
+        admits: Admits[StateT],
+    ) -> Effects[StateT]:
+        """The first deal the game admits, drawn afresh for as long as a draw is refused.
+
+        A game that asks something of the round it opens on states it here: a seat holding a hand still to be
+        played for, a hand with a move to make in it. Each draw is a shuffle of the whole pile, which is what
+        leaves the deal that is kept standing uniformly among the deals the game admits: every one of them is
+        as likely as every other, and no card is favoured beyond what was asked for.
+
+        The accepted draw alone becomes effects, and the order it settles on is what the journal keeps, so a
+        replay deals the same round and a run of the same seed reaches the same table.
+
+        Args:
+            counts: how many cards each zone is owed, in the order the deal hands them out.
+            rng: the generator each draw comes from.
+            admits: whether the table a draw lays out is one the round opens on.
+
+        Raises:
+            ValueError: when `DRAWS_MOST` draws pass with every one refused, which is where a game asking for a
+                deal its deck holds none of is answered.
+        """
+        for _ in range(DRAWS_MOST):
+            drawn = self.effects(counts, rng)
+            if admits(fold(drawn, self._position)):
+                return drawn
+
+        raise ValueError(f"No deal of {dict(counts)} was admitted in {DRAWS_MOST} draws")
 
     def gather(self) -> Effects[StateT]:
         """Every card on the table back into the pile at one face, zone by zone in the order their names sort.

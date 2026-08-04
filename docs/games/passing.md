@@ -19,7 +19,9 @@ game = PassingGame(players=4, deck=standard_decks(1, black_jokers=1, red_jokers=
 ## 1. The rules
 
 **A round deals three cards to every seat and a fourth to the seat leading it**, from the pile that holds the
-gathered deck. Exactly one seat holds four cards at a time, and the turn travels with that card.
+gathered deck. Exactly one seat holds four cards at a time, and the turn travels with that card. **A deal
+handing that seat a win is drawn again**, so a round arrives with the win still to be played for: about one
+four-card hand in four reads three alike, and a round decided by the shuffle is a round nobody played.
 
 **A turn admits one exchange and closes on a pass.** The seat on turn may give one held card up for the top of
 the pile, the card it gives up going face up on the stack. It then passes one card to the seat next round the
@@ -51,7 +53,7 @@ moment the cards read one, and the hand turns face up so the table reads what to
 draws the round** as the turn it ran out on closes, and scores nobody — the seat that took the last card is still
 awarded the win it drew.
 
-The award travels in the transaction that dealt or completed the hand, so a seat is never offered a move while
+The award travels in the transaction of the move that completed the hand, so a seat is never offered a move while
 holding a win and no stretch of latency comes between holding one and being given it. Because a hand reading a
 win ends its round at once, a pile of forty-odd cards outlives no run of play, which leaves the drawn round a
 rule the game keeps rather than one it reaches.
@@ -120,9 +122,9 @@ seat the round belongs to.
 **A move carries every change it causes, and a deal is answered on the settlement that follows it.** The exchange
 a turn spends, the turn a pass hands on, the win the hand left behind reads, the draw an exhausted pile settles:
 each lands in the transaction of the move that prompted it, which is what keeps a window of latency out of an
-award nobody chose. The one win no move puts on the table is the one a fresh deal lays out, and `advance_round`
-answers for that on a settlement pass — so a game built here settles once before service, leaving a round in
-play with a seat on turn.
+award nobody chose. `advance_round` answers the settlement pass with the win the hand on turn reads, which holds
+for any deal a game beneath this one hands it — the deal `deal_round` draws holds none, so every round of this
+game is won by a move. A game built here settles once before service, which is what deals its first round.
 
 What the boundary then does — the round scored into the standing, the gather, the shuffle, the next deal, the
 next leader — is `cardwork.rounds`, written once for every game.
@@ -161,11 +163,14 @@ phases of §4 are captioned there as well, which is what a player reads in place
 
 ## 6. What it asked the framework for
 
-Two things this game needed that the layers below it gained for every game after it:
+Three things this game needed that the layers below it gained for every game after it:
 
 - **`deal_round(position, leader, rng)`** takes the leader, because a deal that gives one seat a card the others
   do not get has to know which seat leads. The seat is drawn before the cards go out, so the leader is there to
   be handed over.
+- **`Redeal.admitted(counts, rng, admits)`** deals what a game asks of the round it opens on, drawing again for
+  as long as a draw is refused. This game asks that the leader's four cards read no win yet; the next game to
+  want a hand with a move in it states that instead, and the drawing is written once.
 - **`standard_decks(count, *, black_jokers, red_jokers)`** builds a deck of several standard decks, and
   **`standard_multiplicity(deck)`** counts the whole decks the suited cards of one make, which is what
   `_validate_initial_deck` reads to accept the deck it was handed.

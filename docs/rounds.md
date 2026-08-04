@@ -189,6 +189,26 @@ the table from its leader by naming the zones in that order, and a zone owed not
 Card conservation covers the rest: a re-deal moves cards and creates none, so `validate_board` holds at every
 position of every round.
 
+**A game that asks something of the round it opens on states it as a predicate, and the deal is drawn until the
+predicate holds.** `admitted(counts, rng, admits)` stands beside `effects` for that — a seat holding a hand
+still to be played for, a hand with a move to make in it:
+
+```python
+return Redeal(position, pile=PILE, face_down=True).admitted(counts, rng, self._still_to_be_won(leader))
+```
+
+Each draw is a shuffle of the whole pile, so the deal that is kept stands uniformly among the deals the game
+admits: every one of them is as likely as every other, and no card is favoured beyond what was asked for. This
+is why a refused draw is dropped whole. Repairing one instead — swapping the offending card for the top of the
+pile, or redrawing a hand and keeping the rest of the table — favours some deals over others, and a player who
+knows the repair can read the deal through it.
+
+The accepted draw alone becomes effects, and the order it settles on is what the journal keeps, so a replay
+deals the same round and a run of the same seed reaches the same table. Drawing again costs replay nothing
+precisely because a shuffle is recorded as the order it produced rather than as the seed it came from. A
+predicate no draw satisfies is answered after `DRAWS_MOST` draws with a `ValueError` naming the counts, which
+stops a table rather than drawing at it for ever.
+
 ---
 
 ## 5. What a game states for itself

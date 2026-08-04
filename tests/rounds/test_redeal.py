@@ -13,15 +13,19 @@ from cardwork.decks.decks import to_game_cards
 from cardwork.effects.effects import AnyEffect, SetFace
 from cardwork.effects.fold import fold
 from cardwork.positions.position import Position
-from cardwork.rounds.redeal import Redeal
+from cardwork.rounds.redeal import DRAWS_MOST, Admits, Redeal
 from cardwork.states.state import GameState
 from cardwork.zones.presets import PILE
-from cardwork.zones.zone import Zone, ZoneId
+from cardwork.zones.zone import Zone, ZoneId, cards_of
 
 from ..cases import Case, descriptions
 
 STOCK: Final[ZoneId] = "stock"
+HAND: Final[ZoneId] = "hand:0"
 SEED: Final[int] = 20260805
+ONE_CARD: Final[int] = 1
+FIRST_CARD: Final[int] = 0
+DRAWS: Final[int] = 20
 LAID_OUT: Final[str] = "laid out"
 CARDS: Final[Cards] = (
     Card(rank=Rank.TWO, suit=Suit.SPADE),
@@ -153,3 +157,43 @@ def test_a_re_deal_asking_for_more_cards_than_the_table_holds_is_refused() -> No
 
     with pytest.raises(KeyError):
         fold(a_redeal(position).effects({"hand:0": len(CARDS) + 1}, Random(SEED)), position)
+
+
+def a_hand_without(unwanted: Card) -> Admits[GameState]:
+    """A deal admitted where the hand it lays out holds none of that card."""
+
+    def admits(dealt: Position[GameState]) -> bool:
+        return unwanted not in cards_of(dealt.board.zone(HAND))
+
+    return admits
+
+
+def test_a_deal_the_game_admits_at_once_is_the_one_it_is_dealt() -> None:
+    position = a_table({STOCK: (), HAND: CARDS})
+
+    admitted = a_redeal(position).admitted({HAND: ONE_CARD}, Random(SEED), lambda dealt: True)
+
+    assert admitted == a_redeal(position).effects({HAND: ONE_CARD}, Random(SEED))
+
+
+def test_the_deal_a_game_keeps_is_the_first_draw_it_admits() -> None:
+    """Each draw is a shuffle of the whole pile, so the deal kept is the first the game did not refuse."""
+    position = a_table({STOCK: (), HAND: CARDS})
+    counts = {HAND: ONE_CARD}
+    first = fold(a_redeal(position).effects(counts, Random(SEED)), position)
+    admits = a_hand_without(cards_of(first.board.zone(HAND))[FIRST_CARD])
+    generator = Random(SEED)
+    drawn = tuple(a_redeal(position).effects(counts, generator) for _ in range(DRAWS))
+
+    admitted = a_redeal(position).admitted(counts, Random(SEED), admits)
+
+    assert admitted == next(deal for deal in drawn if admits(fold(deal, position)))
+    assert admitted != drawn[FIRST_CARD]
+
+
+def test_a_deal_no_draw_satisfies_is_refused_rather_than_drawn_for_ever() -> None:
+    """A game asking for a deal its cards hold none of is answered, so no table waits on a draw never coming."""
+    position = a_table({STOCK: (), HAND: CARDS})
+
+    with pytest.raises(ValueError, match=str(DRAWS_MOST)):
+        a_redeal(position).admitted({HAND: ONE_CARD}, Random(SEED), lambda dealt: False)

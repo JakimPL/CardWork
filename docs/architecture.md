@@ -1042,7 +1042,7 @@ Most games worth writing are a series of rounds: dealt afresh, led by a seat in 
 standing until the standing decides the match. `cardwork.rounds` states that shape once. `RoundGame` fills
 in `advance` and leaves a game five hooks, every one of them about a single round; `RoundState` carries the
 standing beside the tally of the round in play; `Redeal` gathers, shuffles and deals out what the last
-round left where it lay. A round boundary is an ordinary settlement transaction, so projection, replay,
+round left where it lay, drawing again where a game asks something of the round it opens on. A round boundary is an ordinary settlement transaction, so projection, replay,
 events and the adapter need nothing new — which is the whole reason the layer is small. `docs/rounds.md`
 states it whole.
 
