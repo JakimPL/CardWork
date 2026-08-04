@@ -29,7 +29,7 @@ interface Face {
 interface CardFaceProps {
   card: ProjectedCard;
   selected: boolean;
-  open: boolean;
+  dimmed: boolean;
   arriving: boolean;
   onPick: (() => void) | null;
 }
@@ -41,12 +41,15 @@ interface CardFaceProps {
  * A card lying face down is marked as such all the same, since that is what the rest of the table cannot read
  * and what the player holding it knows.
  *
- * A card some move names is drawn as a card the player can press, and reads as picked up while it is in hand.
- * A card no move names is drawn as a card and nothing more. A card that has just been laid where it lies comes
- * in from the hand it was played out of, which is what a player watching the table sees happen.
+ * A card in hand stands raised out of the run it was picked from, which is the one mark a card carries for being
+ * chosen. A card a click stops at fades back, so what a player reads plainly is what a press carries further —
+ * the cards in play at a glance, and the cards a selection could still grow by once one is in hand.
+ *
+ * A card that has just been laid where it lies comes in from the hand it was played out of, which is what a
+ * player watching the table sees happen.
  */
-export function CardFace({ card, selected, open, arriving, onPick }: CardFaceProps): ReactElement {
-  const marks = classes("card", ...drawing(card), selected && "selected", open && "open", arriving && "arriving");
+export function CardFace({ card, selected, dimmed, arriving, onPick }: CardFaceProps): ReactElement {
+  const marks = classes("card", ...drawing(card), selected && "selected", dimmed && "dimmed", arriving && "arriving");
   const label = card === null ? UNREAD : named(faceOf(card.card));
   const pips = card === null ? null : shown(faceOf(card.card));
 

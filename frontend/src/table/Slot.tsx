@@ -4,7 +4,7 @@ import type { Slot as Arrangement, Spread } from "../api/layout";
 import type { ProjectedCard, ZoneView } from "../api/views";
 import type { Arrivals } from "../play/arrivals";
 import { landedIn } from "../play/arrivals";
-import { isOpen, isSelected, offerTo, picksIn } from "../play/selection";
+import { isSelected, leadsNowhere, offerTo, picksIn } from "../play/selection";
 import type { Playing } from "../play/usePlay";
 import { CardFace } from "./CardFace";
 import { classes } from "./classes";
@@ -72,7 +72,7 @@ export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement
               key={held.index}
               card={held.card}
               selected={isSelected(playing.standing, slot.zone, held.index)}
-              open={isOpen(playing.standing, slot.zone, held.index)}
+              dimmed={leadsNowhere(playing.standing, slot.zone, held.index)}
               arriving={held.arriving}
               onPick={
                 picking

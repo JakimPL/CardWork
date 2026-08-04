@@ -1,20 +1,46 @@
 import { describe, expect, it } from "vitest";
 
+import type { Layout, Plaque as Standing } from "../src/api/layout";
+import type { PositionView } from "../src/api/views";
 import { guidance } from "../src/play/guidance";
 import type { Selection } from "../src/play/selection";
 import { offersOf, prospect } from "../src/play/selection";
-import { aDiscard, aGive, aLayout, aTake, aView, card, DISCARDING, GIVING, HAND, offering, TAKING } from "./tables";
+import {
+  aDiscard,
+  aGive,
+  aLayout,
+  aTake,
+  aView,
+  card,
+  DISCARDING,
+  GIVING,
+  HAND,
+  offering,
+  SEATED,
+  TAKING,
+} from "./tables";
 
-const TURN = aLayout({ gestures: [TAKING, GIVING] });
-const SETS = aLayout({ gestures: [DISCARDING] });
+const SEATS: Standing[] = [
+  { seat: 0, name: "North", counts: [] },
+  { seat: 1, name: "East", counts: [] },
+  { seat: 2, name: "South", counts: [] },
+];
+
+const TURN = aLayout({ gestures: [TAKING, GIVING], plaques: SEATS });
+const SETS = aLayout({ gestures: [DISCARDING], plaques: SEATS });
 
 const DEALT = aView({ [HAND]: [card("9", "♦"), card("9", "♠"), card("4", "♦")] }, 1);
 const A_TURN = offering(DEALT, [aTake([0]), aGive(2, [0])]);
 const A_SET = offering(DEALT, [aDiscard([0, 1])]);
 
+/** The same table with the turn standing elsewhere, and with it standing nowhere at all. */
+const ELSEWHERE = aView({ [HAND]: DEALT.zones[HAND]?.cards ?? [] }, 1, { ...SEATED, to_act: [2] });
+const SEVERAL = aView({ [HAND]: DEALT.zones[HAND]?.cards ?? [] }, 1, { ...SEATED, to_act: [0, 2] });
+const AT_REST = aView({ [HAND]: DEALT.zones[HAND]?.cards ?? [] }, 1, { ...SEATED, to_act: [] });
+
 /** What the line under the cards says about one position and one selection. */
-function said(layout: typeof TURN, view: typeof DEALT, selection: Selection | null, notice: string | null): string {
-  return guidance(prospect(offersOf(layout, view), selection), notice);
+function said(layout: Layout, view: PositionView, selection: Selection | null, notice: string | null): string {
+  return guidance(layout, view, prospect(offersOf(layout, view), selection), notice);
 }
 
 interface Case {
@@ -25,9 +51,24 @@ interface Case {
 
 const CASES: Case[] = [
   {
-    description: "a table this seat owes nothing to",
+    description: "a turn standing with another seat, which reads as the name that seat plays under",
+    said: said(TURN, ELSEWHERE, null, null),
+    expected: "Waiting for South",
+  },
+  {
+    description: "a turn several seats hold at once, which names every one of them",
+    said: said(TURN, SEVERAL, null, null),
+    expected: "Waiting for North, South",
+  },
+  {
+    description: "a table nobody owes an action to, which stands on the rules rather than on a player",
+    said: said(TURN, AT_REST, null, null),
+    expected: "Waiting for the table",
+  },
+  {
+    description: "a turn this seat holds with no move in it, which the settlement answers for",
     said: said(TURN, DEALT, null, null),
-    expected: "Nothing to play just now",
+    expected: "Waiting for the table",
   },
   {
     description: "a turn this seat holds, with nothing picked up",
@@ -64,5 +105,11 @@ const CASES: Case[] = [
 describe("the line telling a player where they stand", () => {
   it.each(CASES)("reads $description", ({ said: spoken, expected }: Case) => {
     expect(spoken).toBe(expected);
+  });
+
+  it("names a seat by where it sits where the plaques name none", () => {
+    const nameless = aLayout({ gestures: [TAKING] });
+
+    expect(said(nameless, ELSEWHERE, null, null)).toBe("Waiting for Seat 2");
   });
 });

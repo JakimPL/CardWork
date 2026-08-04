@@ -118,7 +118,7 @@ export function landing(zone: ZoneId, cards: number): Arrivals {
 /** A click that does nothing, since what these tests read is the drawing rather than what follows one. */
 const IDLE = (): void => undefined;
 
-/** The table as it is played, for a test reading what a prospect lights up. */
+/** The table as it is played, for a test reading what a prospect comes to. */
 export function aPlaying(standing: Prospect): Playing {
   return { standing, hint: "", sending: false, pick: IDLE, commit: IDLE, clear: IDLE };
 }

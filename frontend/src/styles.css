@@ -19,7 +19,8 @@
   --black: #1a1a1a;
   --acting: #f0c040;
   --live: #6fcf97;
-  --open: #8fd0ff;
+  --hint: #8fd0ff;
+  --faded: 0.42;
   --gap: clamp(4px, 0.8vh, 12px);
   --card-height: clamp(48px, min(22vh, 11vw), 200px);
   --card-width: calc(var(--card-height) * 71 / 96);
@@ -309,10 +310,17 @@ button.card {
   cursor: progress;
 }
 
-.card.open {
-  box-shadow:
-    0 0 0 2px var(--open),
-    0 1px 3px rgb(0 0 0 / 35%);
+/*
+ * A card a press stops at, which fades back rather than marking itself.
+ *
+ * Nothing on the table is ever lit for being playable, since a card marked out reads as a card already chosen.
+ * What a player reads instead is the cards that have gone quiet: at rest the ones no move names, and once cards
+ * are in hand the ones no move holding those could name beside them.
+ */
+
+.card.dimmed {
+  opacity: var(--faded);
+  filter: saturate(0.35);
 }
 
 .card.selected {
@@ -385,7 +393,7 @@ button.card {
 
 .guidance {
   margin: 0;
-  color: var(--open);
+  color: var(--hint);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;

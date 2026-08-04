@@ -74,9 +74,20 @@ export function isSelected(standing: Prospect, zone: ZoneId, index: number): boo
   return held !== null && held.zone === zone && held.indices.includes(index);
 }
 
-/** Whether picking this card up leads somewhere, which is what lights a card for the player. */
+/** Whether picking this card up leads somewhere, which is what leaves a card reading plainly. */
 export function isOpen(standing: Prospect, zone: ZoneId, index: number): boolean {
   return standing.open.get(zone)?.has(index) ?? false;
+}
+
+/**
+ * Whether a click on that card leads nowhere, which is what a card standing out of play reads as.
+ *
+ * A zone some move picks in holds cards a click carries further and cards it stops at, and telling the two
+ * apart is the whole of what a player needs drawn. A zone no move picks in poses no choice at all, so its cards
+ * read as cards and nothing more, and so do the cards of a table this seat owes no move to.
+ */
+export function leadsNowhere(standing: Prospect, zone: ZoneId, index: number): boolean {
+  return picksIn(standing, zone) && !isSelected(standing, zone, index) && !isOpen(standing, zone, index);
 }
 
 /** Whether any move at all picks its cards in that zone, which is what makes its cards worth clicking. */

@@ -29,9 +29,9 @@ export interface Playing {
  * Play one table from one seat: pick cards up, read what they could send, and send it by pointing.
  *
  * The moves the table says are open are the whole of what this rests on, so nothing here knows one game from
- * another: a card lights up because some move names it, and a place lights up because the cards in hand make a
- * move that goes there. A move leaves for the table only on a click at such a place, which is what keeps a
- * hand of cards from committing itself.
+ * another: a card reads plainly because some move names it, and a place lights up because the cards in hand
+ * make a move that goes there. A move leaves for the table only on a click at such a place, which is what keeps
+ * a hand of cards from committing itself.
  *
  * A selection is held against the position it was made in. The table moving on — by this seat's own move
  * landing or another's — leaves it behind rather than carrying it onto cards that have since shifted.
@@ -90,5 +90,5 @@ export function usePlay(seat: Seat, layout: Layout, view: PositionView, refresh:
     [seat, standing, view.seq, sending, refresh],
   );
 
-  return { standing, hint: guidance(standing, notice), sending, pick, commit, clear };
+  return { standing, hint: guidance(layout, view, standing, notice), sending, pick, commit, clear };
 }

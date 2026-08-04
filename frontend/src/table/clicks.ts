@@ -12,3 +12,17 @@ export function clicking(answer: () => void): (event: MouseEvent) => void {
     answer();
   };
 }
+
+/**
+ * A press of the other button, which the page answers itself.
+ *
+ * The browser answers this one with a menu of its own, and a page that means something by the press says so by
+ * taking it over. It travels up from wherever it landed, so a right-click on a card, on a heap or on the felt
+ * all reach the one answer the page holds for it.
+ */
+export function answering(answer: () => void): (event: MouseEvent) => void {
+  return (event) => {
+    event.preventDefault();
+    answer();
+  };
+}

@@ -3,7 +3,16 @@ import { describe, expect, it } from "vitest";
 import type { Layout } from "../src/api/layout";
 import type { PositionView } from "../src/api/views";
 import type { Prospect, Selection } from "../src/play/selection";
-import { isOpen, isSelected, offersOf, offerTo, pickedUp, picksIn, prospect } from "../src/play/selection";
+import {
+  isOpen,
+  isSelected,
+  leadsNowhere,
+  offersOf,
+  offerTo,
+  pickedUp,
+  picksIn,
+  prospect,
+} from "../src/play/selection";
 import {
   aDiscard,
   aGive,
@@ -62,7 +71,7 @@ describe("a move read through the gesture that makes it", () => {
 });
 
 describe("what a table says can be played", () => {
-  it("lights every card some move names while nothing is picked up", () => {
+  it("holds open every card some move names while nothing is picked up", () => {
     const open = standing(TURN, A_TURN, null).open;
 
     expect([...(open.get(HAND) ?? [])].sort()).toEqual([0, 2]);
@@ -76,7 +85,7 @@ describe("what a table says can be played", () => {
     expect(bare.targets).toHaveLength(0);
   });
 
-  it("lights the places one picked card can be sent, each of them once", () => {
+  it("names the places one picked card can be sent, each of them once", () => {
     const held = standing(TURN, A_TURN, { zone: HAND, indices: [0] });
 
     expect(held.armed).toHaveLength(2);
@@ -102,8 +111,44 @@ describe("what a table says can be played", () => {
   });
 });
 
+describe("a card a press stops at", () => {
+  it("is the card no move names, in a zone some move picks in", () => {
+    const bare = standing(TURN, A_TURN, null);
+
+    expect(leadsNowhere(bare, HAND, 3)).toBe(true);
+    expect(leadsNowhere(bare, HAND, 0)).toBe(false);
+  });
+
+  it("is no card of a zone no move picks in, since that zone poses no choice", () => {
+    const bare = standing(TURN, A_TURN, null);
+
+    expect(leadsNowhere(bare, PILE, 0)).toBe(false);
+  });
+
+  it("is no card of a table this seat owes no move to", () => {
+    const resting = standing(TURN, DEALT, null);
+
+    expect(leadsNowhere(resting, HAND, 0)).toBe(false);
+    expect(leadsNowhere(resting, HAND, 3)).toBe(false);
+  });
+
+  it("is the card a move holding those in hand could not name beside them", () => {
+    const held = standing(SETS, A_SET, { zone: HAND, indices: [0] });
+
+    expect(leadsNowhere(held, HAND, 1)).toBe(false);
+    expect(leadsNowhere(held, HAND, 3)).toBe(true);
+  });
+
+  it("is no card already in hand, which a press puts back down", () => {
+    const held = standing(SETS, A_SET, { zone: HAND, indices: [0, 1] });
+
+    expect(leadsNowhere(held, HAND, 0)).toBe(false);
+    expect(leadsNowhere(held, HAND, 1)).toBe(false);
+  });
+});
+
 describe("a selection of several cards", () => {
-  it("lights the cards a longer move could still name, and none of those in hand", () => {
+  it("holds open the cards a longer move could still name, and none of those in hand", () => {
     const held = standing(SETS, A_SET, { zone: HAND, indices: [0] });
 
     expect([...(held.open.get(HAND) ?? [])].sort()).toEqual([1, 2]);
@@ -124,7 +169,7 @@ describe("a selection of several cards", () => {
     expect(held.open.size).toBe(0);
   });
 
-  it("holds a selection no move could grow out of, and lights nothing further for it", () => {
+  it("holds a selection no move could grow out of, and holds nothing open for it", () => {
     const held = standing(SETS, A_SET, { zone: HAND, indices: [3] });
 
     expect(held.armed).toHaveLength(0);
