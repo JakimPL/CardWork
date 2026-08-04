@@ -1,4 +1,4 @@
-from cardwork.zones.presets import HAND, HIDDEN
+from cardwork.zones.presets import HAND, PILE
 from cardwork.zones.zone import Zone, Zones, hand_of
 
 DISCARD = "discard"
@@ -8,20 +8,28 @@ STACK = "stack"
 def hands(players: int) -> Zones:
     """The zone ids of the hands each seat holds, which is what the rules read against."""
     return {
-        hand_of(seat): Zone(
-            id=hand_of(seat),
+        zone_id: Zone(
+            id=zone_id,
             owner=seat,
             visibility=HAND,
         )
         for seat in range(players)
+        for zone_id in [hand_of(seat)]
     }
 
 
 def discard() -> Zones:
-    """The zone id of the discard pile, which is what the rules read against."""
-    return {DISCARD: Zone(id=DISCARD, visibility=HIDDEN)}
+    """The zone id of the pile cards are laid onto, which lies under the policy reading a card the moment it turns.
+
+    A discard belongs to the table rather than to a seat, so the face a card lies at settles who reads it: what
+    is laid there face up is read by everybody, and what lies face down there stays unknown to all.
+    """
+    return {DISCARD: Zone(id=DISCARD, visibility=PILE)}
 
 
 def stack() -> Zones:
-    """The zone id of the stack pile, which is what the rules read against."""
-    return {STACK: Zone(id=STACK, visibility=HAND)}
+    """The zone id of the pile cards are given up onto, which lies under the same policy a discard does.
+
+    A stack belongs to the table, so what a seat gives up onto it face up is read by the whole table.
+    """
+    return {STACK: Zone(id=STACK, visibility=PILE)}
