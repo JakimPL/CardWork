@@ -135,7 +135,7 @@ function offered(layout: Layout, move: Move): Offered | null {
     : {
         move,
         picked: gesture.picked,
-        indices: ordered(move.action.indices),
+        indices: ordered(indicesOf(move.action)),
         target,
         caption: gesture.caption,
       };
@@ -153,11 +153,22 @@ function groupOf(action: AnyAction): string | null {
     case "take":
     case "discard":
       return action.group;
+    case "pass":
     case "give":
     case "reject":
     case "declare":
       return null;
   }
+}
+
+/**
+ * The positions an intent names, which mirrors `cardwork.moves.actions.indices_of`.
+ *
+ * A pass names its turn alone, so it reads as no position at all: a selection is a run of cards, and a move
+ * that is about none of them is one a player states some other way than by pointing at cards.
+ */
+function indicesOf(action: AnyAction): number[] {
+  return action.kind === "pass" ? [] : action.indices;
 }
 
 /** The place a gesture sends a move onto, which a seat commit takes from the move itself. */

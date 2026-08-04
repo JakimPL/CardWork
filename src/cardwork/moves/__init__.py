@@ -9,6 +9,8 @@ from cardwork.moves.actions import (
     Reject,
     Take,
     group_of,
+    indices_of,
+    kind_of,
 )
 from cardwork.moves.kind import ActionKind
 from cardwork.moves.move import Move, Moves
@@ -28,6 +30,8 @@ __all__ = [
     "Reject",
     "Take",
     "group_of",
+    "indices_of",
+    "kind_of",
     "pop_cards",
     "validate_indices",
 ]

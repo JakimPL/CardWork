@@ -93,7 +93,9 @@ position and the stack records the order the seats gave cards up in, so both kee
 
 Both name positions in the seat's own hand, and the group or the seat they name is the other side of the move.
 Two intents are the whole vocabulary, because the third thing a seat could do with a hand — say that it wins —
-is a thing the cards say for themselves. A refusal names the rule it comes from:
+is a thing the cards say for themselves. `intents: ClassVar[Intents[Take | Give]] = Intents(Take, Give)` states
+those two, which is what has the rules read a move as one of them and the engine refuse every other
+(`architecture.md` §5.3). A refusal names the rule it comes from:
 
 | the move | the refusal |
 |---|---|
@@ -102,7 +104,7 @@ is a thing the cards say for themselves. A refusal names the rule it comes from:
 | a second exchange in one turn | `Seat 2 exchanges once in a turn, and has exchanged in this one` |
 | a pass to any seat but the next | `Seat 2 passes to seat 3, and named seat 0` |
 | a card the hand does not hold | `Seat 2 named position 4 of a hand holding 4` |
-| any other intent | `Seat 2 exchanges or passes, and offered play` |
+| any other intent | `Seat 2 makes a take or a give, and offered a play`, which `intents` states and the engine answers |
 
 `legal_moves` lists every exchange and pass the turn admits, which is every move there is to make, so a solver
 reading the list plays by the rules alone, and the seat on turn is offered the same list in its view.

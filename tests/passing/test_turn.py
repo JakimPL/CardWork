@@ -153,7 +153,7 @@ def test_naming_a_position_the_hand_does_not_hold_is_refused(passing: PassingGam
 def test_an_intent_this_game_leaves_out_is_refused(passing: PassingGame) -> None:
     seat = seat_on_turn(passing)
 
-    with pytest.raises(IllegalMove, match="exchanges or passes"):
+    with pytest.raises(IllegalMove, match="makes a take or a give, and offered a play"):
         passing.submit(
             Move(player=seat, action=Play(group=STACK, indices=frozenset({FIRST_CARD}))),
             base_seq=passing.head,

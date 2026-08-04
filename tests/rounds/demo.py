@@ -1,6 +1,6 @@
 from enum import StrEnum
 from random import Random
-from typing import Final
+from typing import ClassVar, Final
 
 from cardwork.cards.card import Card
 from cardwork.cards.points import REGULAR_POINTS
@@ -11,6 +11,7 @@ from cardwork.decks.decks import does_contain_jokers, to_game_cards
 from cardwork.effects.effects import Effects, MoveCards, SetState
 from cardwork.exceptions import IllegalMove
 from cardwork.games.game import Game
+from cardwork.games.intents import Intents
 from cardwork.moves.actions import Play
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
@@ -50,18 +51,6 @@ class MatchState(RoundState):
     """
 
 
-def tossed(move: Move) -> Play:
-    """The play behind a move, which is the one intent this game is built around.
-
-    Raises:
-        IllegalMove: when the move carries some other intent.
-    """
-    if isinstance(move.action, Play):
-        return move.action
-
-    raise IllegalMove(f"Seat {move.player} tosses a card, and offered {move.action.kind}")
-
-
 class TossGame(RoundGame[MatchState]):
     """A match of rounds in which every seat tosses one card face up, in turn from the seat leading the round.
 
@@ -70,6 +59,8 @@ class TossGame(RoundGame[MatchState]):
     is the round layer's exercise rather than a game worth playing: a leader, a turn order, a re-deal between
     rounds and a score that accumulates are the whole of it.
     """
+
+    intents: ClassVar[Intents[Play]] = Intents(Play)
 
     def zones(self, players: int, deck: Deck) -> Zones:
         return {
@@ -102,7 +93,7 @@ class TossGame(RoundGame[MatchState]):
             raise ValueError(f"Seats {short} hold a hand of some size other than {HAND_SIZE}")
 
     def validate(self, position: Position[MatchState], move: Move) -> None:
-        indices = tossed(move).indices
+        indices = self.intents.read(move).indices
         held = len(position.board.zone(hand_of(move.player)).cards)
         if len(indices) != 1:
             raise IllegalMove(f"Seat {move.player} tosses one card at a time, and named {len(indices)}")
@@ -114,7 +105,7 @@ class TossGame(RoundGame[MatchState]):
         return (
             MoveCards(
                 source=hand_of(move.player),
-                indices=tossed(move).indices,
+                indices=self.intents.read(move).indices,
                 target=DISCARD,
                 face_down=False,
             ),

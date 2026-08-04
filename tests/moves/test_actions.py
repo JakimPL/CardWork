@@ -4,20 +4,26 @@ from typing import Final
 import pytest
 from pydantic import ValidationError
 
+from cardwork.decks.deck import Indices
 from cardwork.moves.actions import (
+    Action,
     AnyAction,
     Declare,
     Discard,
     Give,
+    Pass,
     Play,
     Reject,
     Take,
     group_of,
+    indices_of,
+    kind_of,
 )
 from cardwork.moves.move import Move
 from tests.cases import Case, descriptions
 
 ACTIONS = (
+    Pass(),
     Play(group="meld", indices=frozenset({0, 2})),
     Take(group="discard", indices=frozenset({0})),
     Give(target_player=2, indices=frozenset({1, 3})),
@@ -31,6 +37,12 @@ ACTIONS = (
 class GroupCase(Case):
     action: AnyAction
     group: str | None
+
+
+@dataclass(frozen=True)
+class IndicesCase(Case):
+    action: AnyAction
+    indices: Indices
 
 
 GROUPS: Final[tuple[GroupCase, ...]] = (
@@ -64,12 +76,50 @@ GROUPS: Final[tuple[GroupCase, ...]] = (
         action=Declare(claim="three of a rank", indices=frozenset({0})),
         group=None,
     ),
+    GroupCase(
+        description="a pass names its word alone",
+        action=Pass(),
+        group=None,
+    ),
+)
+
+POSITIONS: Final[tuple[IndicesCase, ...]] = (
+    IndicesCase(
+        description="a play names the cards it is made of",
+        action=Play(group="meld", indices=frozenset({0, 2})),
+        indices=frozenset({0, 2}),
+    ),
+    IndicesCase(
+        description="a declaration made of a whole zone names no position of it",
+        action=Declare(claim="a winning hand", indices=frozenset()),
+        indices=frozenset(),
+    ),
+    IndicesCase(
+        description="a pass names no card at all",
+        action=Pass(),
+        indices=frozenset(),
+    ),
 )
 
 
 @pytest.mark.parametrize("case", GROUPS, ids=descriptions(GROUPS))
 def test_the_group_an_intent_names_is_read_off_the_action(case: GroupCase) -> None:
     assert group_of(case.action) == case.group
+
+
+@pytest.mark.parametrize("case", POSITIONS, ids=descriptions(POSITIONS))
+def test_the_positions_an_intent_names_are_read_off_the_action(case: IndicesCase) -> None:
+    assert indices_of(case.action) == case.indices
+
+
+@pytest.mark.parametrize("action", ACTIONS, ids=lambda action: action.kind)
+def test_the_word_read_off_a_class_is_the_word_an_action_of_it_carries(action: AnyAction) -> None:
+    assert kind_of(type(action)) == action.kind
+
+
+def test_reading_the_word_off_a_class_that_states_none_is_refused() -> None:
+    with pytest.raises(TypeError, match="where the word naming a kind of intent belongs"):
+        kind_of(Action)
 
 
 @pytest.mark.parametrize("action", ACTIONS, ids=lambda action: action.kind)

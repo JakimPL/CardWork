@@ -1,5 +1,5 @@
 from random import Random
-from typing import Final
+from typing import ClassVar, Final
 
 from cardwork.cards.card import Card
 from cardwork.cards.rank import Rank
@@ -10,6 +10,7 @@ from cardwork.decks.draw import permutation
 from cardwork.effects.effects import Effects, MoveCards, Reorder, SetState
 from cardwork.exceptions import IllegalMove
 from cardwork.games.game import Game
+from cardwork.games.intents import Intents
 from cardwork.moves.actions import Play, Take
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
@@ -22,22 +23,12 @@ SEATS: Final[int] = 3
 HAND_SIZE: Final[int] = 3
 RANKS: Final[tuple[Rank, ...]] = (Rank.ACE, Rank.KING, Rank.QUEEN)
 DECK: Final[Deck] = tuple(Card(rank=rank, suit=suit) for suit in Suit for rank in RANKS)
+LAYING: Final[Intents[Play]] = Intents(Play)
+LAYING_OR_RETRACTING: Final[Intents[Play | Take]] = Intents(Play, Take)
 
 
 def tray_of(seat: int) -> ZoneId:
     return f"sealed:{seat}"
-
-
-def played(move: Move) -> Play:
-    """The play behind a move, which is the intent these games are built around.
-
-    Raises:
-        IllegalMove: when the move carries some other intent.
-    """
-    if isinstance(move.action, Play):
-        return move.action
-
-    raise IllegalMove(f"Seat {move.player} lays a card down, and offered {move.action.kind}")
 
 
 class DiscardGame(Game[GameState]):
@@ -46,7 +37,12 @@ class DiscardGame(Game[GameState]):
     This is the engine's exercise rather than a game worth playing: it opens a simultaneous phase,
     closes it a seat at a time, and scores once the last one has acted, which walks `submit`, `advance`
     and `settle` through the branches a real game takes.
+
+    This game is played with a play, and `SealedRoundGame` with a take besides, so the declared type names
+    both intents the two of them reach and each states the vocabulary it is played with.
     """
+
+    intents: ClassVar[Intents[Play | Take]] = LAYING
 
     def zones(self, players: int, deck: Deck) -> Zones:
         return {
@@ -83,7 +79,7 @@ class DiscardGame(Game[GameState]):
             raise ValueError(f"Seats {short} hold a hand of some size other than {HAND_SIZE}")
 
     def validate(self, position: Position[GameState], move: Move) -> None:
-        indices = played(move).indices
+        indices = LAYING.read(move).indices
         held = len(position.board.zone(hand_of(move.player)).cards)
         if len(indices) != 1:
             raise IllegalMove(f"Seat {move.player} lays one card at a time, and named {len(indices)}")
@@ -95,7 +91,7 @@ class DiscardGame(Game[GameState]):
         return (
             MoveCards(
                 source=hand_of(move.player),
-                indices=played(move).indices,
+                indices=LAYING.read(move).indices,
                 target="discard",
                 face_down=False,
             ),
@@ -139,6 +135,8 @@ class SealedRoundGame(DiscardGame):
     which is the split letting an adapter answer one refusal with 403 and the other with 422.
     """
 
+    intents = LAYING_OR_RETRACTING
+
     def zones(self, players: int, deck: Deck) -> Zones:
         trays = {
             tray_of(seat): Zone(
@@ -178,7 +176,7 @@ class SealedRoundGame(DiscardGame):
         return (
             MoveCards(
                 source=hand_of(move.player),
-                indices=played(move).indices,
+                indices=LAYING.read(move).indices,
                 target=tray_of(move.player),
                 face_down=True,
             ),

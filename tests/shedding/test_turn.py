@@ -267,7 +267,7 @@ def test_drawing_a_card_other_than_the_one_at_the_end_of_the_stock_is_refused(sh
 def test_an_intent_this_game_leaves_out_is_refused(shedding: SheddingGame) -> None:
     seat = seat_on_turn(shedding)
 
-    with pytest.raises(IllegalMove, match="sheds or draws"):
+    with pytest.raises(IllegalMove, match="makes a discard or a take, and offered a play"):
         shedding.submit(
             Move(player=seat, action=Play(group=HAND, indices=frozenset({0}))),
             base_seq=shedding.head,

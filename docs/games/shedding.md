@@ -85,8 +85,10 @@ past a dozen in an unlucky round, which is the case a fan of cards had to be dra
 | `Discard(group="hand", indices={i, j, …})` | shed the cards at those positions of this seat's own hand |
 | `Take(group="stock", indices={n})` | draw the card at position *n*, the end of the stock |
 
-This is the first game to speak `Discard`, and the first whose indices name more than one card. A refusal names
-the rule it comes from:
+This is the first game to speak `Discard`, and the first whose indices name more than one card.
+`intents: ClassVar[Intents[Discard | Take]] = Intents(Discard, Take)` states the two, so the rules read a move
+as one of them and the engine refuses every other (`architecture.md` §5.3). A refusal names the rule it comes
+from:
 
 | the move | the refusal |
 |---|---|
@@ -97,7 +99,7 @@ the rule it comes from:
 | a draw naming another zone | `Seat 2 draws from the stock, and named 'discard'` |
 | a draw from an exhausted stock | `Seat 2 draws from a stock that has run out` |
 | a draw naming another position | `Seat 2 draws position [39] of the stock, and named [0]` |
-| any other intent | `Seat 2 sheds or draws, and offered play` |
+| any other intent | `Seat 2 makes a discard or a take, and offered a play`, which `intents` states and the engine answers |
 | a move out of turn | `NotYourTurn`, since one seat holds the turn at a time |
 
 `legal_moves` lists every set the hand holds and the draw beside them, so a triplet lists both of its pairs and

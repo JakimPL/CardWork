@@ -5,7 +5,6 @@ from typing import Final
 import pytest
 
 from cardgames.backend.passing.rules import (
-    NOTHING,
     ROUND_POINT,
     declares,
     four_read_alike,
@@ -29,6 +28,7 @@ from cardwork.cards.cards import (
     TWO_OF_SPADES,
 )
 from cardwork.cards.game import CardsOrJokers
+from cardwork.rounds.game import NOTHING
 from cardwork.rounds.state import BEFORE_THE_FIRST_ROUND
 from cardwork.zones.zone import hand_of
 from tests.cases import Case, descriptions

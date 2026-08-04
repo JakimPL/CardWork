@@ -124,7 +124,7 @@ export interface components {
          * @enum {string}
          */
         ActionKind: "pass" | "play" | "take" | "give" | "reject" | "discard" | "declare";
-        AnyAction: components["schemas"]["Play"] | components["schemas"]["Take"] | components["schemas"]["Give"] | components["schemas"]["Reject"] | components["schemas"]["Discard"] | components["schemas"]["Declare"];
+        AnyAction: components["schemas"]["Pass"] | components["schemas"]["Play"] | components["schemas"]["Take"] | components["schemas"]["Give"] | components["schemas"]["Reject"] | components["schemas"]["Discard"] | components["schemas"]["Declare"];
         /**
          * Award
          * @description Which end of a standing a match is won at.
@@ -312,6 +312,21 @@ export interface components {
             move: components["schemas"]["Move"];
         };
         NonEmptyIndices: components["schemas"]["CardIndex"][];
+        /**
+         * Pass
+         * @description A turn given up, which is the one intent naming no card at all.
+         *
+         *     A seat with nothing it may play, or nothing it will, says so with this and the turn carries on to the next.
+         *     The word is the whole of the move: the cards lie where they lay and the rules read the pass itself, which
+         *     is what `indices_of` answers with an empty run for.
+         */
+        Pass: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "pass";
+        };
         /**
          * Plaque
          * @description One player as the whole table reads them: the seat, the name it plays under, and the zones it holds.

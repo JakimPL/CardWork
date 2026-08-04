@@ -1,5 +1,5 @@
 from random import Random
-from typing import Final
+from typing import ClassVar, Final
 
 from cardgames.backend.passing.rules import (
     AWARD,
@@ -20,6 +20,7 @@ from cardwork.decks.deck import Deck, Indices
 from cardwork.decks.standard import ONE_DECK, standard_multiplicity
 from cardwork.effects.effects import Effects, MoveCards, SetFace, SetState
 from cardwork.exceptions import IllegalMove
+from cardwork.games.intents import Intents
 from cardwork.moves.actions import Give, Take
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
@@ -32,21 +33,6 @@ from cardwork.zones.zone import Zones, cards_of, hand_of
 from cardwork.zones.zones import STACK
 
 ONE_CARD: Final[int] = 1
-
-type PassingIntent = Take | Give
-
-
-def intent(move: Move) -> PassingIntent:
-    """The intent behind a move, which is an exchange with the pile or a pass to the next seat.
-
-    Raises:
-        IllegalMove: when the move carries some other intent.
-    """
-    action = move.action
-    if isinstance(action, Take | Give):
-        return action
-
-    raise IllegalMove(f"Seat {move.player} exchanges or passes, and offered {action.kind}")
 
 
 class PassingGame(RoundGame[PassingState]):
@@ -67,6 +53,8 @@ class PassingGame(RoundGame[PassingState]):
         game = PassingGame(players=4, deck=standard_decks(1, black_jokers=1, red_jokers=1),
                            conclusion=Conclusion(lead=2), rng=Random(7))
     """
+
+    intents: ClassVar[Intents[Take | Give]] = Intents(Take, Give)
 
     def __init__(
         self,
@@ -178,9 +166,9 @@ class PassingGame(RoundGame[PassingState]):
         """Read the move as one of the two a turn is made of, and hold it to the rules of that one.
 
         Raises:
-            IllegalMove: when the move carries another intent, or breaks a rule of the intent it carries.
+            IllegalMove: when the move breaks a rule of the intent it carries.
         """
-        match intent(move):
+        match self.intents.read(move):
             case Take() as exchange:
                 self._validate_exchange(position, move.player, exchange)
 
@@ -194,7 +182,7 @@ class PassingGame(RoundGame[PassingState]):
         rng: Random,
     ) -> Effects[PassingState]:
         """The cards a move moves: the exchange with the pile, or the pass to the next seat."""
-        match intent(move):
+        match self.intents.read(move):
             case Take() as exchange:
                 return self._exchanged(move.player, exchange.indices)
 
@@ -368,7 +356,7 @@ class PassingGame(RoundGame[PassingState]):
         move: Move,
     ) -> PassingState:
         """The cursor the round stands on once this move has landed."""
-        match intent(move):
+        match self.intents.read(move):
             case Take():
                 return position.state.with_changes(swapped=True)
 

@@ -2,7 +2,7 @@ from typing import Final
 
 import pytest
 
-from cardwork.moves.actions import Give
+from cardwork.moves.actions import Give, indices_of
 from cardwork.moves.move import Move
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
@@ -139,7 +139,9 @@ def test_a_gesture_picks_in_a_zone_holding_the_positions_its_move_names(observer
     beyond = tuple(
         move
         for move in view.legal
-        if max(move.action.indices) >= len(view.zones[gesture_for(layout, move).picked].cards)
+        if any(
+            position >= len(view.zones[gesture_for(layout, move).picked].cards) for position in indices_of(move.action)
+        )
     )
     assert beyond == ()
 

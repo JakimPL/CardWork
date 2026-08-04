@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from random import Random
-from typing import Final, Generic
+from typing import ClassVar, Final, Generic
 
 from cardwork.boards.board import Board
 from cardwork.decks.deck import Deck
@@ -12,6 +12,8 @@ from cardwork.exceptions import (
     StalePosition,
     UndoUnavailable,
 )
+from cardwork.games.intents import Intents
+from cardwork.moves.actions import AnyAction
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.states.state import StateT
@@ -36,7 +38,15 @@ class Game(ABC, Generic[StateT]):
 
     The surface is wide because this is the single face a driver, an adapter and a solver all talk to:
     reading the table, committing to it, watching it, and the rules hooks a subclass answers.
+
+    `intents` states the vocabulary a game is played with: it names the actions the rules answer to, and the
+    engine refuses a move carrying another ahead of the rules that would read it. A game annotating the
+    declaration with the actions it names has them reach its own signatures, so a `match` over an intent is
+    covered by the cases the game stated. Left at None it states a condition on nothing, and every intent a
+    client may send reaches the rules.
     """
+
+    intents: ClassVar[Intents[AnyAction] | None] = None
 
     _history: list[Position[StateT]]
     _journal: Journal[StateT]
@@ -192,7 +202,8 @@ class Game(ABC, Generic[StateT]):
         Raises:
             StalePosition: when further commits have landed since `base_seq`.
             NotYourTurn: when `authorize` withholds the turn from this seat.
-            IllegalMove: when `validate` rejects what the move asks for.
+            IllegalMove: when the move carries an intent this game is played without, or when `validate`
+                rejects what the move asks for.
         """
         if base_seq != self.head:
             raise StalePosition(base_seq, self.head)
@@ -278,7 +289,8 @@ class Game(ABC, Generic[StateT]):
 
         Raises:
             NotYourTurn: when `authorize` withholds the turn from this seat.
-            IllegalMove: when `validate` rejects what the move asks for.
+            IllegalMove: when the move carries an intent this game is played without, or when `validate`
+                rejects what the move asks for.
         """
         return fold(self._transact(position, move, rng), position)
 
@@ -344,9 +356,23 @@ class Game(ABC, Generic[StateT]):
     ) -> Effects[StateT]:
         """The full run of effects one move commits: what it does, followed by what the rules owe after."""
         self.authorize(position, move)
+        self._confirm_intent(move)
         self.validate(position, move)
         effects = self.expand(position, move, rng)
         return effects + self.advance(fold(effects, position), move, rng)
+
+    def _confirm_intent(self, move: Move) -> None:
+        """Confirm the move carries one of the intents this game is played with.
+
+        The vocabulary is read ahead of the content, so a game's `validate` states the rules of the intents it
+        plays and the engine answers for every other one. A game stating no vocabulary states a condition on
+        nothing here, and its rules answer whatever a client sends.
+
+        Raises:
+            IllegalMove: when the move carries an intent this game's `intents` leaves out.
+        """
+        if self.intents is not None:
+            self.intents.read(move)
 
     def _confirm_arrangement(
         self,

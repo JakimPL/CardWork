@@ -1,4 +1,5 @@
 from random import Random
+from typing import ClassVar
 
 from cardgames.backend.shedding.rules import (
     AWARD,
@@ -25,6 +26,7 @@ from cardwork.decks.deck import Deck
 from cardwork.decks.standard import is_standard_deck
 from cardwork.effects.effects import Effects, MoveCards, SetState
 from cardwork.exceptions import IllegalMove
+from cardwork.games.intents import Intents
 from cardwork.moves.actions import Discard, Take
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
@@ -34,21 +36,6 @@ from cardwork.rounds.seating import next_seat, rotation
 from cardwork.rounds.state import MatchPhase
 from cardwork.zones.zone import Zones, cards_of, hand_of
 from cardwork.zones.zones import DISCARD
-
-type SheddingIntent = Discard | Take
-
-
-def intent(move: Move) -> SheddingIntent:
-    """The intent behind a move, which is a set shed onto the discard or a card drawn from the stock.
-
-    Raises:
-        IllegalMove: when the move carries some other intent.
-    """
-    action = move.action
-    if isinstance(action, Discard | Take):
-        return action
-
-    raise IllegalMove(f"Seat {move.player} sheds or draws, and offered {action.kind}")
 
 
 class SheddingGame(RoundGame[SheddingState]):
@@ -74,6 +61,8 @@ class SheddingGame(RoundGame[SheddingState]):
 
         game = SheddingGame(players=3, deck=standard_deck(), conclusion=Conclusion(rounds=3), rng=Random(7))
     """
+
+    intents: ClassVar[Intents[Discard | Take]] = Intents(Discard, Take)
 
     def zones(self, players: int, deck: Deck) -> Zones:
         return shedding_zones(players, deck)
@@ -152,9 +141,9 @@ class SheddingGame(RoundGame[SheddingState]):
         """Read the move as one of the two a turn is made of, and hold it to the rules of that one.
 
         Raises:
-            IllegalMove: when the move carries another intent, or breaks a rule of the intent it carries.
+            IllegalMove: when the move breaks a rule of the intent it carries.
         """
-        match intent(move):
+        match self.intents.read(move):
             case Discard() as shedding:
                 self._validate_shed(position, move.player, shedding)
 
@@ -168,7 +157,7 @@ class SheddingGame(RoundGame[SheddingState]):
         rng: Random,
     ) -> Effects[SheddingState]:
         """The cards a turn moves: the set laid on the discard, or the card taken off the stock."""
-        match intent(move):
+        match self.intents.read(move):
             case Discard() as shedding:
                 return self._laid(move.player, shedding)
 

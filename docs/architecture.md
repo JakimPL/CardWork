@@ -110,7 +110,7 @@ the server enforces.
 |---|---|---|
 | `presentation` | `Scene`, `Layout`, `Slot`, `Gesture`, `Plaque`, `Readout` | how a game is laid out for a player |
 | `rounds` | `RoundGame`, `RoundState`, `Redeal`, seating | how a match of rounds runs |
-| `games` | `Game`: setup hooks, rules hooks, and the concrete engine | how a table plays |
+| `games` | `Game`: setup hooks, rules hooks, and the concrete engine; `Intents` | how a table plays |
 | `views` | `PositionView`, `EventView`, per-observer projection | what an observer is told |
 | `transactions` | `Transaction`, `Journal`, `replay` | what happened |
 | `effects` | the four primitives and `fold` | what changes a position |
@@ -581,10 +581,11 @@ the same grounds as the effects: a `Move` crosses the wire in both directions. T
 `ActionKind`, so a layer speaking about a kind of move rather than about one move — a layout saying which
 gesture puts a `Take` on the table (`docs/presentation.md` §1) — holds a member of a closed vocabulary.
 
-Six intents cover the vocabulary a client sends, and a game reads the ones it is played with:
+Seven intents cover the vocabulary a client sends, and a game reads the ones it is played with:
 
 | intent | carries | asks for |
 |---|---|---|
+| `Pass()` | its word alone | the turn given up, and every card left where it lies |
 | `Play(group, indices)` | a group and positions in the seat's own cards | these cards played to that group |
 | `Take(group, indices)` | a group and positions | cards taken from there |
 | `Give(target_player, indices)` | a seat and positions | cards handed to that seat |
@@ -595,12 +596,41 @@ Six intents cover the vocabulary a client sends, and a game reads the ones it is
 **`Declare` is the one intent that carries a word.** A bid, a trump named, a contract announced — each names
 positions *and* what the seat says of them, and the rules answer by reading the cards themselves. The word is
 a `str` on the wire and a `StrEnum` in the game that reads it, which keeps the vocabulary of one game closed
-while the action stays general. `indices` may be empty here alone, since a declaration over a whole hand
-covers everything the seat holds.
+while the action stays general. `indices` may be empty here alone among the intents that name positions, since
+a declaration over a whole hand covers everything the seat holds.
 
 Neither game here sends one, and the reason is worth stating: a declaration earns an intent where the seat's
 word decides something. A win the cards already read decides nothing — a seat holding one gains nothing by
 withholding it — so `cardgames.backend.passing` awards it instead of asking for it (`docs/games/passing.md` §1).
+
+**`Pass` is the one intent that names no card.** A seat with nothing it may play, or nothing it will, gives the
+turn up and the word is the whole of the move. So `group_of` reads None for it and `indices_of` an empty run,
+which is what lets a layer reading the cards behind any move at all — an interface lighting up what a served
+move would take — read one that is about none of them. A move naming no card is also the one a place on the
+table stands for nowhere, which is what `docs/presentation.md` §6 leaves the interface waiting on.
+
+**A game states which of the seven it is played with, and the framework holds every move to that.** `Intents`
+is that statement: a game names the actions its rules answer to and the engine reads a move against them at
+step 7 of §6, so the refusal of an intent a game leaves out is written once, in the framework's own words —
+`Seat 2 makes a take or a give, and offered a play`.
+
+```python
+class PassingGame(RoundGame[PassingState]):
+    intents: ClassVar[Intents[Take | Give]] = Intents(Take, Give)
+
+    def expand(self, position: Table, move: Move, rng: Random) -> Changes:
+        match self.intents.read(move):        # a Take or a Give, and the match is covered by those two
+            case Take() as exchange: ...
+            case Give() as passing: ...
+```
+
+The declaration is generic in the actions it names, so the vocabulary reaches the types a game is written
+in: `read` answers with the actions the game stated, and a `match` over that answer is exhausted by their
+cases. The vocabulary is one word per action, which is what `moves.kind_of` reads off a class.
+
+**A game states no vocabulary by leaving the declaration at None**, which states a condition on nothing: every
+intent reaches its rules, and reaches them still once an eighth is written. So the seven above are named in the
+one place they are declared, and a game that reads them all says as much by saying nothing.
 
 Actions address cards **positionally**: "the first, third and sixth cards of my hand". Positional
 addressing is the right choice under partial knowledge, because it lets a client reference a card it
@@ -674,7 +704,7 @@ Command(table, move, base_seq, idempotency_key)
    │      ── engine below this line; everything above is the adapter ──
    ├─ 5. concurrency      base_seq == journal.head                       409 StalePosition
    ├─ 6. authority        rules.authorize(position, move)                403 NotYourTurn
-   ├─ 7. legality         rules.validate(position, move)                 422 IllegalMove
+   ├─ 7. legality         rules.intents.read(move), then validate(...)   422 IllegalMove
    ├─ 8. expansion        rules.expand(position, move, rng) -> effects   ← RNG resolved and recorded
    ├─ 9. application      position' = fold(effects, position)            pure
    ├─ 10. advancement     follow = rules.advance(position', move, rng)   turn / phase / score, RNG too
@@ -691,6 +721,10 @@ the only method in the engine that mutates at all.
 "effect 3 of 5 failed". A step that raises leaves the engine holding the original position and the caller
 holding an error. Partial application is not something the design prevents; it is something the design
 cannot express.
+
+**Step 7 reads the vocabulary before the content.** A game states the intents it is played with (§5.3), and
+the engine refuses a move carrying any other before `validate` is asked anything, so a game's own refusals
+speak about the moves it plays and the vocabulary is answered for in one place.
 
 **The seat check at step 2 is the adapter's alone.** The engine trusts `move.player`, because a seat number
 is all the domain knows about identity (§10, *Identity*). So the adapter confirms that the credential
@@ -1052,6 +1086,7 @@ A game that overrides any of them has found a missing hook.
 | `advance(position, move, rng)` | abstract | turn and phase transitions, scoring, terminal detection |
 | `authorize(position, move)` | concrete | raise `NotYourTurn` unless this seat may act. Default: `move.player in state.to_act` |
 | `legal_moves(position)` | concrete | enumerate the moves this position admits, for a search and for the interfaces they reach through `view` (§7). Default: none |
+| `intents` | declaration | the actions the rules answer to, which the engine holds a move to at step 7 of §6. Default: `None`, which is every intent |
 
 Four rules for reading that surface:
 
@@ -1066,6 +1101,11 @@ Four rules for reading that surface:
   change a policy rather than supply a missing one. `authorize` admits the seats the cursor names;
   `legal_moves` enumerates nothing, which suits a game whose move space is wide or awkward to list and
   leaves clients to propose a move for `validate` to answer.
+- **`intents` is a declaration rather than a hook**, and the one line of the surface a game states in place
+  of writing: it names the actions of §5.3 the rules answer to, and the engine both refuses the rest and
+  hands the game its own move back at the type it stated. A game annotating it — `ClassVar[Intents[Take |
+  Give]]` — has those actions reach its signatures, so a `match` over an intent is covered by the cases it
+  named. Left at None it states a condition on nothing, and every intent there is reaches the rules.
 - **`advance` is a total function of its arguments.** It cannot remember having run, so `phase` carries
   that. Settlement leans on the same property: it calls `advance` until the answer is empty, which means
   something only while the answer depends on the position rather than on how many times it has been asked.

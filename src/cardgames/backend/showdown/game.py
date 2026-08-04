@@ -1,4 +1,5 @@
 from random import Random
+from typing import ClassVar
 
 from cardgames.backend.showdown.rules import (
     AWARD,
@@ -29,6 +30,7 @@ from cardwork.decks.deck import Deck
 from cardwork.decks.standard import is_standard_deck
 from cardwork.effects.effects import Effects, MoveCards, SetState
 from cardwork.exceptions import IllegalMove
+from cardwork.games.intents import Intents
 from cardwork.moves.actions import Play
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
@@ -38,19 +40,6 @@ from cardwork.rounds.seating import rotation
 from cardwork.rounds.state import MatchPhase
 from cardwork.zones.zone import Zones, cards_of
 from cardwork.zones.zones import DISCARD
-
-
-def committed(move: Move) -> Play:
-    """The commitment behind a move, which is the one intent this game is played with.
-
-    Raises:
-        IllegalMove: when the move carries some other intent.
-    """
-    action = move.action
-    if isinstance(action, Play):
-        return action
-
-    raise IllegalMove(f"Seat {move.player} commits one card, and offered {action.kind}")
 
 
 def holding_named(seat: int, group: str) -> Holding:
@@ -87,6 +76,8 @@ class ShowdownGame(RoundGame[ShowdownState]):
 
         game = ShowdownGame(players=4, deck=standard_deck(), conclusion=Conclusion(rounds=3), rng=Random(7))
     """
+
+    intents: ClassVar[Intents[Play]] = Intents(Play)
 
     def zones(self, players: int, deck: Deck) -> Zones:
         return showdown_zones(players, deck)
@@ -183,10 +174,10 @@ class ShowdownGame(RoundGame[ShowdownState]):
         """Confirm the commitment names one card of a holding that holds it.
 
         Raises:
-            IllegalMove: when the move carries another intent, names neither holding, or names other than one
-                card the named holding holds.
+            IllegalMove: when the commitment names neither holding, or names other than one card the named
+                holding holds.
         """
-        play = committed(move)
+        play = self.intents.read(move)
         holding = holding_named(move.player, play.group)
         held = len(position.board.zone(zone_of(holding, move.player)).cards)
         if len(play.indices) != ONE_CARD:
@@ -202,7 +193,7 @@ class ShowdownGame(RoundGame[ShowdownState]):
         rng: Random,
     ) -> Effects[ShowdownState]:
         """The card sealed face down in the seat's own tray, where it lies unread until the turn turns over."""
-        play = committed(move)
+        play = self.intents.read(move)
         holding = holding_named(move.player, play.group)
         sealed: Effects[ShowdownState] = (
             MoveCards(

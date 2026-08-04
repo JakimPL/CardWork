@@ -35,10 +35,13 @@ the same rules serve a live table, a replay and a search.
 
 ```python
 from random import Random
+from typing import ClassVar
 
 from cardwork.decks.deck import Deck
 from cardwork.effects.effects import Effects
 from cardwork.games.game import Game
+from cardwork.games.intents import Intents
+from cardwork.moves.actions import Play, Take
 from cardwork.moves.move import Move
 from cardwork.positions.position import Position
 from cardwork.states.state import GameState
@@ -56,6 +59,8 @@ Changes = Effects[Trump]
 
 
 class MyGame(Game[Trump]):
+    intents: ClassVar[Intents[Play | Take]] = Intents(Play, Take)   # the intents its rules answer to
+
     def zones(self, players: int, deck: Deck) -> Zones: ...        # the table before anyone touches it
     def _initialize(self, players: int) -> Trump: ...              # the pre-deal cursor
     def _deal_cards(self, position: Table, rng: Random) -> Changes: ...   # shuffle and distribute
@@ -71,6 +76,12 @@ class MyGame(Game[Trump]):
 Two hooks ship with a body and are overridden only to change a policy: `authorize`, which admits the seats
 `to_act` names, and `legal_moves`, which enumerates nothing until a game chooses to. A game that does
 enumerate has them reach every client, since a view and an event each carry the moves their observer may make.
+
+`intents` is the one line of the surface a game states rather than writes. It names the actions the rules
+answer to, and the framework does the rest: a move carrying another is refused before the rules read it, and
+`self.intents.read(move)` hands a game its own move back at the type it declared — so a `match` over an
+intent is covered by the cases the game named. Left at `None` it states a condition on nothing, and every
+intent a client may send reaches the rules.
 
 ## Laying a game out
 

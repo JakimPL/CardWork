@@ -3,7 +3,7 @@ from random import Random
 from typing import Final
 
 from cardgames.backend.passing.game import PassingGame
-from cardgames.backend.passing.rules import HAND_ON_TURN, HAND_SIZE, NOTHING
+from cardgames.backend.passing.rules import HAND_ON_TURN, HAND_SIZE
 from cardgames.backend.passing.state import PassingPhase, PassingState
 from cardgames.backend.passing.zones import PILE
 from cardgames.frontend.passing.layout import PASSING_SCENE
@@ -13,6 +13,7 @@ from cardwork.decks.standard import standard_decks
 from cardwork.moves.actions import Give, Take
 from cardwork.moves.move import Move
 from cardwork.rounds.conclusion import Conclusion
+from cardwork.rounds.game import NOTHING
 from cardwork.rounds.seating import next_seat
 from cardwork.zones.zone import hand_of
 from cardwork.zones.zones import STACK

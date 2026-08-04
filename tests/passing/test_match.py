@@ -7,12 +7,12 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from cardgames.backend.passing.game import PassingGame
-from cardgames.backend.passing.rules import NOTHING
 from cardgames.backend.passing.state import PassingPhase
 from cardwork.decks.deck import Deck
 from cardwork.effects.fold import fold
 from cardwork.moves.actions import Give
 from cardwork.moves.move import Move
+from cardwork.rounds.game import NOTHING
 from cardwork.rounds.seating import next_seat
 from cardwork.rounds.state import MatchPhase
 from tests.cases import Case, descriptions

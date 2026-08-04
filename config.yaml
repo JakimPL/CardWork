@@ -9,7 +9,7 @@ table:
 
 artwork:
   pack: kare
-  back: crosshatch
+  back: weave_one
 
 service:
   host: 127.0.0.1

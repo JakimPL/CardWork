@@ -138,7 +138,7 @@ def test_committing_from_a_holding_that_has_run_out_is_refused(showdown: Showdow
 
 
 def test_an_intent_this_game_leaves_out_is_refused(showdown: ShowdownGame) -> None:
-    with pytest.raises(IllegalMove, match="commits one card, and offered take"):
+    with pytest.raises(IllegalMove, match="makes a play, and offered a take"):
         showdown.submit(
             Move(player=FIRST_SEAT, action=Take(group=DISCARD, indices=frozenset({FIRST_CARD}))),
             base_seq=showdown.head,

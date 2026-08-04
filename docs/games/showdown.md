@@ -81,14 +81,16 @@ turns read a card out of by position, and a tray keeps the order the commitments
 | `Play(group="blind", indices={i})` | commit the card at position *i* of the five lying face down |
 
 One intent covers the game, and `Holding` holds the two words it carries, so the vocabulary a client sends is
-closed and read by a `match`. A refusal names the rule it comes from:
+closed and read by a `match`. `intents: ClassVar[Intents[Play]] = Intents(Play)` states the one of them, which
+is what has every commitment reach the rules as a `Play` and every other intent be refused before them
+(`architecture.md` §5.3). A refusal names the rule it comes from:
 
 | the move | the refusal |
 |---|---|
 | a commitment naming another holding | `Seat 2 commits from its hand or its blind, and named 'sleeve'` |
 | a commitment of several cards | `Seat 2 commits one card at a time, and named 2` |
 | a position the holding has run past | `Seat 2 named position 0 of a hand holding 0` |
-| any other intent | `Seat 2 commits one card, and offered take` |
+| any other intent | `Seat 2 makes a play, and offered a take`, which `intents` states and the engine answers |
 | a second commitment in one turn | `NotYourTurn`, since the turn stands with the seats that have yet to act |
 
 `legal_moves` lists every card of both holdings for each seat still to commit, so a solver reading the list

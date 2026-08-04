@@ -15,6 +15,13 @@ class Action(BaseFrozen):
 
 
 class Pass(Action):
+    """A turn given up, which is the one intent naming no card at all.
+
+    A seat with nothing it may play, or nothing it will, says so with this and the turn carries on to the next.
+    The word is the whole of the move: the cards lie where they lay and the rules read the pass itself, which
+    is what `indices_of` answers with an empty run for.
+    """
+
     kind: Literal[ActionKind.PASS] = ActionKind.PASS
 
 
@@ -61,20 +68,52 @@ class Declare(Action):
 
 
 type AnyAction = Annotated[
-    Play | Take | Give | Reject | Discard | Declare,
+    Pass | Play | Take | Give | Reject | Discard | Declare,
     Field(discriminator="kind"),
 ]
+
+
+def kind_of(action: type[Action]) -> ActionKind:
+    """The word an action carries as its tag, read off the class rather than off an action of it.
+
+    A layer that names a kind of intent before any move has been made — a game stating the vocabulary it is
+    played with — holds the classes and wants their words, which each member of `AnyAction` states as the
+    default of the field the union discriminates on.
+
+    Raises:
+        TypeError: when the class states no word of its own, as `Action` itself leaves it to its members.
+    """
+    stated = action.model_fields.get("kind")
+    kind = stated.default if stated is not None else None
+    if not isinstance(kind, ActionKind):
+        raise TypeError(f"{action.__name__} carries {kind!r} where the word naming a kind of intent belongs")
+
+    return kind
 
 
 def group_of(action: AnyAction) -> str | None:
     """The group an intent names beside its positions, which is what tells two moves of one kind apart.
 
-    A play, an exchange and a discard each name the group they are made in. The three intents beside them
-    carry a word of their own or none at all, so a group reads as None for those.
+    A play, an exchange and a discard each name the group they are made in. The four intents beside them
+    carry a seat, a claim or their word alone, so a group reads as None for those.
     """
     match action:
         case Play() | Take() | Discard():
             return action.group
 
-        case Give() | Reject() | Declare():
+        case Pass() | Give() | Reject() | Declare():
             return None
+
+
+def indices_of(action: AnyAction) -> Indices:
+    """The positions an intent names in the zone it is made in, and an empty run where it names no card.
+
+    Six of the intents name the cards they are about, and a pass names its turn alone, so a layer reading the
+    cards behind any move at all — an interface lighting up what a served move would take — reads them here.
+    """
+    match action:
+        case Play() | Take() | Give() | Reject() | Discard() | Declare():
+            return action.indices
+
+        case Pass():
+            return frozenset()

@@ -186,8 +186,8 @@ a move is made by the gesture whose kind is its kind, and whose group is its gro
 ```
 
 `Gesture.matches(action)` is that rule, and `moves.group_of(action)` is the group read off an intent — a play,
-an exchange and a discard name one, and the three intents beside them carry a word of their own or none. A
-layout admits no second answer, so an interface calling it reads one gesture or a bug in the game that stated
+an exchange and a discard name one, and the four intents beside them carry a seat, a claim or their word alone.
+A layout admits no second answer, so an interface calling it reads one gesture or a bug in the game that stated
 the layout.
 
 The gesture then says the rest: `picked` is the zone whose cards the player selects, the move's own `indices`
@@ -208,7 +208,9 @@ Five places where the vocabulary stops at what the games ask for, each following
 - **`Commit` names places on the table.** A move is sent by pointing at where it goes, which is what keeps a
   button standing apart from the game out of the interface. A game whose move carries a decision no place on
   the table stands for — a bid, a trump chosen, a contract announced — gains a member here the day it is
-  written, and `Declare` is the intent waiting for it (`architecture.md` §5.3).
+  written, and `Declare` is the intent waiting for it (`architecture.md` §5.3). `Pass` waits on the same
+  member from the other side: it names no card either, so a seat gives its turn up by some gesture other than
+  picking cards and pointing at where they go, and a game states one the day the page grows it.
 - **`Spread.STACK` reads by the last card**, since that is the end a game lays on. A heap dealt from its other
   end holds cards nobody reads, and a heap of backs reads alike from either end, so the field naming which end
   faces up arrives with the first game that deals readable cards from position zero. A game whose players draw
