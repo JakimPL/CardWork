@@ -14,7 +14,6 @@ export type Plaque = components["schemas"]["Plaque"];
 export type Readout = components["schemas"]["Readout"];
 export type Tally = components["schemas"]["Tally"];
 
-export type Region = components["schemas"]["Region"];
 export type Spread = components["schemas"]["Spread"];
 export type Commit = components["schemas"]["Commit"];
 export type Scope = components["schemas"]["Scope"];

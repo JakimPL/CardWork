@@ -1,12 +1,14 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import type { Layout, Plaque as Standing, Readout, Slot } from "../src/api/layout";
+import type { Layout, Readout } from "../src/api/layout";
 import type { PositionView } from "../src/api/views";
 import { NOTHING_LANDED } from "../src/play/arrivals";
 import type { Selection } from "../src/play/selection";
 import { offersOf, prospect } from "../src/play/selection";
 import { Header } from "../src/table/Header";
+import type { Placement } from "../src/table/placing";
+import { own, shared } from "../src/table/placing";
 import { Zones } from "../src/table/Zones";
 import {
   aDiscard,
@@ -16,37 +18,31 @@ import {
   aTake,
   aView,
   card,
+  DEALT_FROM,
   DISCARDING,
   DRAWING,
   GIVING,
   HAND,
+  HELD,
+  LAID_ON,
   offering,
   PILE,
+  PLAQUES,
   STACK,
   TAKING,
 } from "./tables";
 
-const HELD: Slot = { zone: HAND, label: "Your hand", region: "seat", spread: "fan", place: 0, counted: false };
-const DEALT_FROM: Slot = { zone: PILE, label: "Pile", region: "table", spread: "stack", place: 0, counted: true };
-const LAID_ON: Slot = { zone: STACK, label: "Stack", region: "table", spread: "stack", place: 1, counted: true };
-
 const POINTS: Readout = { field: "points", label: "Points", scope: "seat" };
-
-const SEATS: Standing[] = [
-  { seat: 0, name: "Seat 0", counts: [{ zone: "hand:0", label: "Cards" }] },
-  { seat: 1, name: "Seat 1", counts: [{ zone: HAND, label: "Cards" }] },
-  { seat: 2, name: "Seat 2", counts: [{ zone: "hand:2", label: "Cards" }] },
-];
 
 const LAYOUT = aLayout({
   slots: [HELD, DEALT_FROM, LAID_ON],
   readouts: [POINTS],
   phases: { passing: "Passing" },
-  plaques: SEATS,
+  plaques: PLAQUES,
   gestures: [TAKING, GIVING],
 });
 
-const WATCHING = aLayout({ observer: null, slots: [DEALT_FROM, LAID_ON], plaques: SEATS });
+const WATCHING = aLayout({ observer: null, slots: [DEALT_FROM, LAID_ON], plaques: PLAQUES });
 
 const POSITION: PositionView = aView(
   {
@@ -61,11 +57,11 @@ const POSITION: PositionView = aView(
 const A_TURN = offering(POSITION, [aTake([0]), aTake([2]), aGive(2, [0]), aGive(2, [2])]);
 
 /** The draw `shedding` offers, which names the card at the end of the heap and no other position of it. */
-const DRAWS = aLayout({ slots: [HELD, DEALT_FROM, LAID_ON], plaques: SEATS, gestures: [DRAWING] });
+const DRAWS = aLayout({ slots: [HELD, DEALT_FROM, LAID_ON], plaques: PLAQUES, gestures: [DRAWING] });
 const A_DRAW = offering(POSITION, [aTake([3])]);
 
 /** A hand three of whose four cards read as one rank, as a game shedding sets of them deals one. */
-const SETS = aLayout({ slots: [HELD, DEALT_FROM, LAID_ON], plaques: SEATS, gestures: [DISCARDING] });
+const SETS = aLayout({ slots: [HELD, DEALT_FROM, LAID_ON], plaques: PLAQUES, gestures: [DISCARDING] });
 
 const A_HAND: PositionView = aView(
   {
@@ -80,7 +76,7 @@ const SHEDS = [aDiscard([0, 1]), aDiscard([0, 2]), aDiscard([1, 2]), aDiscard([0
 const A_SET = offering(A_HAND, SHEDS);
 
 /** The whole of a shedding turn: any set of the rank laid down, or the card at the end of the heap taken up. */
-const TURNS = aLayout({ slots: [HELD, DEALT_FROM, LAID_ON], plaques: SEATS, gestures: [DISCARDING, DRAWING] });
+const TURNS = aLayout({ slots: [HELD, DEALT_FROM, LAID_ON], plaques: PLAQUES, gestures: [DISCARDING, DRAWING] });
 const A_SET_OR_A_DRAW = offering(A_HAND, [...SHEDS, aTake([3])]);
 
 /** How many cards of one drawing have gone quiet, which is what a player reads as out of play. */
@@ -98,15 +94,16 @@ function raised(drawing: string): number {
   return [...drawing.matchAll(/aria-pressed="true"/g)].length;
 }
 
-function rendered(layout: Layout, view: PositionView, selection: Selection | null, region: "seat" | "table"): string {
+function rendered(layout: Layout, view: PositionView, selection: Selection | null, place: Placement): string {
   const playing = aPlaying(prospect(offersOf(layout, view), selection));
+  const slots = place === "own" ? own(layout) : shared(layout);
   return renderToStaticMarkup(
-    <Zones region={region} layout={layout} view={view} arrivals={NOTHING_LANDED} playing={playing} />,
+    <Zones place={place} slots={slots} view={view} arrivals={NOTHING_LANDED} playing={playing} />,
   );
 }
 
-function drawn(view: PositionView, selection: Selection | null, region: "seat" | "table"): string {
-  return rendered(LAYOUT, view, selection, region);
+function drawn(view: PositionView, selection: Selection | null, place: Placement): string {
+  return rendered(LAYOUT, view, selection, place);
 }
 
 function standing(view: PositionView, selection: Selection | null): string {
@@ -116,7 +113,7 @@ function standing(view: PositionView, selection: Selection | null): string {
 
 describe("the cards a player may press", () => {
   it("fades the card no move names, and leaves the cards in play reading as cards", () => {
-    const hand = drawn(A_TURN, null, "seat");
+    const hand = drawn(A_TURN, null, "own");
 
     expect(faded(hand)).toBe(1);
     expect(pressable(hand)).toBe(3);
@@ -124,7 +121,7 @@ describe("the cards a player may press", () => {
   });
 
   it("raises the card picked up, and fades the cards a move holding it cannot name beside it", () => {
-    const hand = drawn(A_TURN, { zone: HAND, indices: [0] }, "seat");
+    const hand = drawn(A_TURN, { zone: HAND, indices: [0] }, "own");
 
     expect(hand).toContain("selected");
     expect(raised(hand)).toBe(1);
@@ -133,7 +130,7 @@ describe("the cards a player may press", () => {
   });
 
   it("presses nothing on a table this seat owes no move to, and fades nothing there either", () => {
-    const hand = drawn(POSITION, null, "seat");
+    const hand = drawn(POSITION, null, "own");
 
     expect(pressable(hand)).toBe(0);
     expect(faded(hand)).toBe(0);
@@ -142,8 +139,8 @@ describe("the cards a player may press", () => {
   it("presses nothing at a table it is only watching", () => {
     const watched = renderToStaticMarkup(
       <Zones
-        region="table"
-        layout={WATCHING}
+        place="shared"
+        slots={shared(WATCHING)}
         view={A_TURN}
         arrivals={NOTHING_LANDED}
         playing={aPlaying(prospect(offersOf(WATCHING, A_TURN), null))}
@@ -155,7 +152,7 @@ describe("the cards a player may press", () => {
   });
 
   it("leaves a zone no move picks in reading as it lies, whatever the hand holds", () => {
-    const table = drawn(A_TURN, { zone: HAND, indices: [0] }, "table");
+    const table = drawn(A_TURN, { zone: HAND, indices: [0] }, "shared");
 
     expect(faded(table)).toBe(0);
   });
@@ -163,22 +160,22 @@ describe("the cards a player may press", () => {
 
 describe("a hand a set is picked out of", () => {
   it("fades the card of the odd rank from the moment the turn arrives", () => {
-    const hand = rendered(SETS, A_SET, null, "seat");
+    const hand = rendered(SETS, A_SET, null, "own");
 
     expect(faded(hand)).toBe(1);
     expect(pressable(hand)).toBe(4);
   });
 
   it("keeps the rest of the rank reading plainly while one of them is in hand", () => {
-    const hand = rendered(SETS, A_SET, { zone: HAND, indices: [0] }, "seat");
+    const hand = rendered(SETS, A_SET, { zone: HAND, indices: [0] }, "own");
 
     expect(faded(hand)).toBe(1);
     expect(raised(hand)).toBe(1);
   });
 
   it("holds the last of the rank open once the set stands complete, and sends it on a place rather than a card", () => {
-    const hand = rendered(SETS, A_SET, { zone: HAND, indices: [0, 1] }, "seat");
-    const table = rendered(SETS, A_SET, { zone: HAND, indices: [0, 1] }, "table");
+    const hand = rendered(SETS, A_SET, { zone: HAND, indices: [0, 1] }, "own");
+    const table = rendered(SETS, A_SET, { zone: HAND, indices: [0, 1] }, "shared");
 
     expect(faded(hand)).toBe(1);
     expect(raised(hand)).toBe(2);
@@ -187,7 +184,7 @@ describe("a hand a set is picked out of", () => {
   });
 
   it("raises the whole of the rank once every card of it is in hand", () => {
-    const hand = rendered(SETS, A_SET, { zone: HAND, indices: [0, 1, 2] }, "seat");
+    const hand = rendered(SETS, A_SET, { zone: HAND, indices: [0, 1, 2] }, "own");
 
     expect(faded(hand)).toBe(1);
     expect(raised(hand)).toBe(3);
@@ -196,22 +193,22 @@ describe("a hand a set is picked out of", () => {
 
 describe("a heap a player draws off", () => {
   it("leaves the card it shows reading as a card, which is the card a draw off the end of it names", () => {
-    const table = rendered(DRAWS, A_DRAW, null, "table");
+    const table = rendered(DRAWS, A_DRAW, null, "shared");
 
     expect(faded(table)).toBe(0);
     expect(pressable(table)).toBe(1);
   });
 
   it("fades that card once a set is in hand, since a turn lays cards down or takes one up", () => {
-    const resting = rendered(TURNS, A_SET_OR_A_DRAW, null, "table");
-    const holding = rendered(TURNS, A_SET_OR_A_DRAW, { zone: HAND, indices: [0] }, "table");
+    const resting = rendered(TURNS, A_SET_OR_A_DRAW, null, "shared");
+    const holding = rendered(TURNS, A_SET_OR_A_DRAW, { zone: HAND, indices: [0] }, "shared");
 
     expect(faded(resting)).toBe(0);
     expect(faded(holding)).toBe(1);
   });
 
   it("sends the card onto the holding the game names, which is the seat's own", () => {
-    const seat = rendered(DRAWS, A_DRAW, { zone: PILE, indices: [3] }, "seat");
+    const seat = rendered(DRAWS, A_DRAW, { zone: PILE, indices: [3] }, "own");
 
     expect(seat).toContain("slot fan live");
     expect(seat).toContain(`aria-label="${DRAWING.caption}"`);
@@ -221,7 +218,7 @@ describe("a heap a player draws off", () => {
 
 describe("the places a selection can be sent onto", () => {
   it("lays a place to send onto over the zone a move commits to, under the words the game gives it", () => {
-    const table = drawn(A_TURN, { zone: HAND, indices: [0] }, "table");
+    const table = drawn(A_TURN, { zone: HAND, indices: [0] }, "shared");
 
     expect(table).toContain("slot stack live");
     expect(table).toContain(`aria-label="${TAKING.caption}"`);
@@ -237,7 +234,7 @@ describe("the places a selection can be sent onto", () => {
   });
 
   it("lays none anywhere while the cards are still being picked", () => {
-    expect(drawn(A_TURN, null, "table")).not.toContain("landing");
+    expect(drawn(A_TURN, null, "shared")).not.toContain("landing");
     expect(standing(A_TURN, null)).not.toContain("landing");
   });
 });

@@ -10,6 +10,8 @@ import { classes } from "./classes";
 import { answering } from "./clicks";
 import { Header } from "./Header";
 import { clears } from "./keys";
+import { own, shared, stations } from "./placing";
+import { Station } from "./Station";
 import { StatusLine } from "./StatusLine";
 import { Zones } from "./Zones";
 
@@ -24,11 +26,13 @@ interface PlayfieldProps {
 }
 
 /**
- * One table as a seat plays it: the standing across the top, the shared cards in the middle, its own below.
+ * One table as a seat plays it: the standing across the top, the table in the middle, its own cards below.
  *
- * The three regions are the whole page and they fit the window between them, so a player reads the table
- * without scrolling for any part of it. Every zone drawn, every figure read and every word of the phase comes
- * from the layout the game stated, which is what leaves this page holding no knowledge of either game.
+ * The three bands are the whole page and they fit the window between them, so a player reads the table without
+ * scrolling for any part of it. The middle band is the table itself: the zones every seat shares lie at the
+ * centre of it and the other players sit round them, each with the cards the table reads of them, which is what
+ * a game of cards looks like. Every zone drawn, every figure read and every word of the phase comes from the
+ * layout the game stated, which is what leaves this page holding no knowledge of any game.
  *
  * Three presses put the cards in hand back down, which between them cover every way a table is played: a click
  * on the page away from the cards, a press of the other button wherever it lands, and `Escape`. The first is the
@@ -67,11 +71,21 @@ export function Playfield({
       role="presentation"
     >
       <Header layout={layout} view={view} playing={playing} />
-      <main className="shared">
-        <Zones region="table" layout={layout} view={view} arrivals={arrivals} playing={playing} />
+      <main className="felt">
+        {stations(layout).map((station) => (
+          <Station
+            key={station.seat}
+            station={station}
+            layout={layout}
+            view={view}
+            arrivals={arrivals}
+            playing={playing}
+          />
+        ))}
+        <Zones place="shared" slots={shared(layout)} view={view} arrivals={arrivals} playing={playing} />
       </main>
       <footer className="controls">
-        <Zones region="seat" layout={layout} view={view} arrivals={arrivals} playing={playing} />
+        <Zones place="own" slots={own(layout)} view={view} arrivals={arrivals} playing={playing} />
         <p className="guidance">{playing.hint}</p>
         <StatusLine layout={layout} view={view} connection={connection} trouble={trouble} />
       </footer>

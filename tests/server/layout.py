@@ -6,7 +6,6 @@ from cardwork.presentation import presets
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.readout import Readout
-from cardwork.presentation.region import Region
 from cardwork.presentation.scene import Scene
 from cardwork.presentation.scope import Scope
 from cardwork.presentation.slot import Slot
@@ -46,11 +45,26 @@ PHASES: Final[Mapping[str, str]] = {
 def slots_of(seat: int) -> tuple[Slot, ...]:
     """The hand a seat seals a card from, and the tray the card sits in while the round stays open."""
     return (
-        presets.hand(hand_of(seat), "Your hand", place=HELD),
+        presets.hand(hand_of(seat), "Your hand", seat=seat, place=HELD),
         Slot(
             zone=tray_of(seat),
             label="Sealed",
-            region=Region.SEAT,
+            seat=seat,
+            spread=Spread.SLOT,
+            place=SEALED,
+            counted=False,
+        ),
+    )
+
+
+def seen_of(seat: int) -> tuple[Slot, ...]:
+    """The same two zones as the rest of the table reads them: a holding counted, and a tray it can watch."""
+    return (
+        presets.holding(hand_of(seat), "Hand", seat=seat, place=HELD),
+        Slot(
+            zone=tray_of(seat),
+            label="Sealed",
+            seat=seat,
             spread=Spread.SLOT,
             place=SEALED,
             counted=False,
@@ -92,6 +106,7 @@ SEALED_SCENE: Final[Scene] = Scene(
     title=TITLE,
     shared=SHARED,
     held=slots_of,
+    seen=seen_of,
     gestures=gestures_of,
     counts=counts_of,
     readouts=READOUTS,

@@ -1,4 +1,4 @@
-import type { Gesture, Layout } from "../src/api/layout";
+import type { Gesture, Layout, Plaque, Slot } from "../src/api/layout";
 import type { Move } from "../src/api/moves";
 import type { Cursor, EventView, PositionView, ProjectedCard, ZoneChange, ZoneId } from "../src/api/views";
 import type { Arrivals } from "../src/play/arrivals";
@@ -12,6 +12,33 @@ export const PILE = "pile";
 
 /** The seat these tests play as, which is the middle one of three. */
 export const SEAT = 1;
+
+/** Every seat of that table, and the zone each of them holds its cards in. */
+export const SEATS = [0, 1, 2];
+
+export function handOf(seat: number): ZoneId {
+  return `hand:${seat}`;
+}
+
+/** The three zones a table of `passing` lays out, as the seat playing it reads them. */
+export const HELD: Slot = { zone: HAND, label: "Your hand", seat: SEAT, spread: "fan", place: 0, counted: false };
+export const DEALT_FROM: Slot = { zone: PILE, label: "Pile", seat: null, spread: "stack", place: 0, counted: true };
+export const LAID_ON: Slot = { zone: STACK, label: "Stack", seat: null, spread: "stack", place: 1, counted: true };
+
+/** The hand of one other seat as the rest of the table reads it, which lies where that seat sits. */
+export function aHolding(seat: number): Slot {
+  return { zone: handOf(seat), label: "Hand", seat, spread: "fan", place: 0, counted: true };
+}
+
+/** The seats around this one, each with the cards the table reads of them. */
+export const AROUND: Slot[] = SEATS.filter((seat) => seat !== SEAT).map(aHolding);
+
+/** A plaque for every seat, each counting the hand that seat holds. */
+export const PLAQUES: Plaque[] = SEATS.map((seat) => ({
+  seat,
+  name: `Seat ${seat}`,
+  counts: [{ zone: handOf(seat), label: "Cards" }],
+}));
 
 export const SEATED: Cursor = {
   phase: "passing",

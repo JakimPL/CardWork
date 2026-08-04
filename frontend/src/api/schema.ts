@@ -220,8 +220,9 @@ export interface components {
          *     the size of a card, the colour of a highlight, the moment a heap collapses — is the interface's own.
          *
          *     Every claim a layout makes about itself is checked as it is built, which leaves an interface free to trust
-         *     it: one slot per zone, one slot per place in a region, one plaque per seat, one gesture per move, and every
-         *     zone a gesture picks from or commits onto laid out as a slot the player can reach.
+         *     it: one slot per zone, a slot belonging to a seat of the table or to the table itself, one slot per place
+         *     among the slots of one owner, one plaque per seat, one gesture per move, and every zone a gesture picks from
+         *     or commits onto laid out as a slot the player can reach.
          */
         Layout: {
             /** Gestures */
@@ -326,17 +327,6 @@ export interface components {
             label: string;
             scope: components["schemas"]["Scope"];
         };
-        /**
-         * Region
-         * @description Where on the screen a zone is laid out, which is the whole of the geography a game states.
-         *
-         *     A `TABLE` zone is one the seats share and every one of them reads the same way: the pile dealt from, the
-         *     stack laid on. A `SEAT` zone belongs to the observer the layout was built for, and holds the cards that
-         *     observer acts with. Where each region sits on the page and how much of it a card takes belongs to the
-         *     interface, which is why two names carry the whole of it.
-         * @enum {string}
-         */
-        Region: "table" | "seat";
         /** Reject */
         Reject: {
             indices: components["schemas"]["NonEmptyIndices"];
@@ -358,12 +348,17 @@ export interface components {
         Scope: "table" | "seat";
         /**
          * Slot
-         * @description One zone laid out: where it goes, how its cards lie against each other, and what it is called.
+         * @description One zone laid out: whose it is, how its cards lie against each other, and what it is called.
          *
-         *     `place` orders the slots sharing a region, counting from the first. `counted` shows how many cards the
-         *     zone holds, which is what a heap of backs has to say for itself and a hand of three states by lying
-         *     there. Whether a slot may be selected from or committed onto follows from the gestures naming it, so a
-         *     slot states where its cards are and leaves what they afford to the moves the rules admit.
+         *     `seat` names the owner of the zone, and None a zone the seats share and every one of them reads the same
+         *     way: the pile dealt from, the stack laid on. Where an owner's zones go on the page is the interface's own —
+         *     the seat reading the layout holds one place, each of the others another, and the shared zones the middle —
+         *     which is why one number carries the whole of the geography a game states.
+         *
+         *     `place` orders the slots one owner holds, counting from the first. `counted` shows how many cards the zone
+         *     holds, which is what a heap of backs has to say for itself and a hand of three states by lying there.
+         *     Whether a slot may be selected from or committed onto follows from the gestures naming it, so a slot states
+         *     where its cards are and leaves what they afford to the moves the rules admit.
          */
         Slot: {
             /** Counted */
@@ -372,7 +367,8 @@ export interface components {
             label: string;
             /** Place */
             place: number;
-            region: components["schemas"]["Region"];
+            /** Seat */
+            seat: number | null;
             spread: components["schemas"]["Spread"];
             /** Zone */
             zone: string;

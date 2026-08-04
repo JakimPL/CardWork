@@ -27,7 +27,7 @@ all rest on:
 |---|---|
 | `docs/combinations.md` | what a run of cards reads as: patterns, jokers, duplicates, rankings, points |
 | `docs/rounds.md` | a match played as a series of rounds, each dealt afresh and scored into a standing |
-| `docs/presentation.md` | how a game states its own table for a player: regions, spreads, gestures, plaques |
+| `docs/presentation.md` | how a game states its own table for a player: slots, spreads, gestures, plaques |
 | `docs/games/passing.md` | a game of four cards, in which a fourth circulates and three reading alike win |
 | `docs/games/showdown.md` | a game of ten sealed turns, every seat committing one card at once |
 | `docs/games/shedding.md` | a game of matched sets, a turn shedding several cards of one rank or drawing one |
@@ -1322,11 +1322,11 @@ the host mounts. It holds three layers of its own, and each names only what is b
 |---|---|
 | `api` | what a table answers and what a client sends: the layout vocabulary, the projections, the seat, the refusals, and the calls that read them |
 | `play` | what a client makes of those answers: the seat an address names, the view a commit leaves, the figures a readout reads |
-| `table` | what appears on screen: the standing, the two regions of zones, a slot, a card, the line saying where play stands |
+| `table` | what appears on screen: the standing, the three groups of zones, a station, a slot, a card, the line saying where play stands |
 
 **The types come from the document where a document exists, and by hand where one cannot.** `/layout` is the
 one answer that stands apart from a game's own state, so it publishes a schema and `openapi-typescript`
-generates the whole layout vocabulary from it — a slot, a gesture, a plaque, a readout, a move and the four
+generates the whole layout vocabulary from it — a slot, a gesture, a plaque, a readout, a move and the three
 closed vocabularies besides. `/view` and `/events` are generic in the state a game declares, which leaves
 FastAPI nothing to build a schema from, so `api/views.ts` mirrors them: a page reading a game's own cursor
 reads fields the framework never declared, which is exactly what a readout names for it. `make types` writes
@@ -1386,12 +1386,26 @@ check on every commit touching `frontend/` with its tests at push, which is the 
 had.
 
 **The page fits the window.** One screen high, `overflow: hidden`, three rows of `auto 1fr auto`: the
-standing of every seat across the top, the shared cards in the middle, the seat's own holdings and the line
+standing of every seat across the top, the table in the middle, the seat's own holdings and the line
 saying where play stands at the bottom. Every card is measured from a single height that follows the shorter
 side of the viewport, at the proportions of a real one, so the same table reads at any size without a scrollbar
 anywhere. A card is read by its corner, which is the part of it the card lying over it leaves showing, and a fan
 closes up as it fills: a handful lies open enough to read every face and a holding of a dozen and more tightens
 to the width there is for it, so a hand of four and a hand of seventeen are the same drawing at two overlaps.
+
+**Every player sits somewhere, and the page works out where.** `table/placing.ts` reads a layout's slots by the
+seat each one belongs to and yields the three groups the page draws: the shared zones in the middle, the
+observer's own in the panel below, and a station for every other seat whose cards the table draws. A station is
+placed round an ellipse by `sizing.ts`, at `turn = (seat - observer + players) % players` from the near edge the
+observer holds — so a table of four reads left, across and right, which is how a card table is drawn, and a
+spectator counts from the first seat instead. The cards of a station are drawn smaller than the ones in hand, so
+a full table of holdings lies inside the felt at any window. A seat the layout draws no cards for takes no
+station: its holding is a figure on its plaque, which is how a game keeps a zone off the table altogether.
+
+**A move onto a player lands on that player's cards.** A `Commit.SEAT` gesture arms the station of the seat the
+move names, so a pass reads as picking a card up and clicking the cards of the player it goes to. The plaque
+keeps the same landing for a seat the table draws nowhere, which leaves the move reachable in the one place left
+to point at.
 
 **A heap reads by its top card, and opens for as long as an arrival takes to read.** `play/arrivals.ts` counts
 what one commit laid in each zone — the cards lying at the positions it grew by, which leaves a zone that gave

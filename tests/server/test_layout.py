@@ -39,11 +39,11 @@ async def test_a_seat_lays_out_the_zones_it_holds_of_its_own(client: AsyncClient
     assert {hand_of(SEATED), tray_of(SEATED)} <= laid
 
 
-async def test_a_seat_lays_out_no_zone_another_seat_holds(client: AsyncClient) -> None:
+async def test_a_seat_lays_out_the_zones_of_every_other_seat_under_that_seat(client: AsyncClient) -> None:
     response = await client.get(LAYOUT, headers=credentials(SEATED))
 
-    laid = {slot["zone"] for slot in response.json()["slots"]}
-    assert not laid & {hand_of(seat) for seat in range(SEATS) if seat != SEATED}
+    owners = {slot["zone"]: slot["seat"] for slot in response.json()["slots"]}
+    assert {hand_of(seat): seat for seat in range(SEATS)}.items() <= owners.items()
 
 
 async def test_a_spectator_reads_the_zones_the_table_shares(client: AsyncClient) -> None:

@@ -50,7 +50,7 @@ same question asked of zones and seats rather than of moves.
 
 | piece | states |
 |---|---|
-| `Slot` | one zone laid out: the region it sits in, the place it takes there, how its cards lie, what it is called, whether its size shows |
+| `Slot` | one zone laid out: the seat it belongs to, the place it takes among that owner's zones, how its cards lie, what it is called, whether its size shows |
 | `Gesture` | one kind of move as a player makes it: the zone its cards are picked in, and the place clicked to send it |
 | `Plaque` | one player: the seat, the name it plays under, and the zones of theirs the table counts |
 | `Tally` | one of those counts, under the word the game calls that zone by |
@@ -58,11 +58,16 @@ same question asked of zones and seats rather than of moves.
 | `Layout` | the whole of it for one observer, checked against itself as it is built |
 | `Scene` | the whole of it for a table: what every observer reads alike, and what each seat holds |
 
-Four closed vocabularies carry the choices:
+**A slot names its owner rather than a place on the page.** `Slot.seat` is a seat of the table, or None for a
+zone the seats share and every one of them reads the same way. Where an owner's zones sit on the page follows
+from that and belongs to the interface: the seat reading the layout holds the panel it plays from, each of the
+others a station round the table, and the shared zones the middle of it. So a game states whose cards are whose
+and the page states what that looks like, which is the same division the spreads draw.
+
+Three closed vocabularies carry the choices:
 
 | vocabulary | members | decides |
 |---|---|---|
-| `Region` | `TABLE`, `SEAT` | whether a zone belongs to the whole table or to the observer |
 | `Spread` | `SLOT`, `STACK`, `FAN`, `ROW` | how the cards of a zone lie: one place, a heap, overlapped, side by side |
 | `Commit` | `ZONE`, `SEAT` | whether a move is sent by clicking a zone or a player |
 | `Scope` | `TABLE`, `SEAT` | whether a field of the cursor holds one value or one per seat |
@@ -75,16 +80,19 @@ builds, so a field renamed refuses the layout rather than leaving a blank on the
 second thing to read against, and it belongs to the game rather than to the layout a client receives, so it
 arrives as an argument to the constructor and stays off the model: a `Readout` on the wire is three strings.
 
-**A count is what another seat's zone says about itself.** The cards in an opponent's hand are theirs to read
-and the size of it is the table's to know, so a zone belonging to another seat reaches the screen as a `Tally`
-on their plaque. A zone of the observer's own reaches it as a `Slot` holding cards, and as a count on its own
-plaque besides, so the row of plaques reads across the table without a gap where the reader sits.
+**A zone is read twice: once by the seat holding it, and once by everybody else.** The cards in an opponent's
+hand are theirs to read and the size of it is the table's to know, so the same zone takes a `Slot` showing every
+card of it at the seat it belongs to, and a `Slot` of backs carrying its size at every other seat. A `Tally` on
+the plaque is how a zone the table draws nowhere still says how much of it there is, which is what a game states
+for a holding kept off the table altogether.
 
-**`presets` names the two arrangements every game reaches for**, as `zones.presets` names the visibility
-policies: `presets.hand(zone, label, place=...)` is a holding in the observer's own region, overlapped and
-showing its cards, and `presets.heap(zone, label, place=...)` is a stack on the shared table, read by its top
-card and its size. Both fix a `counted` a game would otherwise decide twice. Anything else is spelled out as a
-`Slot`, and becomes a preset when a second game wants the same arrangement.
+**`presets` names the three arrangements every game reaches for**, as `zones.presets` names the visibility
+policies: `presets.hand(zone, label, seat=..., place=...)` is a holding as the seat holding it reads it,
+overlapped and showing its cards; `presets.holding(zone, label, seat=..., place=...)` is the same zone as the
+rest of the table reads it, lying the same way and carrying its size; and `presets.heap(zone, label, place=...)`
+is a stack the seats share, read by its top card and its size. Each fixes a `counted` a game would otherwise
+decide twice. Anything else is spelled out as a `Slot`, and becomes a preset when a second game wants the same
+arrangement.
 
 ---
 
@@ -96,19 +104,24 @@ layout falls in step with the projection (`architecture.md` §7), which is also 
 moves a view carries, which are that seat's own.
 
 A game states one `Scene` all the same, because a table has one arrangement and its observers differ only in
-where they sit. A scene holds the zones every observer reads alike, and three functions of a seat — the zones
-it holds, the gestures it makes, the counts the table reads of it:
+where they sit. A scene holds the zones every observer reads alike, and four functions of a seat — the zones it
+holds as it reads them, the same zones as the rest of the table reads them, the gestures it makes, the counts the
+table reads of it:
 
 ```python
 PASSING_SCENE.layout(players=3, observer=1)     # -> Layout(observer=1, ...)
-PASSING_SCENE.layout(players=3, observer=None)  # -> the shared table, and no gesture
+PASSING_SCENE.layout(players=3, observer=None)  # -> every seat as the table reads it, and no gesture
 ```
 
-What `Scene.layout` states so that no game states it again: a seat reads the zones it holds beside the shared
-ones and is offered the gestures of its own turn; a spectator reads the shared zones and makes no move; every
-seat of the table takes a plaque, named by where it sits until a host holds a name for it. That is the same
-entitlement the projection gives an observer over the cards, and it now lives in one place rather than in
-every game that would have to remember it.
+What `Scene.layout` states so that no game states it again: a seat reads the zones it holds, the seats around it
+as the table reads them and the shared ones besides, and is offered the gestures of its own turn; a spectator
+reads every seat as the table reads it and makes no move; every seat of the table takes a plaque, named by where
+it sits until a host holds a name for it. That is the same entitlement the projection gives an observer over the
+cards, and it now lives in one place rather than in every game that would have to remember it.
+
+A scene answers for the ownership it states as it lays a table out: a zone the table shares belongs to no seat,
+and the zones a scene is asked for at one seat all belong to that seat. So a game that reads `hand_of(seat)`
+under the wrong seat fails at the layout rather than drawing one player's cards in front of another.
 
 **A scene is a port the adapter asks for by shape.** A table is put into service with the arrangement it is
 read through beside the game itself, and `GET /tables/{id}/layout` answers the layout of the seat behind the
@@ -127,7 +140,8 @@ Every claim a layout makes is checked as it is built, which leaves an interface 
 |---|---|
 | the observer is one of the seats, or a spectator | a plaque exists for whoever is watching |
 | one slot per zone | a card lies in one place on the screen |
-| one slot per place in a region | the slots of a region fall in a settled order |
+| every slot belongs to a seat of the table, or to the table | a slot has somewhere on the page to be drawn |
+| one slot per place among one owner's slots | the zones of one owner fall in a settled order |
 | one plaque per seat | the standing reads across the table in one row |
 | one gesture per kind and group | a move resolves to a single gesture |
 | a gesture over every group of a kind stands alone | that resolution is unambiguous |
@@ -173,15 +187,18 @@ Three places where the vocabulary stops at what the games ask for, each followin
   faces up arrives with the first game that deals readable cards from position zero. A game whose players draw
   off a heap states the end they draw from instead, which is what `cardgames.backend.shedding` does
   (`docs/games/shedding.md` §2).
-- **`Region` names two places**, because a game states which zones a player owns and the interface states where
-  the page puts them. A third region arrives with a game that wants one.
+- **A slot names an owner and no place**, because a game states which zones a player owns and the interface
+  states where the page puts them: the three placements it derives — the panel below, a station round the table,
+  the shared middle — are one reading of `Slot.seat` against `Layout.observer`, and a page that wanted a fourth
+  would derive that too. A field naming the page's own geography arrives the day a game needs a zone drawn
+  somewhere the owner of it cannot say.
 
 ---
 
 ## 7. The three worked examples
 
 `cardgames.frontend.passing`, `cardgames.frontend.showdown` and `cardgames.frontend.shedding` state a `Scene`
-apiece — constants for what the table shares and three functions of a seat for what it holds — and each lays out
+apiece — constants for what the table shares and four functions of a seat for what it holds — and each lays out
 every observer from it, with every zone id concrete. Between them they exercise both addressings §1 sets out,
 and §5 of each game's own document reads its scene out zone by zone.
 

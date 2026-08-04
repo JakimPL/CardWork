@@ -1,32 +1,38 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import type { Layout, Readout, Slot } from "../src/api/layout";
+import type { Layout, Readout } from "../src/api/layout";
 import type { Cursor, PositionView } from "../src/api/views";
 import { NOTHING_LANDED } from "../src/play/arrivals";
 import { prospect } from "../src/play/selection";
 import { Header } from "../src/table/Header";
+import { own, shared } from "../src/table/placing";
 import { StatusLine } from "../src/table/StatusLine";
 import { Zones } from "../src/table/Zones";
-import { aLayout, aPlaying, aView, card, HAND, PILE, STACK } from "./tables";
-
-/** The table `passing` lays out for the seat in the middle of three, as the game's own module states it. */
-const HELD: Slot = { zone: HAND, label: "Your hand", region: "seat", spread: "fan", place: 0, counted: false };
-const DEALT_FROM: Slot = { zone: PILE, label: "Pile", region: "table", spread: "stack", place: 0, counted: true };
-const LAID_ON: Slot = { zone: STACK, label: "Stack", region: "table", spread: "stack", place: 1, counted: true };
+import {
+  aLayout,
+  aPlaying,
+  AROUND,
+  aView,
+  card,
+  DEALT_FROM,
+  HAND,
+  HELD,
+  LAID_ON,
+  PILE,
+  PLAQUES,
+  STACK,
+} from "./tables";
 
 const POINTS: Readout = { field: "points", label: "Points", scope: "seat" };
 const ROUND: Readout = { field: "round_number", label: "Round", scope: "table" };
 
+/** The table `passing` lays out for the seat in the middle of three, as the game's own module states it. */
 const LAYOUT: Layout = aLayout({
   slots: [HELD, DEALT_FROM, LAID_ON],
   readouts: [POINTS, ROUND],
   phases: { passing: "Passing" },
-  plaques: [
-    { seat: 0, name: "Seat 0", counts: [{ zone: "hand:0", label: "Cards" }] },
-    { seat: 1, name: "Seat 1", counts: [{ zone: HAND, label: "Cards" }] },
-    { seat: 2, name: "Seat 2", counts: [{ zone: "hand:2", label: "Cards" }] },
-  ],
+  plaques: PLAQUES,
 });
 
 const DEALT: PositionView = aView(
@@ -45,11 +51,16 @@ const RESTING = aPlaying(prospect([], null));
 
 const drawn = (element: Parameters<typeof renderToStaticMarkup>[0]): string => renderToStaticMarkup(element);
 
+/** One group of the page's zones, drawn as the layout places them. */
+const held = (): string =>
+  drawn(<Zones place="own" slots={own(LAYOUT)} view={DEALT} arrivals={NOTHING_LANDED} playing={RESTING} />);
+
+const middle = (): string =>
+  drawn(<Zones place="shared" slots={shared(LAYOUT)} view={DEALT} arrivals={NOTHING_LANDED} playing={RESTING} />);
+
 describe("the table one seat reads", () => {
   it("draws every card of its own hand, whichever way up the cards lie", () => {
-    const page = drawn(
-      <Zones region="seat" layout={LAYOUT} view={DEALT} arrivals={NOTHING_LANDED} playing={RESTING} />,
-    );
+    const page = held();
 
     expect(page).toContain("Your hand");
     expect([...page.matchAll(/class="card face/g)]).toHaveLength(3);
@@ -58,31 +69,27 @@ describe("the table one seat reads", () => {
   });
 
   it("draws a heap it may not read as the back of one card, under the count of them all", () => {
-    const page = drawn(
-      <Zones region="table" layout={LAYOUT} view={DEALT} arrivals={NOTHING_LANDED} playing={RESTING} />,
-    );
+    const page = middle();
 
     expect([...page.matchAll(/class="card back"/g)]).toHaveLength(1);
     expect(page).toContain(">4</span>");
   });
 
   it("draws a heap lying face up by the card laid on it", () => {
-    const page = drawn(
-      <Zones region="table" layout={LAYOUT} view={DEALT} arrivals={NOTHING_LANDED} playing={RESTING} />,
-    );
+    const page = middle();
 
     expect(page).toContain(">2</span>");
     expect(page).toContain(">♣</span>");
   });
 
-  it("lays out no zone another seat holds, and counts it on that seat's plaque instead", () => {
+  it("holds in the panel it plays from the zones of its own seat and no other", () => {
+    const table = aLayout({ slots: [HELD, ...AROUND, DEALT_FROM, LAID_ON], plaques: PLAQUES });
     const cards = drawn(
-      <Zones region="seat" layout={LAYOUT} view={DEALT} arrivals={NOTHING_LANDED} playing={RESTING} />,
+      <Zones place="own" slots={own(table)} view={DEALT} arrivals={NOTHING_LANDED} playing={RESTING} />,
     );
-    const standing = drawn(<Header layout={LAYOUT} view={DEALT} playing={RESTING} />);
 
-    expect(cards).not.toContain("hand:0");
-    expect(standing).toContain("Cards");
+    expect(cards).toContain("Your hand");
+    expect([...cards.matchAll(/class="slot [a-z]/g)]).toHaveLength(1);
   });
 });
 

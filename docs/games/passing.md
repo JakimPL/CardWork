@@ -136,10 +136,12 @@ looks (`presentation.md`). Which zone lies where:
 
 | zone | lies | as |
 |---|---|---|
-| `hand:me` | in the observer's own region, fanned out | the cards it picks from |
-| `hand:other` | on that seat's plaque, as a count | what the table reads of another hand |
+| `hand:me` | in the panel the observer plays from, fanned out | the cards it picks from |
+| `hand:other` | at that seat's station, fanned out under its count | the backs of a hand, and how many of them |
 | `pile` | on the shared table, a heap read by its count | a stack of backs |
 | `stack` | on the shared table, a heap read by its top card | every card given up |
+
+A pass lands on the cards of the seat it goes to, since a station is where that player sits.
 
 A turn is two gestures, one for each intent of §3:
 

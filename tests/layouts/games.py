@@ -33,13 +33,15 @@ class LayoutCase(Case):
     """One game's layout beside a table of its own, and the whole of what an observer reads off it.
 
     The counts stand for what a layout holds rather than for what it looks like: how many zones an observer
-    has of its own, how many the table shares, how many gestures a turn is made of, how many zones a plaque
-    counts. `phases` is every phase the game's cursor may read, which the captions are held against.
+    has of its own, how many of another seat's the table draws, how many the table shares, how many gestures a
+    turn is made of, how many zones a plaque counts. `phases` is every phase the game's cursor may read, which
+    the captions are held against.
     """
 
     scene: Scene
     table: Callable[[], Game[GameState]]
     held: int
+    seen: int
     shared: int
     gestures: int
     counts: int
@@ -81,6 +83,7 @@ CASES: Final[tuple[LayoutCase, ...]] = (
         scene=PASSING_SCENE,
         table=a_passing_table,
         held=1,
+        seen=1,
         shared=2,
         gestures=2,
         counts=1,
@@ -91,6 +94,7 @@ CASES: Final[tuple[LayoutCase, ...]] = (
         scene=SHOWDOWN_SCENE,
         table=a_showdown_table,
         held=3,
+        seen=3,
         shared=2,
         gestures=2,
         counts=3,
@@ -101,6 +105,7 @@ CASES: Final[tuple[LayoutCase, ...]] = (
         scene=SHEDDING_SCENE,
         table=a_shedding_table,
         held=1,
+        seen=1,
         shared=2,
         gestures=2,
         counts=1,

@@ -33,17 +33,28 @@ def gesture_for(layout: Layout, move: Move) -> Gesture:
 
 @pytest.mark.parametrize("case", CASES, ids=IDS)
 @pytest.mark.parametrize("seat", SEATS)
-def test_a_seat_reads_its_own_zones_beside_the_ones_the_table_shares(seat: int, case: LayoutCase) -> None:
+def test_a_seat_reads_its_own_zones_the_seats_around_it_and_the_ones_the_table_shares(
+    seat: int,
+    case: LayoutCase,
+) -> None:
     layout = case.scene.layout(PLAYERS, seat)
 
-    assert len(layout.slots) == case.held + case.shared
+    assert len(layout.slots) == case.held + case.seen * (PLAYERS - 1) + case.shared
 
 
 @pytest.mark.parametrize("case", CASES, ids=IDS)
-def test_a_spectator_reads_the_shared_zones_and_makes_no_move(case: LayoutCase) -> None:
+@pytest.mark.parametrize("seat", SEATS)
+def test_a_seat_reads_the_cards_of_every_seat_at_the_table(seat: int, case: LayoutCase) -> None:
+    layout = case.scene.layout(PLAYERS, seat)
+
+    assert {slot.seat for slot in layout.slots if slot.seat is not None} == set(SEATS)
+
+
+@pytest.mark.parametrize("case", CASES, ids=IDS)
+def test_a_spectator_reads_every_seat_of_the_table_and_makes_no_move(case: LayoutCase) -> None:
     layout = case.scene.layout(PLAYERS, None)
 
-    assert (len(layout.slots), layout.gestures) == (case.shared, ())
+    assert (len(layout.slots), layout.gestures) == (case.seen * PLAYERS + case.shared, ())
 
 
 @pytest.mark.parametrize("case", CASES, ids=IDS)

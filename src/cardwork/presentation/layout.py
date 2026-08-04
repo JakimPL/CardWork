@@ -37,8 +37,9 @@ class Layout(BaseFrozen):
     the size of a card, the colour of a highlight, the moment a heap collapses — is the interface's own.
 
     Every claim a layout makes about itself is checked as it is built, which leaves an interface free to trust
-    it: one slot per zone, one slot per place in a region, one plaque per seat, one gesture per move, and every
-    zone a gesture picks from or commits onto laid out as a slot the player can reach.
+    it: one slot per zone, a slot belonging to a seat of the table or to the table itself, one slot per place
+    among the slots of one owner, one plaque per seat, one gesture per move, and every zone a gesture picks from
+    or commits onto laid out as a slot the player can reach.
     """
 
     title: str
@@ -76,15 +77,32 @@ class Layout(BaseFrozen):
         return self
 
     @model_validator(mode="after")
-    def _every_place_holds_one_slot(self) -> Self:
-        """Confirm the slots of a region fall in a settled order.
+    def _every_slot_belongs_to_the_table(self) -> Self:
+        """Confirm each slot belongs to a seat of the table, or to the table itself.
 
         Raises:
-            ValueError: when two slots of one region take the same place.
+            ValueError: when a slot names an owner the table holds no seat for.
         """
-        twice = repeated(tuple((slot.region, slot.place) for slot in self.slots))
+        unseated = distinct(
+            tuple(slot.seat for slot in self.slots if slot.seat is not None and not 0 <= slot.seat < self.players)
+        )
+        if unseated:
+            raise ValueError(
+                f"A slot belongs to one of the {self.players} seats or to the table, and these name: {unseated}"
+            )
+
+        return self
+
+    @model_validator(mode="after")
+    def _every_place_holds_one_slot(self) -> Self:
+        """Confirm the slots of one owner fall in a settled order.
+
+        Raises:
+            ValueError: when two slots of one owner take the same place.
+        """
+        twice = repeated(tuple((slot.seat, slot.place) for slot in self.slots))
         if twice:
-            raise ValueError(f"A place in a region holds one slot, and these hold two apiece: {twice}")
+            raise ValueError(f"A place among one owner's slots holds one slot, and these hold two apiece: {twice}")
 
         return self
 

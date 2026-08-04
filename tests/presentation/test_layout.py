@@ -8,7 +8,6 @@ from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.layout import Layout, distinct, repeated
 from cardwork.presentation.readout import Readout
-from cardwork.presentation.region import Region
 from cardwork.presentation.scope import Scope
 from cardwork.presentation.slot import Slot
 from cardwork.presentation.spread import Spread
@@ -25,6 +24,7 @@ from .demo import (
     PLAQUES,
     READOUTS,
     SEATS,
+    SHARED,
     SLOTS,
     STAGE,
     STANDING,
@@ -60,25 +60,30 @@ def test_a_layout_naming_a_seat_the_table_does_not_hold_is_refused() -> None:
 
 
 def test_a_layout_laying_one_zone_out_twice_is_refused() -> None:
-    twice = Slot(zone=PILE, label="Pile again", region=Region.TABLE, spread=Spread.SLOT, place=2, counted=True)
+    twice = Slot(zone=PILE, label="Pile again", seat=None, spread=Spread.SLOT, place=2, counted=True)
 
     with pytest.raises(ValidationError, match="A zone is laid out once"):
         a_layout(slots=SLOTS + (twice,))
 
 
-def test_a_layout_giving_two_slots_of_one_region_the_same_place_is_refused() -> None:
-    shared = Slot(
-        zone=UNLAID, label="Vault", region=Region.TABLE, spread=Spread.SLOT, place=DEALT_FROM.place, counted=True
-    )
+def test_a_layout_naming_a_slot_of_a_seat_the_table_does_not_hold_is_refused() -> None:
+    unseated = Slot(zone=UNLAID, label="Vault", seat=UNSEATED, spread=Spread.SLOT, place=0, counted=True)
 
-    with pytest.raises(ValidationError, match="A place in a region holds one slot"):
+    with pytest.raises(ValidationError, match=f"A slot belongs to one of the {SEATS} seats or to the table"):
+        a_layout(slots=SLOTS + (unseated,))
+
+
+def test_a_layout_giving_two_slots_of_one_owner_the_same_place_is_refused() -> None:
+    shared = Slot(zone=UNLAID, label="Vault", seat=None, spread=Spread.SLOT, place=DEALT_FROM.place, counted=True)
+
+    with pytest.raises(ValidationError, match="A place among one owner's slots holds one slot"):
         a_layout(slots=SLOTS + (shared,))
 
 
-def test_a_layout_giving_two_regions_the_same_place_is_accepted() -> None:
+def test_a_layout_giving_two_owners_the_same_place_is_accepted() -> None:
     layout = a_layout()
 
-    assert {(slot.region, slot.place) for slot in layout.slots} >= {(Region.SEAT, 0), (Region.TABLE, 0)}
+    assert {(slot.seat, slot.place) for slot in layout.slots} >= {(OWNER, 0), (OTHER, 0), (None, 0)}
 
 
 def test_a_layout_leaving_a_seat_without_a_plaque_is_refused() -> None:
@@ -167,11 +172,12 @@ def test_a_layout_captions_the_phases_it_names() -> None:
 
 
 def test_a_layout_tallies_a_zone_it_lays_out_nowhere() -> None:
-    """A plaque counts another seat's hand, which is a zone no slot of this observer's layout holds."""
-    tallied = {tally.zone for plaque in a_layout().plaques for tally in plaque.counts}
+    """A plaque counts another seat's hand, which a table drawing only its own cards holds no slot for."""
+    layout = a_layout(slots=(HELD,) + SHARED)
+    tallied = {tally.zone for plaque in layout.plaques for tally in plaque.counts}
 
     assert hand_of(OTHER) in tallied
-    assert hand_of(OTHER) not in {slot.zone for slot in a_layout().slots}
+    assert hand_of(OTHER) not in {slot.zone for slot in layout.slots}
 
 
 def test_distinct_names_each_value_once_in_the_order_it_first_appears() -> None:

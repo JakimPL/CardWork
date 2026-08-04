@@ -1,5 +1,6 @@
 import type { Layout } from "../api/layout";
 import type { PositionView } from "../api/views";
+import { nameOf } from "./seats";
 import type { Prospect } from "./selection";
 
 /** What the line under the cards says while a player holds a turn, or a selection part of the way to a move. */
@@ -10,9 +11,6 @@ const SPENT = "No move sends these cards";
 /** What it says while the table owes this seat nothing: whom the turn stands with, or the table itself. */
 const WAITING_ON = "Waiting for";
 const WAITING = "Waiting for the table";
-
-/** What a seat reads as where the plaques name none, which a layout leaves no room for. */
-const SEATED = "Seat";
 
 /** How two things a selection could send read beside each other. */
 const BESIDES = " · ";
@@ -56,9 +54,4 @@ export function guidance(layout: Layout, view: PositionView, standing: Prospect,
 function waitingOn(layout: Layout, view: PositionView): string {
   const named = view.state.to_act.filter((seat) => seat !== layout.observer).map((seat) => nameOf(layout, seat));
   return named.length === 0 ? WAITING : `${WAITING_ON} ${named.join(ALSO)}`;
-}
-
-/** What one seat is called, which is the name its plaque reads under. */
-function nameOf(layout: Layout, seat: number): string {
-  return layout.plaques.find((plaque) => plaque.seat === seat)?.name ?? `${SEATED} ${seat}`;
 }

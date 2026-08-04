@@ -8,7 +8,6 @@ from cardwork.presentation import presets
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.readout import Readout
-from cardwork.presentation.region import Region
 from cardwork.presentation.scene import Scene
 from cardwork.presentation.scope import Scope
 from cardwork.presentation.slot import Slot
@@ -52,11 +51,11 @@ def slots_of(seat: int) -> tuple[Slot, ...]:
     its true position for exactly that. The tray holds the one card of the turn.
     """
     return (
-        presets.hand(hand_of(seat), "Your hand", place=HELD),
+        presets.hand(hand_of(seat), "Your hand", seat=seat, place=HELD),
         Slot(
             zone=blind_of(seat),
             label="Your blind",
-            region=Region.SEAT,
+            seat=seat,
             spread=Spread.ROW,
             place=BLIND,
             counted=False,
@@ -64,7 +63,35 @@ def slots_of(seat: int) -> tuple[Slot, ...]:
         Slot(
             zone=tray_of(seat),
             label="Sealed",
-            region=Region.SEAT,
+            seat=seat,
+            spread=Spread.SLOT,
+            place=SEALED,
+            counted=False,
+        ),
+    )
+
+
+def seen_of(seat: int) -> tuple[Slot, ...]:
+    """The three zones of a seat as the rest of the table reads them: a holding, a blind, and a tray.
+
+    A blind nobody reads says one thing to the table, which is how many cards are still to come out of it, so it
+    lies across the table as a heap under its size where the seat holding it reads a row of places to pick from.
+    The tray shows the card sealed there once the round opens it, which is what a showdown comes to.
+    """
+    return (
+        presets.holding(hand_of(seat), "Hand", seat=seat, place=HELD),
+        Slot(
+            zone=blind_of(seat),
+            label="Blind",
+            seat=seat,
+            spread=Spread.STACK,
+            place=BLIND,
+            counted=True,
+        ),
+        Slot(
+            zone=tray_of(seat),
+            label="Sealed",
+            seat=seat,
             spread=Spread.SLOT,
             place=SEALED,
             counted=False,
@@ -104,6 +131,7 @@ SHOWDOWN_SCENE: Final[Scene] = Scene(
     title=TITLE,
     shared=SHARED,
     held=slots_of,
+    seen=seen_of,
     gestures=gestures_of,
     counts=counts_of,
     readouts=READOUTS,

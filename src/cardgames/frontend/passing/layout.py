@@ -41,7 +41,16 @@ PHASES: Final[Mapping[str, str]] = {
 
 def slots_of(seat: int) -> tuple[Slot, ...]:
     """The hand a seat plays from, which is the zone either move of a turn picks its card in."""
-    return (presets.hand(hand_of(seat), "Your hand", place=HELD),)
+    return (presets.hand(hand_of(seat), "Your hand", seat=seat, place=HELD),)
+
+
+def seen_of(seat: int) -> tuple[Slot, ...]:
+    """The same hand as the rest of the table reads it, which is the backs of its cards and how many.
+
+    A pass is committed onto the seat it goes to, so the cards of that seat are what a player points at to send
+    one, and the hand lies on the table for exactly that.
+    """
+    return (presets.holding(hand_of(seat), "Hand", seat=seat, place=HELD),)
 
 
 def gestures_of(seat: int) -> tuple[Gesture, ...]:
@@ -80,6 +89,7 @@ PASSING_SCENE: Final[Scene] = Scene(
     title=TITLE,
     shared=SHARED,
     held=slots_of,
+    seen=seen_of,
     gestures=gestures_of,
     counts=counts_of,
     readouts=READOUTS,

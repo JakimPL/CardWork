@@ -146,8 +146,8 @@ settlement of that kind whose `SetState` reads `phase="decided"` and carries the
 
 | zone | lies | as |
 |---|---|---|
-| `hand:me` | in the observer's own region, fanned out | the cards it holds, read by rank to find what goes with what |
-| another seat's hand | on that seat's plaque, as one count | how close that seat is to going out |
+| `hand:me` | in the panel the observer plays from, fanned out | the cards it holds, read by rank to find what goes with what |
+| another seat's hand | at that seat's station, fanned out under its count | how close that seat is to going out |
 | `stock` | on the shared table, a heap read by its count | what is still to be drawn |
 | `discard` | on the shared table, a heap read by its top card | the last set shed |
 

@@ -1,17 +1,15 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import type { Layout, Region, Slot } from "../src/api/layout";
+import type { Layout } from "../src/api/layout";
 import type { PositionView } from "../src/api/views";
 import type { Arrivals } from "../src/play/arrivals";
 import { NOTHING_LANDED } from "../src/play/arrivals";
 import { prospect } from "../src/play/selection";
+import type { Placement } from "../src/table/placing";
+import { own, shared } from "../src/table/placing";
 import { Zones } from "../src/table/Zones";
-import { aLayout, aPlaying, aView, card, HAND, landing, PILE, STACK } from "./tables";
-
-const HELD: Slot = { zone: HAND, label: "Your hand", region: "seat", spread: "fan", place: 0, counted: false };
-const DEALT_FROM: Slot = { zone: PILE, label: "Pile", region: "table", spread: "stack", place: 0, counted: true };
-const LAID_ON: Slot = { zone: STACK, label: "Stack", region: "table", spread: "stack", place: 1, counted: true };
+import { aLayout, aPlaying, aView, card, DEALT_FROM, HAND, HELD, LAID_ON, landing, PILE, STACK } from "./tables";
 
 const LAYOUT: Layout = aLayout({ slots: [HELD, DEALT_FROM, LAID_ON] });
 
@@ -28,15 +26,14 @@ const PLAYED: PositionView = aView(
 /** A table nothing is being played on, since what these tests read is the drawing of it. */
 const RESTING = aPlaying(prospect([], null));
 
-function drawn(view: PositionView, arrivals: Arrivals, region: Region): string {
-  return renderToStaticMarkup(
-    <Zones region={region} layout={LAYOUT} view={view} arrivals={arrivals} playing={RESTING} />,
-  );
+function drawn(view: PositionView, arrivals: Arrivals, place: Placement): string {
+  const slots = place === "own" ? own(LAYOUT) : shared(LAYOUT);
+  return renderToStaticMarkup(<Zones place={place} slots={slots} view={view} arrivals={arrivals} playing={RESTING} />);
 }
 
 describe("a heap at rest", () => {
   it("reads by the card lying on top of it, under the count of them all", () => {
-    const table = drawn(PLAYED, NOTHING_LANDED, "table");
+    const table = drawn(PLAYED, NOTHING_LANDED, "shared");
 
     expect([...table.matchAll(/class="card face/g)]).toHaveLength(1);
     expect(table).toContain(">K</span>");
@@ -44,13 +41,13 @@ describe("a heap at rest", () => {
   });
 
   it("marks the depth of the cards lying under that one", () => {
-    const table = drawn(PLAYED, NOTHING_LANDED, "table");
+    const table = drawn(PLAYED, NOTHING_LANDED, "shared");
 
     expect([...table.matchAll(/class="cards deep"/g)]).toHaveLength(2);
   });
 
   it("marks no depth under a holding that shows every card it has", () => {
-    const hand = drawn(PLAYED, NOTHING_LANDED, "seat");
+    const hand = drawn(PLAYED, NOTHING_LANDED, "own");
 
     expect(hand).not.toContain("deep");
   });
@@ -58,7 +55,7 @@ describe("a heap at rest", () => {
 
 describe("a card just laid on a heap", () => {
   it("shows beside the card it came to rest on, and is marked as having arrived", () => {
-    const table = drawn(PLAYED, landing(STACK, 1), "table");
+    const table = drawn(PLAYED, landing(STACK, 1), "shared");
 
     expect([...table.matchAll(/class="card face [a-z]+ arriving"/g)]).toHaveLength(1);
     expect(table).toContain(">5</span>");
@@ -66,20 +63,20 @@ describe("a card just laid on a heap", () => {
   });
 
   it("leaves the heaps it was not laid on reading by their own top card", () => {
-    const table = drawn(PLAYED, landing(STACK, 1), "table");
+    const table = drawn(PLAYED, landing(STACK, 1), "shared");
 
     expect([...table.matchAll(/class="card back"/g)]).toHaveLength(1);
   });
 
   it("closes back to the one card once the arrival has been read", () => {
-    const table = drawn(PLAYED, NOTHING_LANDED, "table");
+    const table = drawn(PLAYED, NOTHING_LANDED, "shared");
 
     expect(table).not.toContain("arriving");
     expect([...table.matchAll(/class="card face/g)]).toHaveLength(1);
   });
 
   it("shows a settlement of several cards whole, on the card they landed on", () => {
-    const table = drawn(PLAYED, landing(STACK, 2), "table");
+    const table = drawn(PLAYED, landing(STACK, 2), "shared");
 
     expect([...table.matchAll(/class="card face/g)]).toHaveLength(3);
     expect([...table.matchAll(/arriving/g)]).toHaveLength(2);
@@ -88,13 +85,13 @@ describe("a card just laid on a heap", () => {
 
 describe("a holding of any size", () => {
   it("tells the style sheet how many cards it fans out, which is what the overlap follows", () => {
-    const hand = drawn(PLAYED, NOTHING_LANDED, "seat");
+    const hand = drawn(PLAYED, NOTHING_LANDED, "own");
 
     expect(hand).toContain("--held:3");
   });
 
   it("marks the card just dealt to it as having arrived, beside the cards already held", () => {
-    const hand = drawn(PLAYED, landing(HAND, 1), "seat");
+    const hand = drawn(PLAYED, landing(HAND, 1), "own");
 
     expect([...hand.matchAll(/class="card face/g)]).toHaveLength(3);
     expect([...hand.matchAll(/arriving/g)]).toHaveLength(1);

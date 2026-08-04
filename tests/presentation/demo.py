@@ -7,7 +7,6 @@ from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.layout import Layout
 from cardwork.presentation.plaque import Plaque
 from cardwork.presentation.readout import Readout
-from cardwork.presentation.region import Region
 from cardwork.presentation.scene import Scene
 from cardwork.presentation.scope import Scope
 from cardwork.presentation.slot import Slot
@@ -31,14 +30,26 @@ def hand_of(seat: int) -> ZoneId:
 
 
 def a_hand(seat: int) -> Slot:
-    """The hand one seat holds, laid out in the region of the observer it belongs to."""
+    """The hand one seat holds, as that seat reads it: every card of it, and no count."""
     return Slot(
         zone=hand_of(seat),
         label="Your hand",
-        region=Region.SEAT,
+        seat=seat,
         spread=Spread.FAN,
         place=0,
         counted=False,
+    )
+
+
+def a_holding(seat: int) -> Slot:
+    """The same hand as the rest of the table reads it, which lies the same way and carries its size."""
+    return Slot(
+        zone=hand_of(seat),
+        label="Hand",
+        seat=seat,
+        spread=Spread.FAN,
+        place=0,
+        counted=True,
     )
 
 
@@ -70,7 +81,7 @@ HELD: Final[Slot] = a_hand(OWNER)
 DEALT_FROM: Final[Slot] = Slot(
     zone=PILE,
     label="Pile",
-    region=Region.TABLE,
+    seat=None,
     spread=Spread.STACK,
     place=0,
     counted=True,
@@ -78,13 +89,14 @@ DEALT_FROM: Final[Slot] = Slot(
 LAID_ON: Final[Slot] = Slot(
     zone=STACK,
     label="Stack",
-    region=Region.TABLE,
+    seat=None,
     spread=Spread.STACK,
     place=1,
     counted=False,
 )
 SHARED: Final[tuple[Slot, ...]] = (DEALT_FROM, LAID_ON)
-SLOTS: Final[tuple[Slot, ...]] = (HELD,) + SHARED
+AROUND: Final[tuple[Slot, ...]] = tuple(a_holding(seat) for seat in range(SEATS) if seat != OWNER)
+SLOTS: Final[tuple[Slot, ...]] = (HELD,) + AROUND + SHARED
 
 EXCHANGE: Final[Gesture] = an_exchange(OWNER)
 PASS_ON: Final[Gesture] = a_pass(OWNER)
@@ -94,6 +106,11 @@ GESTURES: Final[tuple[Gesture, ...]] = (EXCHANGE, PASS_ON)
 def slots_of(seat: int) -> tuple[Slot, ...]:
     """The one zone a seat holds of its own, which is the hand it plays from."""
     return (a_hand(seat),)
+
+
+def holdings_of(seat: int) -> tuple[Slot, ...]:
+    """The same hand as the rest of the table reads it, which is what lies at that seat's station."""
+    return (a_holding(seat),)
 
 
 def gestures_of(seat: int) -> tuple[Gesture, ...]:
@@ -123,6 +140,7 @@ SCENE: Final[Scene] = Scene(
     title=TITLE,
     shared=SHARED,
     held=slots_of,
+    seen=holdings_of,
     gestures=gestures_of,
     counts=counts_of,
     readouts=READOUTS,
@@ -140,9 +158,10 @@ def a_layout(
 ) -> Layout:
     """The demonstration table laid out for one seat, with any part of it standing in for its own.
 
-    The table is a hand held, a pile dealt from and a stack laid on, which between them exercise both
-    regions, a commit onto a zone and a commit onto a seat. `SCENE` states the same table for every seat at
-    once, so a layout built by hand here and one a scene lays out are the same thing for the owner.
+    The table is a hand held, the hands of the seats around it, a pile dealt from and a stack laid on, which
+    between them exercise every owner a slot may name, a commit onto a zone and a commit onto a seat. `SCENE`
+    states the same table for every seat at once, so a layout built by hand here and one a scene lays out are
+    the same thing for the owner.
     """
     return Layout(
         title=TITLE,

@@ -3,7 +3,11 @@
  * cards lie against each other, and everything below decides what that comes to in pixels.
  *
  * The page is one screen high and never scrolls: the standing and the controls take the height they need and
- * the shared table takes the rest, while every card is measured from one height that follows the window.
+ * the table takes the rest, while every card is measured from one height that follows the window.
+ *
+ * `--card-height` is the one figure the cards are drawn from, and everything a card is measured by is derived
+ * from it on the slot rather than at the root, so a group of zones the page draws smaller states that height
+ * once and the cards inside it follow.
  */
 
 :root {
@@ -22,13 +26,11 @@
   --hint: #8fd0ff;
   --faded: 0.42;
   --gap: clamp(4px, 0.8vh, 12px);
-  --card-height: clamp(48px, min(22vh, 11vw), 200px);
-  --card-width: calc(var(--card-height) * 71 / 96);
-  --radius: calc(var(--card-height) * 0.07);
-  --depth: calc(var(--card-height) * 0.03);
+  --dealt: clamp(48px, min(22vh, 11vw), 200px);
+  --across-the-table: 0.55;
+  --card-height: var(--dealt);
+  --radius: calc(var(--dealt) * 0.07);
   --held: 5;
-  --face: clamp(14px, calc(var(--card-height) * 0.4), 74px);
-  --index: clamp(9px, calc(var(--card-height) * 0.17), 30px);
   --caption: clamp(10px, 1.5vh, 14px);
 }
 
@@ -137,9 +139,10 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* The two regions of cards: the table everyone shares, and the holdings of the seat reading the page. */
+/* The table: the zones every seat shares at the centre of it, and the other players sitting round them. */
 
-.shared {
+.felt {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -156,17 +159,60 @@ body {
   border-top: 1px solid var(--edge);
 }
 
-.region {
+.zones {
   display: flex;
   align-items: flex-end;
   gap: calc(var(--gap) * 2);
 }
 
-.region.table {
+.zones.shared {
   justify-content: center;
 }
 
+/*
+ * One other player where they sit, which the script places by the part of the felt their seat holds.
+ *
+ * The cards of a seat read across the table are drawn smaller than the ones in hand, so a full table of them
+ * lies inside the felt at any window the page is read at.
+ */
+
+.station {
+  --card-height: calc(var(--dealt) * var(--across-the-table));
+
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--gap) / 2);
+  padding: calc(var(--gap) / 2) var(--gap);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  left: calc(var(--across) * 1%);
+  top: calc(var(--up) * 1%);
+  transform: translate(-50%, -50%);
+}
+
+.station.acting {
+  border-color: var(--acting);
+  background: rgb(240 192 64 / 12%);
+}
+
+.station.live {
+  border-color: var(--live);
+  box-shadow: 0 0 0 2px rgb(111 207 151 / 45%);
+}
+
+.station .zones {
+  gap: var(--gap);
+}
+
 .slot {
+  --card-width: calc(var(--card-height) * 71 / 96);
+  --radius: calc(var(--card-height) * 0.07);
+  --depth: calc(var(--card-height) * 0.03);
+  --face: clamp(14px, calc(var(--card-height) * 0.4), 74px);
+  --index: clamp(9px, calc(var(--card-height) * 0.17), 30px);
+
   display: flex;
   flex-direction: column;
   gap: calc(var(--gap) / 2);

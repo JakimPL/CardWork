@@ -146,12 +146,15 @@ next leader — is `cardwork.rounds`, written once for every game.
 
 | zone | lies | as |
 |---|---|---|
-| `hand:me` | in the observer's own region, fanned out | the five it reads and picks by what they are |
+| `hand:me` | in the panel the observer plays from, fanned out | the five it reads and picks by what they are |
 | `blind:me` | beside it, in a row of whole cards | five backs it picks by where they lie |
 | `tray:me` | beside those, in a single place | the card it has sealed this turn |
-| another seat's three | on that seat's plaque, as three counts | what the table reads of a seat, the tray among it saying who has committed |
+| another seat's three | at that seat's station | a hand fanned under its count, a blind as a heap under its own, and a tray saying whether that seat has committed |
 | `stock` | on the shared table, a heap read by its count | what is still to be dealt |
 | `discard` | on the shared table, a heap read by its top card | every card the round has revealed |
+
+A blind lies in a row for the seat picking by position and as a heap for everybody else, since what a blind says
+across the table is how many cards are still to come out of it.
 
 Both holdings commit the same way, one gesture apiece:
 

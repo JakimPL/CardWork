@@ -47,7 +47,16 @@ def slots_of(seat: int) -> tuple[Slot, ...]:
     others that go with it. It grows by the cards a turn draws, so this is the one holding in either game that
     lies at no settled size.
     """
-    return (presets.hand(hand_of(seat), "Your hand", place=HELD),)
+    return (presets.hand(hand_of(seat), "Your hand", seat=seat, place=HELD),)
+
+
+def seen_of(seat: int) -> tuple[Slot, ...]:
+    """The same hand as the rest of the table reads it, which is how the race to shed out is followed.
+
+    A seat down to two cards is what everybody else is playing against, so the size of a holding is the whole of
+    what a hand tells the table, and it lies there to be counted at a glance.
+    """
+    return (presets.holding(hand_of(seat), "Hand", seat=seat, place=HELD),)
 
 
 def gestures_of(seat: int) -> tuple[Gesture, ...]:
@@ -87,6 +96,7 @@ SHEDDING_SCENE: Final[Scene] = Scene(
     title=TITLE,
     shared=SHARED,
     held=slots_of,
+    seen=seen_of,
     gestures=gestures_of,
     counts=counts_of,
     readouts=READOUTS,

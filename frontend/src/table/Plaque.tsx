@@ -7,6 +7,7 @@ import { offerTo } from "../play/selection";
 import type { Playing } from "../play/usePlay";
 import { classes } from "./classes";
 import { clicking } from "./clicks";
+import { drawnAt } from "./placing";
 
 interface PlaqueProps {
   plaque: Standing;
@@ -23,14 +24,17 @@ interface PlaqueProps {
  * readouts the game scopes to a seat.
  *
  * A seat the cards in hand can be sent to lies under a place to send them, since a move naming a player is
- * committed by pointing at that player.
+ * committed by pointing at that player. Where the table draws that seat's own cards, the cards themselves are
+ * what a player points at and the plaque leaves the move to them, which is the nearer thing to reach for.
  */
 export function Plaque({ plaque, layout, view, playing }: PlaqueProps): ReactElement {
   const acting = view.state.to_act.includes(plaque.seat);
-  const own = plaque.seat === layout.observer;
-  const landing = offerTo(playing.standing, { commit: "seat", seat: plaque.seat });
+  const seated = plaque.seat === layout.observer;
+  const landing = drawnAt(layout, plaque.seat)
+    ? null
+    : offerTo(playing.standing, { commit: "seat", seat: plaque.seat });
   return (
-    <div className={classes("plaque", acting && "acting", own && "own", landing !== null && "live")}>
+    <div className={classes("plaque", acting && "acting", seated && "own", landing !== null && "live")}>
       {landing !== null && (
         <button
           type="button"
@@ -42,7 +46,7 @@ export function Plaque({ plaque, layout, view, playing }: PlaqueProps): ReactEle
           })}
         />
       )}
-      <span className="who">{own ? `${plaque.name} (you)` : plaque.name}</span>
+      <span className="who">{seated ? `${plaque.name} (you)` : plaque.name}</span>
       <dl className="figures">
         {seatReadouts(layout).map((readout) => (
           <div className="figure" key={readout.field}>
