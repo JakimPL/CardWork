@@ -7,7 +7,15 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
 
-from cardtable.artwork import ARTWORK, MANIFEST, Artwork, PackManifest, PackName, ServedPack, serve_artwork
+from cardtable.artwork import (
+    ARTWORK,
+    MANIFEST,
+    Artwork,
+    PackManifest,
+    PackName,
+    ServedPack,
+    serve_artwork,
+)
 
 from .tables import BASE_URL
 

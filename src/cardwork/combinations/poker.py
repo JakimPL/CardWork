@@ -1,6 +1,6 @@
 from typing import Final
 
-from cardwork.cards.order import ACE_LOW_RANKS
+from cardwork.cards.orders import ACE_LOW_RANKS
 from cardwork.cards.rank import Ranks
 from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.patterns.any_cards import AnyCards

@@ -4,8 +4,13 @@ from typing import Final
 import pytest
 from pydantic import ValidationError
 
-from cardwork.cards.cards import ACE_OF_CLUBS, ACE_OF_SPADES, TWO_OF_CLUBS, TWO_OF_SPADES
-from cardwork.cards.order import ACE_LOW_RANKS, RANK_SEQUENCE, SUIT_SEQUENCE
+from cardwork.cards.cards import (
+    ACE_OF_CLUBS,
+    ACE_OF_SPADES,
+    TWO_OF_CLUBS,
+    TWO_OF_SPADES,
+)
+from cardwork.cards.orders import ACE_LOW_RANKS, RANK_SEQUENCE, SUIT_SEQUENCE
 from cardwork.cards.rank import Rank
 from cardwork.cards.suit import Suit
 from cardwork.combinations.policy import REGULAR_EVALUATION, Duplicates, Evaluation

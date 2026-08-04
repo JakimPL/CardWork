@@ -33,7 +33,13 @@ from cardwork.combinations.detect import find
 from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.patterns.same_suit import SameSuit
 from cardwork.combinations.points import REGULAR_SCORING
-from cardwork.combinations.poker import FULL_HOUSE, HIGH_CARD, STRAIGHT, STRAIGHT_FLUSH, TRIPLET
+from cardwork.combinations.poker import (
+    FULL_HOUSE,
+    HIGH_CARD,
+    STRAIGHT,
+    STRAIGHT_FLUSH,
+    TRIPLET,
+)
 from cardwork.combinations.policy import REGULAR_EVALUATION
 
 THREE_OF_A_SUIT: Final[Pattern] = SameSuit(places=3)

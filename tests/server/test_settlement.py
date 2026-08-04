@@ -6,7 +6,16 @@ from cardserver.sessions import TableSession
 from cardwork.states.state import GameState
 
 from ..games.demo import SEATS
-from .conftest import DEAL, JOURNAL, MOVES, VIEW, close_the_round, credentials, reclaiming, sealing
+from .conftest import (
+    DEAL,
+    JOURNAL,
+    MOVES,
+    VIEW,
+    close_the_round,
+    credentials,
+    reclaiming,
+    sealing,
+)
 
 
 async def test_the_rules_close_the_round_once_the_window_has_passed(

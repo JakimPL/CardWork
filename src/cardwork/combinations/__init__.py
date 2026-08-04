@@ -16,6 +16,7 @@ from cardwork.combinations.poker import (
     TWO_PAIR,
     WHEEL,
 )
+from cardwork.combinations.policy import REGULAR_EVALUATION, Duplicates, Evaluation
 from cardwork.combinations.ranking import ByPattern, Ranking
 from cardwork.combinations.shape import Shape
 from cardwork.combinations.tally import Tally
@@ -29,6 +30,7 @@ __all__ = [
     "PAIR",
     "POKER",
     "QUADRUPLET",
+    "REGULAR_EVALUATION",
     "REGULAR_SCORING",
     "STRAIGHT",
     "STRAIGHT_FLUSH",
@@ -39,6 +41,8 @@ __all__ = [
     "ByStrength",
     "Combination",
     "Demand",
+    "Duplicates",
+    "Evaluation",
     "Matching",
     "Pattern",
     "Ranking",

@@ -1,6 +1,12 @@
 import pytest
 
-from cardwork.exceptions import CardworkError, IllegalMove, NotYourTurn, StalePosition, UndoUnavailable
+from cardwork.exceptions import (
+    CardworkError,
+    IllegalMove,
+    NotYourTurn,
+    StalePosition,
+    UndoUnavailable,
+)
 
 HIERARCHY = (IllegalMove, NotYourTurn, StalePosition, UndoUnavailable)
 

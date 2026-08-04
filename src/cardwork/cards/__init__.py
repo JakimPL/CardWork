@@ -1,10 +1,13 @@
 from cardwork.cards.card import Card, Cards
 from cardwork.cards.game import CardsOrJokers, GameCard, is_joker
 from cardwork.cards.joker import Joker, Jokers
-from cardwork.cards.order import (
+from cardwork.cards.order import ByRank, BySuit
+from cardwork.cards.orders import (
+    ACE_LOW_RANKS,
     BY_RANK,
     BY_RANK_ACE_LOW,
     BY_SUIT,
+    RANK_SEQUENCE,
     REGULAR_ORDER,
     SUIT_SEQUENCE,
 )
@@ -14,12 +17,16 @@ from cardwork.cards.suit import Suit, Suits
 
 __all__ = [
     "ACE_LOW_POINTS",
+    "ACE_LOW_RANKS",
     "BY_RANK",
     "BY_RANK_ACE_LOW",
     "BY_SUIT",
+    "RANK_SEQUENCE",
     "REGULAR_ORDER",
     "REGULAR_POINTS",
     "SUIT_SEQUENCE",
+    "ByRank",
+    "BySuit",
     "Card",
     "Cards",
     "CardsOrJokers",

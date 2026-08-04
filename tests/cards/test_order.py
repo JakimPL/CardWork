@@ -20,7 +20,14 @@ from cardwork.cards.cards import (
     TWO_OF_CLUBS,
     TWO_OF_SPADES,
 )
-from cardwork.cards.order import ACE_LOW_RANKS, BY_RANK, BY_RANK_ACE_LOW, BY_SUIT, RANK_SEQUENCE, REGULAR_ORDER
+from cardwork.cards.orders import (
+    ACE_LOW_RANKS,
+    BY_RANK,
+    BY_RANK_ACE_LOW,
+    BY_SUIT,
+    RANK_SEQUENCE,
+    REGULAR_ORDER,
+)
 from cardwork.cards.rank import Rank
 from cardwork.cards.suit import Suit
 

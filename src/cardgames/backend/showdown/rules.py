@@ -3,7 +3,7 @@ from typing import Final
 
 from cardwork.cards.card import Card
 from cardwork.cards.game import CardOrJoker
-from cardwork.cards.order import REGULAR_ORDER
+from cardwork.cards.orders import REGULAR_ORDER
 from cardwork.cards.points import REGULAR_POINTS, PointTable
 from cardwork.ordering.preorder import Preorder
 from cardwork.states.state import Points

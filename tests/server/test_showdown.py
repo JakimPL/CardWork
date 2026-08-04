@@ -5,9 +5,21 @@ from typing import Final
 from httpx import AsyncClient
 
 from cardgames.backend.showdown.game import ONE_ROUND, ShowdownGame
-from cardgames.backend.showdown.rules import BLIND_SIZE, HAND_SIZE, NOTHING, ONE_CARD, TURNS
+from cardgames.backend.showdown.rules import (
+    BLIND_SIZE,
+    HAND_SIZE,
+    NOTHING,
+    ONE_CARD,
+    TURNS,
+)
 from cardgames.backend.showdown.state import ShowdownState
-from cardgames.backend.showdown.zones import DISCARD, Holding, blind_of, hand_of, tray_of
+from cardgames.backend.showdown.zones import (
+    DISCARD,
+    Holding,
+    blind_of,
+    hand_of,
+    tray_of,
+)
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
 from cardserver.sessions import TableSession
 from cardwork.decks.deck import Deck

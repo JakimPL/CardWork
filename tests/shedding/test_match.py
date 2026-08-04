@@ -10,7 +10,12 @@ from cardgames.backend.shedding.game import ONE_ROUND, SheddingGame
 from cardgames.backend.shedding.rules import NOTHING, ROUND_POINT
 from cardgames.backend.shedding.state import SheddingPhase
 from cardgames.backend.shedding.zones import DISCARD, STOCK, hand_of
-from cardwork.cards.cards import FIVE_OF_HEARTS, FIVE_OF_SPADES, KING_OF_CLUBS, NINE_OF_DIAMONDS
+from cardwork.cards.cards import (
+    FIVE_OF_HEARTS,
+    FIVE_OF_SPADES,
+    KING_OF_CLUBS,
+    NINE_OF_DIAMONDS,
+)
 from cardwork.cards.game import CardsOrJokers
 from cardwork.effects.fold import fold
 from cardwork.rounds.state import MatchPhase

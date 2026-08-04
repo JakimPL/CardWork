@@ -5,7 +5,12 @@ import pytest
 from pydantic import ValidationError
 
 from cardwork.boards.board import Board
-from cardwork.cards.cards import ACE_OF_SPADES, KING_OF_HEARTS, QUEEN_OF_CLUBS, TWO_OF_SPADES
+from cardwork.cards.cards import (
+    ACE_OF_SPADES,
+    KING_OF_HEARTS,
+    QUEEN_OF_CLUBS,
+    TWO_OF_SPADES,
+)
 from cardwork.cards.game import CardOrJoker, GameCard
 from cardwork.effects.effects import MoveCards
 from cardwork.positions.position import Position

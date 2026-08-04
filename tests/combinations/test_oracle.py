@@ -11,7 +11,7 @@ from cardwork.cards.card import Card
 from cardwork.cards.cards import BLACK_JOKER, RED_JOKER, STANDARD_CARDS
 from cardwork.cards.game import CardOrJoker
 from cardwork.cards.joker import Joker
-from cardwork.cards.order import RANK_SEQUENCE
+from cardwork.cards.orders import RANK_SEQUENCE
 from cardwork.cards.suit import Suit
 from cardwork.combinations.detect import contains, matches
 from cardwork.combinations.pattern import Pattern
@@ -21,7 +21,15 @@ from cardwork.combinations.patterns.run import Run
 from cardwork.combinations.patterns.same_rank import SameRank
 from cardwork.combinations.patterns.same_suit import SameSuit
 from cardwork.combinations.patterns.together import Together
-from cardwork.combinations.poker import FULL_HOUSE, PAIR, QUADRUPLET, STRAIGHT, TRIPLET, TWO_PAIR, WHEEL
+from cardwork.combinations.poker import (
+    FULL_HOUSE,
+    PAIR,
+    QUADRUPLET,
+    STRAIGHT,
+    TRIPLET,
+    TWO_PAIR,
+    WHEEL,
+)
 from cardwork.combinations.policy import REGULAR_EVALUATION
 
 from ..cases import Case

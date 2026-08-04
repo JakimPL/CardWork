@@ -5,7 +5,8 @@ from typing import Final, Self
 from pydantic import model_validator
 
 from cardwork.cards.card import Card
-from cardwork.cards.order import RANK_SEQUENCE, SUIT_SEQUENCE, ByRank, BySuit
+from cardwork.cards.order import ByRank, BySuit
+from cardwork.cards.orders import RANK_SEQUENCE, SUIT_SEQUENCE
 from cardwork.cards.rank import Rank, Ranks
 from cardwork.cards.suit import Suit, Suits
 from cardwork.models.base import BaseFrozen

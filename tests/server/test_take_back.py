@@ -7,7 +7,15 @@ from cardserver.sessions import TableSession
 from cardwork.states.state import GameState
 
 from ..games.demo import HAND_SIZE, SEATS, hand_of, tray_of
-from .conftest import DEAL, LONG_GRACE, MOVES, VIEW, close_the_round, credentials, reclaiming
+from .conftest import (
+    DEAL,
+    LONG_GRACE,
+    MOVES,
+    VIEW,
+    close_the_round,
+    credentials,
+    reclaiming,
+)
 
 
 @pytest.fixture(name="grace")

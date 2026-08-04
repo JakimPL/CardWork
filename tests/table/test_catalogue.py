@@ -2,7 +2,12 @@ from http import HTTPStatus
 
 import pytest
 
-from cardtable.catalogue import a_passing_match, a_shedding_match, a_showdown_match, opened
+from cardtable.catalogue import (
+    a_passing_match,
+    a_shedding_match,
+    a_showdown_match,
+    opened,
+)
 from cardtable.games import GameName
 from cardwork.presentation.layout import Layout
 

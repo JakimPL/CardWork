@@ -4,7 +4,16 @@ from typing import Final
 import pytest
 from pydantic import ValidationError
 
-from cardwork.moves.actions import AnyAction, Declare, Discard, Give, Play, Reject, Take, group_of
+from cardwork.moves.actions import (
+    AnyAction,
+    Declare,
+    Discard,
+    Give,
+    Play,
+    Reject,
+    Take,
+    group_of,
+)
 from cardwork.moves.move import Move
 
 from ..cases import Case, descriptions

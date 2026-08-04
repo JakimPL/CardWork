@@ -4,7 +4,7 @@ from typing import Final
 
 from cardwork.cards.card import Card
 from cardwork.cards.game import CardOrJoker
-from cardwork.cards.order import RANK_SEQUENCE, SUIT_SEQUENCE
+from cardwork.cards.orders import RANK_SEQUENCE, SUIT_SEQUENCE
 from cardwork.cards.rank import Rank
 from cardwork.combinations.detect import matches
 from cardwork.combinations.patterns.same_rank import SameRank

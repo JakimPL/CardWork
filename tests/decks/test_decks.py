@@ -1,6 +1,13 @@
 from cardwork.cards.cards import ACE_OF_SPADES, BLACK_JOKER, KING_OF_HEARTS, RED_JOKER
 from cardwork.cards.game import GameCard
-from cardwork.decks.decks import compare_decks, count_cards, does_contain_jokers, jokers, normalize_deck, to_game_cards
+from cardwork.decks.decks import (
+    compare_decks,
+    count_cards,
+    does_contain_jokers,
+    jokers,
+    normalize_deck,
+    to_game_cards,
+)
 
 
 def test_normalize_deck_unwraps_game_cards() -> None:

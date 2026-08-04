@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from typing import Final
 
 from cardwork.cards.game import CardOrJoker
-from cardwork.cards.order import RANK_SEQUENCE, SUIT_SEQUENCE
+from cardwork.cards.orders import RANK_SEQUENCE, SUIT_SEQUENCE
 from cardwork.combinations.detect import contains, matches
 from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.patterns.same_rank import SameRank

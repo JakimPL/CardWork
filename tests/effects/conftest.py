@@ -3,7 +3,12 @@ from typing import Final
 import pytest
 
 from cardwork.boards.board import Board
-from cardwork.cards.cards import ACE_OF_SPADES, KING_OF_HEARTS, QUEEN_OF_CLUBS, TWO_OF_SPADES
+from cardwork.cards.cards import (
+    ACE_OF_SPADES,
+    KING_OF_HEARTS,
+    QUEEN_OF_CLUBS,
+    TWO_OF_SPADES,
+)
 from cardwork.decks.deck import Deck
 from cardwork.decks.decks import to_game_cards
 from cardwork.positions.position import Position
