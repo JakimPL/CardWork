@@ -7,8 +7,8 @@ particular game nor a particular screen.
 
 The layer sits at the head of the framework, and the framework itself is a stranger to it: the engine plays a
 game whether or not anybody is watching. It names four layers below — `zones` for a zone to lay out, `moves`
-for a kind of move to make, `states` for a field of the cursor to show, `rounds` for the two phases a match of
-them pauses at — and stops there.
+for a kind of move to make, `states` for a field of the cursor to show and the end a standing is won at,
+`rounds` for the two phases a match of them pauses at — and stops there.
 
 ```python
 Scene(
@@ -76,7 +76,7 @@ Five closed vocabularies carry the choices:
 | `Commit` | `ZONE`, `SEAT` | whether a move is sent by clicking a zone or a player |
 | `Scope` | `TABLE`, `SEAT` | whether a field of the cursor holds one value or one per seat |
 | `Interlude` | `ROUND`, `MATCH` | what a phase play pauses at has come to |
-| `Award` | `HIGHEST`, `LOWEST` | which end of the standing a match is won at |
+| `Award` | `HIGHEST`, `LOWEST` | which end of the standing a match is won at — `cardwork.states`, read here |
 
 **A boundary is a phase, and a game says which of its phases are ones to stop at.** A round scored, the cards
 gathered and the next hand dealt settle in a single burst, so a player watching the table alone reads one round
@@ -85,10 +85,13 @@ the `Interlude` each has come to, which is the whole of what an interface needs 
 out; the figures it reads out are the layout's own readouts, and the words are the interface's. A phase keyed
 there is captioned like any other, since it is a phase a player reads in the ordinary way as well.
 
-**A standing has an end a match is won at, and the rules keep no winner.** `points` is a tally and nothing more:
-whether the seat holding the most of it or the fewest holds the match is a rule of the game, so `Layout.award`
-states which end and an interface names the seat by reading the standing there. So a page saying who won holds no
-rule of its own about what winning is.
+**A standing has an end a match is won at, and `points` alone does not say which.** Whether the seat holding the
+most of it or the fewest holds the match is a rule of the game, so `Layout.award` states which end and an
+interface names the seat by reading the standing there — a page saying who won holds no rule of its own about what
+winning is. `Award` is the one vocabulary here that this layer reads rather than declares: `cardwork.states` holds
+it beside the `points` tuple it is about, because the rules settle a match on a lead by the same reading
+(`docs/rounds.md` §1). Each game states it once and its scene points at that, so the seat the rules end a match
+for and the seat the page names are the same seat by construction.
 
 **A readout is how a number reaches the screen, and the only how.** The standing is
 `Readout.of(PassingState, "points", "Points", scope=Scope.SEAT)`; the round in play is the same call over
@@ -224,9 +227,11 @@ Five places where the vocabulary stops at what the games ask for, each following
 - **An award names an end of the standing and no rule about reaching it.** The two members are the whole of what a
   direction can be, and both are needed for either to say anything: a field with one value states nothing, and an
   interface reading `points` has no way to guess which way a particular game counts. So this is one place the
-  vocabulary is complete on the day it arrives, and what does wait for a game to want it is a match won on
-  something other than the standing — a target reached, a lead held — which is the rules layer's to state before
-  it is anything for a layout to point at.
+  vocabulary is complete on the day it arrives — and complete enough that it outgrew this layer: the rules ask the
+  same question of the same standing to settle a match on a lead, so `Award` moved down to `cardwork.states` and
+  the layout points at what the game already states. What still waits is a match won on something other than a
+  standing — a contract made, a seat left holding every card — which the rules state as their own `match_over`
+  before it is anything for a layout to point at.
 
 ---
 

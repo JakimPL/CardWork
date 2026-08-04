@@ -2,6 +2,7 @@ from random import Random
 from typing import Final
 
 from cardgames.backend.shedding.rules import (
+    AWARD,
     HAND_SIZE,
     NO_CARDS,
     NOTHING,
@@ -15,10 +16,8 @@ from cardgames.backend.shedding.rules import (
 )
 from cardgames.backend.shedding.state import SheddingPhase, SheddingState
 from cardgames.backend.shedding.zones import (
-    DISCARD,
     HAND,
     STOCK,
-    hand_of,
     shedding_zones,
 )
 from cardwork.cards.game import CardsOrJokers
@@ -33,11 +32,11 @@ from cardwork.rounds.game import RoundGame
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import next_seat, rotation
 from cardwork.rounds.state import MatchPhase
-from cardwork.zones.zone import Zones, cards_of
+from cardwork.zones.zone import Zones, cards_of, hand_of
+from cardwork.zones.zones import DISCARD
 
 SEATS_LEAST: Final[int] = 2
 SEATS_MOST: Final[int] = 6
-ONE_ROUND: Final[int] = 1
 
 type SheddingIntent = Discard | Take
 
@@ -73,29 +72,11 @@ class SheddingGame(RoundGame[SheddingState]):
     round runs until the stock has run out and no seat holds a set left to shed — a seat with neither is passed
     over — and the shortest hand at the table takes it, every one of them where several stand equally short.
 
-    The match runs the rounds it was built for.
+    The match runs to the conclusion its table was opened with, which is a count of rounds where a match of this
+    is played to one.
 
-        game = SheddingGame(players=3, deck=standard_deck(), rounds=3, rng=Random(7))
+        game = SheddingGame(players=3, deck=standard_deck(), conclusion=Conclusion(rounds=3), rng=Random(7))
     """
-
-    def __init__(
-        self,
-        players: int,
-        deck: Deck,
-        *,
-        rounds: int,
-        rng: Random | None = None,
-    ) -> None:
-        """A table seated for that many players, dealing from that deck, to run that many rounds.
-
-        Raises:
-            ValueError: when fewer than one round is asked for.
-        """
-        if rounds < ONE_ROUND:
-            raise ValueError(f"A match runs at least {ONE_ROUND} round, and {rounds} were asked for")
-
-        self._rounds = rounds
-        super().__init__(players, deck, rng=rng)
 
     def zones(self, players: int, deck: Deck) -> Zones:
         return shedding_zones(players, deck)
@@ -108,11 +89,11 @@ class SheddingGame(RoundGame[SheddingState]):
         if not is_standard_deck(deck):
             raise ValueError("This game is played with one standard deck of suited cards")
 
-    def _initialize(self, players: int) -> SheddingState:
+    def initial_state(self, players: int) -> SheddingState:
         return SheddingState(
             phase=MatchPhase.BETWEEN_ROUNDS,
             points=(NOTHING,) * players,
-            rounds=self._rounds,
+            award=AWARD,
         )
 
     def _final_validation(self, position: Position[SheddingState]) -> None:
@@ -169,9 +150,6 @@ class SheddingGame(RoundGame[SheddingState]):
 
     def round_over(self, position: Position[SheddingState]) -> bool:
         return position.state.phase == SheddingPhase.DECIDED
-
-    def match_over(self, position: Position[SheddingState]) -> bool:
-        return position.state.round_number >= position.state.rounds
 
     def validate(self, position: Position[SheddingState], move: Move) -> None:
         """Read the move as one of the two a turn is made of, and hold it to the rules of that one.

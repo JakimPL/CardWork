@@ -2,6 +2,7 @@ from random import Random
 from typing import Final
 
 from cardgames.backend.showdown.rules import (
+    AWARD,
     BLIND_SIZE,
     FIRST_TURN,
     HAND_SIZE,
@@ -14,7 +15,6 @@ from cardgames.backend.showdown.rules import (
 )
 from cardgames.backend.showdown.state import ShowdownPhase, ShowdownState
 from cardgames.backend.showdown.zones import (
-    DISCARD,
     HOLDINGS,
     SEALED_CARD,
     STOCK,
@@ -37,10 +37,10 @@ from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
 from cardwork.rounds.state import MatchPhase
 from cardwork.zones.zone import Zones, cards_of
+from cardwork.zones.zones import DISCARD
 
 SEATS_LEAST: Final[int] = 2
 SEATS_MOST: Final[int] = 5
-ONE_ROUND: Final[int] = 1
 
 
 def committed(move: Move) -> Play:
@@ -85,30 +85,11 @@ class ShowdownGame(RoundGame[ShowdownState]):
     worth, pips at face value and jack through ace at ten. A commitment stands once it is sent, since the
     vocabulary this game reads holds nothing that takes one back.
 
-    The round's tally is added into the standing as the round closes, and the match runs the rounds it was built
-    for.
+    The round's tally is added into the standing as the round closes, and the match runs to the conclusion its
+    table was opened with, which is a count of rounds where a match of this is played to one.
 
-        game = ShowdownGame(players=4, deck=standard_deck(), rounds=3, rng=Random(7))
+        game = ShowdownGame(players=4, deck=standard_deck(), conclusion=Conclusion(rounds=3), rng=Random(7))
     """
-
-    def __init__(
-        self,
-        players: int,
-        deck: Deck,
-        *,
-        rounds: int,
-        rng: Random | None = None,
-    ) -> None:
-        """A table seated for that many players, dealing from that deck, to run that many rounds.
-
-        Raises:
-            ValueError: when fewer than one round is asked for.
-        """
-        if rounds < ONE_ROUND:
-            raise ValueError(f"A match runs at least {ONE_ROUND} round, and {rounds} were asked for")
-
-        self._rounds = rounds
-        super().__init__(players, deck, rng=rng)
 
     def zones(self, players: int, deck: Deck) -> Zones:
         return showdown_zones(players, deck)
@@ -121,11 +102,11 @@ class ShowdownGame(RoundGame[ShowdownState]):
         if not is_standard_deck(deck):
             raise ValueError("This game is played with one standard deck of suited cards")
 
-    def _initialize(self, players: int) -> ShowdownState:
+    def initial_state(self, players: int) -> ShowdownState:
         return ShowdownState(
             phase=MatchPhase.BETWEEN_ROUNDS,
             points=(NOTHING,) * players,
-            rounds=self._rounds,
+            award=AWARD,
         )
 
     def _final_validation(self, position: Position[ShowdownState]) -> None:
@@ -200,9 +181,6 @@ class ShowdownGame(RoundGame[ShowdownState]):
     def round_over(self, position: Position[ShowdownState]) -> bool:
         """Whether both holdings of every seat have run out, which the last turn of a round leaves them at."""
         return not any(self._holding(position, seat) for seat in range(position.players))
-
-    def match_over(self, position: Position[ShowdownState]) -> bool:
-        return position.state.round_number >= position.state.rounds
 
     def validate(self, position: Position[ShowdownState], move: Move) -> None:
         """Confirm the commitment names one card of a holding that holds it.

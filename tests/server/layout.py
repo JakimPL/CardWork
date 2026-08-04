@@ -3,7 +3,6 @@ from typing import Final
 
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation import presets
-from cardwork.presentation.award import Award
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
@@ -13,10 +12,10 @@ from cardwork.presentation.scope import Scope
 from cardwork.presentation.slot import Slot
 from cardwork.presentation.spread import Spread
 from cardwork.presentation.tally import Tally
+from cardwork.states.award import Award
 from cardwork.states.state import GameState
-from cardwork.zones.zone import ZoneId
-
-from ..games.demo import hand_of, tray_of
+from cardwork.zones.zone import ZoneId, hand_of
+from tests.games.demo import tray_of
 
 TITLE: Final[str] = "Sealed round"
 DRAW: Final[ZoneId] = "draw"

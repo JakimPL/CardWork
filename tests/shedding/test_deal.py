@@ -4,13 +4,14 @@ from typing import Final
 
 import pytest
 
-from cardgames.backend.shedding.game import ONE_ROUND, SheddingGame
+from cardgames.backend.shedding.game import SheddingGame
 from cardgames.backend.shedding.rules import HAND_SIZE, NOTHING, SHED_LEAST
 from cardgames.backend.shedding.state import SheddingPhase, SheddingState
 from cardgames.backend.shedding.zones import DISCARD, STOCK, hand_of
 from cardwork.decks.standard import standard_deck, standard_decks
 from cardwork.effects.effects import Effects
 from cardwork.positions.position import Position
+from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
 from tests.cases import Case, descriptions
@@ -29,7 +30,6 @@ from .driving import (
 FIRST_ROUND: Final[int] = 1
 TOO_MANY_SEATS: Final[int] = 7
 TOO_FEW_SEATS: Final[int] = 1
-NO_ROUNDS: Final[int] = 0
 NO_CARDS: Final[int] = 0
 READER: Final[int] = 0
 ANOTHER_SEAT: Final[int] = 1
@@ -129,17 +129,14 @@ def test_a_table_seats_two_to_six_players() -> None:
         a_match(TOO_FEW_SEATS, ROUNDS, SEED)
 
 
-def test_a_match_runs_at_least_one_round() -> None:
-    with pytest.raises(ValueError, match=f"at least {ONE_ROUND} round"):
-        a_match(SEATS, NO_ROUNDS, SEED)
-
-
 def test_a_deck_other_than_one_standard_deck_is_refused() -> None:
     with pytest.raises(ValueError, match="one standard deck"):
-        SheddingGame(players=SEATS, deck=DECK[:-1], rounds=ROUNDS, rng=Random(SEED))
+        SheddingGame(players=SEATS, deck=DECK[:-1], conclusion=Conclusion(rounds=ROUNDS), rng=Random(SEED))
 
     with pytest.raises(ValueError, match="one standard deck"):
-        SheddingGame(players=SEATS, deck=standard_decks(2, black_jokers=0, red_jokers=0), rounds=ROUNDS)
+        SheddingGame(
+            players=SEATS, deck=standard_decks(2, black_jokers=0, red_jokers=0), conclusion=Conclusion(rounds=ROUNDS)
+        )
 
 
 def test_a_deck_holding_a_joker_is_refused() -> None:
@@ -147,11 +144,11 @@ def test_a_deck_holding_a_joker_is_refused() -> None:
         SheddingGame(
             players=SEATS,
             deck=standard_deck(black_jokers=1, red_jokers=0),
-            rounds=ROUNDS,
+            conclusion=Conclusion(rounds=ROUNDS),
             rng=Random(SEED),
         )
 
 
 def test_a_deal_leaving_a_seat_short_of_its_hand_is_refused() -> None:
     with pytest.raises(ValueError, match="hold a hand of a size other than"):
-        ShortDealGame(players=SEATS, deck=DECK, rounds=ROUNDS, rng=Random(SEED))
+        ShortDealGame(players=SEATS, deck=DECK, conclusion=Conclusion(rounds=ROUNDS), rng=Random(SEED))

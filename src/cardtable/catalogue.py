@@ -29,26 +29,27 @@ def a_passing_match(settings: Settings) -> PassingGame:
     return PassingGame(
         players=settings.players,
         deck=PASSING_DECK,
+        conclusion=settings.conclusion,
         rng=Random(settings.seed),
     )
 
 
 def a_showdown_match(settings: Settings) -> ShowdownGame:
-    """A match of `showdown` over one standard deck, running the rounds the settings ask of it."""
+    """A match of `showdown` over one standard deck, ending where the settings say it does."""
     return ShowdownGame(
         players=settings.players,
         deck=SHOWDOWN_DECK,
-        rounds=settings.rounds,
+        conclusion=settings.conclusion,
         rng=Random(settings.seed),
     )
 
 
 def a_shedding_match(settings: Settings) -> SheddingGame:
-    """A match of `shedding` over one standard deck, running the rounds the settings ask of it."""
+    """A match of `shedding` over one standard deck, ending where the settings say it does."""
     return SheddingGame(
         players=settings.players,
         deck=SHEDDING_DECK,
-        rounds=settings.rounds,
+        conclusion=settings.conclusion,
         rng=Random(settings.seed),
     )
 

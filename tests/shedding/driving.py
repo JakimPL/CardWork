@@ -13,6 +13,7 @@ from cardwork.decks.standard import standard_deck
 from cardwork.moves.actions import Discard, Take
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
+from cardwork.rounds.conclusion import Conclusion
 from cardwork.transactions.transaction import Transaction
 from cardwork.zones.zone import ZoneId, cards_of
 
@@ -29,7 +30,7 @@ type Chooser = Callable[[Moves], Move]
 
 def a_match(players: int, rounds: int, seed: int) -> SheddingGame:
     """A fresh table of that many seats, built for that many rounds, drawing from a generator of that seed."""
-    return SheddingGame(players=players, deck=DECK, rounds=rounds, rng=Random(seed))
+    return SheddingGame(players=players, deck=DECK, conclusion=Conclusion(rounds=rounds), rng=Random(seed))
 
 
 def seat_on_turn(game: SheddingGame) -> int:

@@ -6,8 +6,8 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from cardgames.backend.passing.game import BEST, NEXT_BEST, PassingGame
-from cardgames.backend.passing.rules import NOTHING, WINNING_LEAD
+from cardgames.backend.passing.game import PassingGame
+from cardgames.backend.passing.rules import NOTHING
 from cardgames.backend.passing.state import PassingPhase
 from cardwork.decks.deck import Deck
 from cardwork.effects.fold import fold
@@ -24,12 +24,15 @@ from .driving import (
     SEATS,
     SEED,
     TWO_SEATS,
+    WINNING_LEAD,
     a_match,
     play_out,
     with_the_pile_run_out,
 )
 
 FULL_TABLE: Final[int] = 8
+LEADING: Final[int] = 0
+CHASING: Final[int] = 1
 SEEDS: Final[range] = range(10)
 
 
@@ -107,7 +110,7 @@ def test_a_match_closes_once_one_seat_leads_the_next_best_by_two(case: MatchCase
     standing = sorted(game.state.points, reverse=True)
 
     assert game.state.phase == MatchPhase.MATCH_OVER
-    assert standing[BEST] - standing[NEXT_BEST] >= WINNING_LEAD
+    assert standing[LEADING] - standing[CHASING] >= WINNING_LEAD
     assert sum(game.state.points) <= game.state.round_number
     assert game.state.to_act == frozenset()
     assert game.legal_moves(game.position) == ()
@@ -149,7 +152,7 @@ def test_a_match_dealt_and_played_from_any_generator_closes_on_a_lead_of_two(see
     standing = sorted(game.state.points, reverse=True)
 
     assert game.state.phase == MatchPhase.MATCH_OVER
-    assert standing[BEST] - standing[NEXT_BEST] >= WINNING_LEAD
+    assert standing[LEADING] - standing[CHASING] >= WINNING_LEAD
     assert game.snapshot(game.head) == game.replay()
     for seq in range(game.head + 1):
         game.snapshot(seq).board.validate_board()

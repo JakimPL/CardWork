@@ -17,7 +17,7 @@ ONE_MATCH: Final[int] = 1
 
 SPARE: Final[dict[str, object]] = {
     "game": GameName.SHOWDOWN.value,
-    "table": {"name": "baize", "players": 2, "rounds": 1, "grace_seconds": 0.0},
+    "table": {"name": "baize", "players": 2, "conclusion": {"rounds": 1}, "grace_seconds": 0.0},
     "artwork": {"pack": None, "back": "crosshatch"},
     "service": {"host": "0.0.0.0", "log_level": LogLevel.DEBUG.value},
 }
@@ -57,7 +57,7 @@ def test_a_run_told_to_read_a_file_that_stands_nowhere_says_so(tmp_path: Path) -
 
 
 def test_a_field_a_table_is_opened_with_is_asked_for_outright(tmp_path: Path) -> None:
-    lacking = {**SPARE, "table": {"name": "baize", "rounds": 1, "grace_seconds": 0.0}}
+    lacking = {**SPARE, "table": {"name": "baize", "conclusion": {"rounds": 1}, "grace_seconds": 0.0}}
 
     with pytest.raises(ValidationError):
         Configuration.read(a_file_stating(tmp_path, lacking))
@@ -71,7 +71,7 @@ def test_a_name_the_configuration_holds_no_field_for_is_turned_away(tmp_path: Pa
 
 
 def test_a_seating_no_table_admits_is_turned_away_as_the_file_is_read(tmp_path: Path) -> None:
-    alone = {**SPARE, "table": {"name": "baize", "players": 1, "rounds": 1, "grace_seconds": 0.0}}
+    alone = {**SPARE, "table": {"name": "baize", "players": 1, "conclusion": {"rounds": 1}, "grace_seconds": 0.0}}
 
     with pytest.raises(ValidationError):
         Configuration.read(a_file_stating(tmp_path, alone))

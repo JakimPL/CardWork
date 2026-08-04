@@ -2,7 +2,6 @@ from collections.abc import Mapping
 from typing import Final
 
 from cardwork.moves.kind import ActionKind
-from cardwork.presentation.award import Award
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
@@ -14,8 +13,9 @@ from cardwork.presentation.scope import Scope
 from cardwork.presentation.slot import Slot
 from cardwork.presentation.spread import Spread
 from cardwork.presentation.tally import Tally
+from cardwork.states.award import Award
 from cardwork.states.state import GameState
-from cardwork.zones.zone import ZoneId
+from cardwork.zones.zone import ZoneId, hand_of
 
 SEATS: Final[int] = 3
 OWNER: Final[int] = 1
@@ -28,10 +28,6 @@ TITLE: Final[str] = "Demonstration"
 PHASES: Final[Mapping[str, str]] = {PLAYING: "Your turn", SCORED: "Round scored"}
 INTERLUDES: Final[Mapping[str, Interlude]] = {SCORED: Interlude.ROUND}
 AWARD: Final[Award] = Award.LOWEST
-
-
-def hand_of(seat: int) -> ZoneId:
-    return f"hand:{seat}"
 
 
 def a_hand(seat: int) -> Slot:

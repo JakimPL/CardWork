@@ -12,10 +12,12 @@ from cardwork.decks.deck import Deck
 from cardwork.decks.standard import standard_decks
 from cardwork.moves.actions import Give, Take
 from cardwork.moves.move import Move
+from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.seating import next_seat
 
 from .conftest import DEAL, MOVES, VIEW, command, credentials, served
 
+WINNING_LEAD: Final[int] = 2
 SEATS: Final[int] = 3
 SEED: Final[int] = 20260806
 DECK: Final[Deck] = standard_decks(1, black_jokers=1, red_jokers=1)
@@ -26,7 +28,7 @@ ONE_CARD: Final[int] = 1
 
 def a_passing_table() -> PassingGame:
     """A three-seat match over one jokered deck, which is the game as `cardgames.backend.passing` plays it."""
-    return PassingGame(players=SEATS, deck=DECK, rng=Random(SEED))
+    return PassingGame(players=SEATS, deck=DECK, conclusion=Conclusion(lead=WINNING_LEAD), rng=Random(SEED))
 
 
 def turn_of(session: TableSession[PassingState]) -> int:

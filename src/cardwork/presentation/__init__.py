@@ -1,4 +1,3 @@
-from cardwork.presentation.award import Award
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
@@ -12,7 +11,6 @@ from cardwork.presentation.spread import Spread
 from cardwork.presentation.tally import Tally
 
 __all__ = [
-    "Award",
     "Commit",
     "Gesture",
     "Interlude",

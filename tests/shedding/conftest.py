@@ -1,6 +1,7 @@
 import pytest
 
-from cardgames.backend.shedding.game import ONE_ROUND, SheddingGame
+from cardgames.backend.shedding.game import SheddingGame
+from cardwork.rounds.conclusion import ONE_ROUND
 
 from .driving import ROUNDS, SEATS, SEED, TWO_SEATS, a_match
 

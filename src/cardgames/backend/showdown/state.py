@@ -17,14 +17,13 @@ class ShowdownPhase(StrEnum):
 
 
 class ShowdownState(RoundState):
-    """The cursor of a showdown match: the turn the round has reached, and the rounds the match was built for.
+    """The cursor of a showdown match: the turn the round has reached.
 
     `turn_number` names the turn in play, standing at `BEFORE_THE_FIRST_TURN` on a table whose first round has
     yet to be dealt and at the last turn of a round once that turn has been revealed.
 
-    Keeping the match length here leaves a replayed position self-describing: how many rounds this table was
-    ever going to play is read from the state, as everything else about it is.
+    The standing, the round in play and the clauses the match ends on stand on `RoundState`, which is where every
+    match played in rounds keeps them.
     """
 
-    rounds: int
     turn_number: int = BEFORE_THE_FIRST_TURN

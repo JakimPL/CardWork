@@ -47,6 +47,7 @@ class Ranking(BaseFrozen):
 
         return self
 
+    @property
     def order(self) -> Preorder[Combination]:
         """Combinations by their pattern first and by their strength within it.
 

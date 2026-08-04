@@ -1,6 +1,7 @@
 import pytest
 
-from cardgames.backend.showdown.game import ONE_ROUND, ShowdownGame
+from cardgames.backend.showdown.game import ShowdownGame
+from cardwork.rounds.conclusion import ONE_ROUND
 
 from .driving import ROUNDS, SEATS, SEED, TWO_SEATS, a_match
 

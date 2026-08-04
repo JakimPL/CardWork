@@ -14,15 +14,17 @@ from cardgames.frontend.shedding.layout import SHEDDING_SCENE
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
 from cardwork.decks.standard import standard_deck, standard_decks
 from cardwork.games.game import Game
-from cardwork.presentation.award import Award
 from cardwork.presentation.scene import Scene
+from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.state import MatchPhase
+from cardwork.states.award import Award
 from cardwork.states.state import GameState
 from tests.cases import Case
 
 PLAYERS: Final[int] = 3
 SEED: Final[int] = 7
 ROUNDS: Final[int] = 2
+WINNING_LEAD: Final[int] = 2
 
 SEATS: Final[tuple[int, ...]] = tuple(range(PLAYERS))
 OBSERVERS: Final[tuple[int | None, ...]] = SEATS + (None,)
@@ -54,6 +56,7 @@ def a_passing_table() -> PassingGame:
     return PassingGame(
         players=PLAYERS,
         deck=standard_decks(1, black_jokers=1, red_jokers=1),
+        conclusion=Conclusion(lead=WINNING_LEAD),
         rng=Random(SEED),
     )
 
@@ -63,7 +66,7 @@ def a_showdown_table() -> ShowdownGame:
     return ShowdownGame(
         players=PLAYERS,
         deck=standard_deck(),
-        rounds=ROUNDS,
+        conclusion=Conclusion(rounds=ROUNDS),
         rng=Random(SEED),
     )
 
@@ -73,7 +76,7 @@ def a_shedding_table() -> SheddingGame:
     return SheddingGame(
         players=PLAYERS,
         deck=standard_deck(),
-        rounds=ROUNDS,
+        conclusion=Conclusion(rounds=ROUNDS),
         rng=Random(SEED),
     )
 

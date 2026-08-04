@@ -11,10 +11,12 @@ from cardwork.decks.standard import standard_decks
 from cardwork.moves.actions import Give, Take
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
+from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.seating import next_seat
 from cardwork.transactions.transaction import Transaction
 from cardwork.zones.zone import cards_of
 
+WINNING_LEAD: Final[int] = 2
 SEATS: Final[int] = 3
 TWO_SEATS: Final[int] = 2
 SEED: Final[int] = 20260803
@@ -28,7 +30,7 @@ type Chooser = Callable[[Moves], Move]
 
 def a_match(players: int, deck: Deck, seed: int) -> PassingGame:
     """A fresh table of that many seats and that deck, drawing from a generator of that seed."""
-    return PassingGame(players=players, deck=deck, rng=Random(seed))
+    return PassingGame(players=players, deck=deck, conclusion=Conclusion(lead=WINNING_LEAD), rng=Random(seed))
 
 
 def seat_on_turn(game: PassingGame) -> int:

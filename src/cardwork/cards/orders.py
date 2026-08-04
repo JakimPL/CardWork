@@ -10,6 +10,7 @@ from cardwork.ordering.preorder import Preorder
 RANK_SEQUENCE: Final[Ranks] = tuple(Rank)
 ACE_LOW_RANKS: Final[Ranks] = (Rank.ACE, *RANK_SEQUENCE[:-1])
 SUIT_SEQUENCE: Final[Suits] = (Suit.CLUB, Suit.DIAMOND, Suit.HEART, Suit.SPADE)
+GERMAN_SUIT_SEQUENCE: Final[Suits] = (Suit.CLUB, Suit.SPADE, Suit.HEART, Suit.DIAMOND)
 
 BY_RANK: Final[Preorder[Card]] = ByRank(RANK_SEQUENCE)
 BY_RANK_ACE_LOW: Final[Preorder[Card]] = ByRank(ACE_LOW_RANKS)

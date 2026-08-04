@@ -6,7 +6,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from cardgames.backend.showdown.game import ONE_ROUND, ShowdownGame
+from cardgames.backend.showdown.game import ShowdownGame
 from cardgames.backend.showdown.rules import (
     BLIND_SIZE,
     FIRST_TURN,
@@ -17,6 +17,7 @@ from cardgames.backend.showdown.rules import (
 )
 from cardgames.backend.showdown.state import ShowdownPhase
 from cardgames.backend.showdown.zones import DISCARD, STOCK, blind_of, hand_of
+from cardwork.rounds.conclusion import ONE_ROUND
 from cardwork.rounds.seating import next_seat
 from cardwork.rounds.state import MatchPhase
 from tests.cases import Case, descriptions

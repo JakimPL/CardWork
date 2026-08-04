@@ -1,11 +1,11 @@
 from collections.abc import Mapping
 from typing import Final
 
+from cardgames.backend.shedding.rules import AWARD
 from cardgames.backend.shedding.state import SheddingPhase, SheddingState
-from cardgames.backend.shedding.zones import DISCARD, HAND, STOCK, hand_of
+from cardgames.backend.shedding.zones import HAND, STOCK
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation import presets
-from cardwork.presentation.award import Award
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
@@ -15,6 +15,8 @@ from cardwork.presentation.scope import Scope
 from cardwork.presentation.slot import Slot
 from cardwork.presentation.tally import Tally
 from cardwork.rounds.state import MatchPhase
+from cardwork.zones.zone import hand_of
+from cardwork.zones.zones import DISCARD
 
 TITLE: Final[str] = "Shedding"
 
@@ -43,8 +45,6 @@ PHASES: Final[Mapping[str, str]] = {
 }
 
 INTERLUDES: Final[Mapping[str, Interlude]] = presets.match_interludes()
-
-AWARD: Final[Award] = Award.HIGHEST
 
 
 def slots_of(seat: int) -> tuple[Slot, ...]:

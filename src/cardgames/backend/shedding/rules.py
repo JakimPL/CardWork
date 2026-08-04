@@ -10,8 +10,10 @@ from cardwork.combinations.detect import matches
 from cardwork.combinations.patterns.same_rank import SameRank
 from cardwork.combinations.policy import Duplicates, Evaluation
 from cardwork.decks.deck import Indices
+from cardwork.states.award import Award
 from cardwork.states.state import Points
 
+AWARD: Final[Award] = Award.HIGHEST
 HAND_SIZE: Final[int] = 4
 SHED_LEAST: Final[int] = 2
 ONE_CARD: Final[int] = 1

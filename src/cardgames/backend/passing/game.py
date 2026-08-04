@@ -2,19 +2,17 @@ from random import Random
 from typing import Final
 
 from cardgames.backend.passing.rules import (
+    AWARD,
     HAND_ON_TURN,
     HAND_SIZE,
     NOTHING,
     ROUND_POINT,
-    WINNING_LEAD,
     declares,
 )
 from cardgames.backend.passing.state import PassingPhase, PassingState
 from cardgames.backend.passing.zones import (
     PILE,
-    STACK,
     TOP_OF_THE_PILE,
-    hand_of,
     passing_zones,
 )
 from cardwork.decks.deck import Deck, Indices
@@ -24,17 +22,17 @@ from cardwork.exceptions import IllegalMove
 from cardwork.moves.actions import Give, Take
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
+from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.game import RoundGame
 from cardwork.rounds.redeal import Admits, Redeal
 from cardwork.rounds.seating import next_seat, rotation
 from cardwork.rounds.state import MatchPhase
-from cardwork.zones.zone import Zones, cards_of
+from cardwork.zones.zone import Zones, cards_of, hand_of
+from cardwork.zones.zones import STACK
 
 SEATS_LEAST: Final[int] = 2
 SEATS_MOST: Final[int] = 8
 ONE_CARD: Final[int] = 1
-BEST: Final[int] = 0
-NEXT_BEST: Final[int] = 1
 
 type PassingIntent = Take | Give
 
@@ -64,9 +62,11 @@ class PassingGame(RoundGame[PassingState]):
     standing in for whatever the three asks of it. `rules.declares` holds that rule whole. A win needs no claim:
     a seat holding one has nothing to gain by passing it on, so the rules take it the moment the cards read it,
     turning the hand face up and scoring its seat a point. An exhausted pile draws the round as the turn it ran
-    out on closes, and scores nobody. The match belongs to the first seat leading the next best by two points.
+    out on closes, and scores nobody. The match runs to the conclusion its table was opened with, which is a lead
+    over the next best seat where a match of this is played to one.
 
-        game = PassingGame(players=4, deck=standard_decks(1, black_jokers=1, red_jokers=1), rng=Random(7))
+        game = PassingGame(players=4, deck=standard_decks(1, black_jokers=1, red_jokers=1),
+                           conclusion=Conclusion(lead=2), rng=Random(7))
     """
 
     def __init__(
@@ -74,6 +74,7 @@ class PassingGame(RoundGame[PassingState]):
         players: int,
         deck: Deck,
         *,
+        conclusion: Conclusion,
         rng: Random | None = None,
     ) -> None:
         """A table dealt its first round, standing where the seat leading it has a turn to take.
@@ -81,7 +82,7 @@ class PassingGame(RoundGame[PassingState]):
         A table opens between rounds, so the settlement here is what deals the first one, which is what every
         driver and adapter beyond this expects of a table it has just opened.
         """
-        super().__init__(players, deck, rng=rng)
+        super().__init__(players, deck, conclusion=conclusion, rng=rng)
         self.settle()
 
     def zones(self, players: int, deck: Deck) -> Zones:
@@ -95,8 +96,12 @@ class PassingGame(RoundGame[PassingState]):
         if standard_multiplicity(deck) < ONE_DECK:
             raise ValueError("This game is played with whole standard decks, and any number of jokers besides")
 
-    def _initialize(self, players: int) -> PassingState:
-        return PassingState(phase=MatchPhase.BETWEEN_ROUNDS, points=(NOTHING,) * players)
+    def initial_state(self, players: int) -> PassingState:
+        return PassingState(
+            phase=MatchPhase.BETWEEN_ROUNDS,
+            points=(NOTHING,) * players,
+            award=AWARD,
+        )
 
     def _final_validation(self, position: Position[PassingState]) -> None:
         """Confirm the deal left every seat its three cards and the seat leading the round its fourth.
@@ -169,15 +174,6 @@ class PassingGame(RoundGame[PassingState]):
 
     def round_over(self, position: Position[PassingState]) -> bool:
         return position.state.phase == PassingPhase.DECIDED
-
-    def match_over(self, position: Position[PassingState]) -> bool:
-        """Whether one seat leads the next best by the points a match is won by."""
-        points = position.state.points
-        standing = sorted(
-            points if points is not None else (NOTHING,) * position.players,
-            reverse=True,
-        )
-        return standing[BEST] - standing[NEXT_BEST] >= WINNING_LEAD
 
     def validate(self, position: Position[PassingState], move: Move) -> None:
         """Read the move as one of the two a turn is made of, and hold it to the rules of that one.

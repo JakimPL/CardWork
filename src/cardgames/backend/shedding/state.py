@@ -16,15 +16,14 @@ class SheddingPhase(StrEnum):
 
 
 class SheddingState(RoundState):
-    """The cursor of a shedding match: who went out, and the rounds the match was built for.
+    """The cursor of a shedding match: who went out.
 
     `winner` names the seat that shed its last card, and reads None through a round in play and through a round
     the stock ran out of. What the round awarded stands in `round_points`, which is read off the hands as they
     lie, so a round closed on an exhausted stock is scored as fully as one a seat went out of.
 
-    Keeping the match length here leaves a replayed position self-describing: how many rounds this table was
-    ever going to play is read from the state, as everything else about it is.
+    The standing, the round in play and the clauses the match ends on stand on `RoundState`, which is where every
+    match played in rounds keeps them.
     """
 
-    rounds: int
     winner: int | None = None

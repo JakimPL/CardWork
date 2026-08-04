@@ -10,6 +10,7 @@ from cardgames.backend.passing.zones import PILE, STACK, hand_of
 from cardwork.decks.standard import standard_decks
 from cardwork.effects.effects import Effects
 from cardwork.positions.position import Position
+from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
 from tests.cases import Case, descriptions
@@ -21,6 +22,7 @@ from .driving import (
     SEATS,
     SEED,
     TWO_SEATS,
+    WINNING_LEAD,
     PassingGame,
     a_match,
     exchange,
@@ -185,4 +187,4 @@ def test_a_deck_of_jokers_alone_is_refused() -> None:
 
 def test_a_deal_leaving_the_leader_without_its_fourth_card_is_refused() -> None:
     with pytest.raises(ValueError, match="hold a hand of a size other than"):
-        ShortDealGame(players=SEATS, deck=PLAIN_DECK, rng=Random(SEED))
+        ShortDealGame(players=SEATS, deck=PLAIN_DECK, conclusion=Conclusion(lead=WINNING_LEAD), rng=Random(SEED))

@@ -2,14 +2,15 @@
 
 `cardgames.backend.showdown` is a game of ten sealed turns: five cards a seat reads, five that lie face down to the
 whole table its owner included, and one card from every seat committed at once each turn and turned over
-together. It seats two to five, plays over one standard deck, and runs the number of rounds it was built for.
+together. It seats two to five, plays over one standard deck, and runs to the ending its table states, which is
+a count of rounds where it is played as it was written.
 
 It is the second game written on this framework and the first played simultaneously, so the two things worth
 reading it for are the sealed commitment and the turn that settles itself: every seat owes an action at the
 same time, and the reveal belongs to the settlement that follows the last of them.
 
 ```python
-game = ShowdownGame(players=4, deck=standard_deck(), rounds=3, rng=Random(7))
+game = ShowdownGame(players=4, deck=standard_deck(), conclusion=Conclusion(rounds=3), rng=Random(7))
 ```
 
 ---
@@ -40,9 +41,10 @@ card that takes the turn brings nothing of its own to the tally: a seat scores w
 `rules.STRENGTH` and `rules.POINTS` name the two readings, and both come from `cardwork.cards` as they stand.
 
 **Ten turns run both holdings out and close the round**, whose tally is added into the standing. **The match
-belongs to the standing once it has played the rounds it was built for.** The first round is led by a seat
-drawn at random, each later round by the seat after the previous leader, which is what `RoundGame` arrives
-with.
+belongs to the standing once the clauses its table was opened with are met**, which is a count of rounds where
+this is played as it was written and any of `Conclusion`'s three where a table asks for something else
+(`docs/rounds.md` §1). The first round is led by a seat drawn at random, each later round by the seat after the
+previous leader, which is what `RoundGame` arrives with.
 
 ---
 
@@ -112,9 +114,9 @@ against the one `phase` field:
 A round runs in one stage because a turn is one simultaneous commitment: the reveal is what closes a turn
 and opens the next, so a table at rest is always a table owing commitments.
 
-`ShowdownState` adds `turn_number`, which names the turn in play and stands at the tenth once that turn has
-been revealed, and `rounds`, the number of rounds the match was built for — kept on the state so a replayed
-position describes how long it was ever going to run.
+`ShowdownState` adds `turn_number` alone, which names the turn in play and stands at the tenth once that turn
+has been revealed. How long the match runs stands on `RoundState` as the clauses its table was opened with, so
+a replayed position describes the ending it was always running to without this game keeping a field for it.
 
 **A commitment answers for itself, and the turn settles itself.** The card sealed into a tray and the seat
 taken out of the turn land in the transaction the commitment commits; the reveal, the points it awards and
@@ -191,5 +193,6 @@ twice:
 
 It is also the first game to lay a zone under the `HIDDEN` visibility preset, which is what a blind five and
 a sealed commitment are made of. Everything else it consults as it stands: `Redeal` for the gather and the
-deal, `REGULAR_ORDER` and `REGULAR_POINTS` for the strength and the worth of a card, and the engine for the
-journal, the projection and the wire.
+deal, `REGULAR_ORDER` and `REGULAR_POINTS` for the strength and the worth of a card, `RoundGame.match_over`
+reading the `Conclusion` its table was opened with, and the engine for the journal, the projection and the
+wire.

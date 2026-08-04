@@ -14,21 +14,22 @@ from cardwork.games.game import Game
 from cardwork.moves.actions import Play
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
+from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.game import RoundGame
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
 from cardwork.rounds.state import MatchPhase, RoundState
 from cardwork.states.state import Points
 from cardwork.transactions.transaction import Transaction
-from cardwork.zones.presets import HAND, PILE
-from cardwork.zones.zone import Zone, ZoneId, Zones
+from cardwork.zones.presets import PILE
+from cardwork.zones.zone import Zone, ZoneId, Zones, hand_of
+from cardwork.zones.zones import discard, hands
 
 SEATS: Final[int] = 3
 HAND_SIZE: Final[int] = 2
 ROUNDS: Final[int] = 2
 SEED: Final[int] = 20260805
 STOCK: Final[ZoneId] = "stock"
-DISCARD: Final[ZoneId] = "discard"
 FIRST_CARD: Final[int] = 0
 RANKS: Final[Ranks] = (Rank.TWO, Rank.THREE, Rank.FOUR)
 DECK: Final[Deck] = tuple(Card(rank=rank, suit=suit) for suit in Suit for rank in RANKS)
@@ -42,17 +43,11 @@ class TossPhase(StrEnum):
 
 
 class MatchState(RoundState):
-    """The cursor of a toss match, which records the number of rounds the match was built for.
+    """The cursor of a toss match, which is what `RoundState` keeps and nothing besides.
 
-    Keeping the match length here rather than on the game leaves a replayed position self-describing: how
-    many rounds this table was ever going to play is read from the state, as everything else is.
+    A round of this tracks the standing, the round in play and the clauses the match ends on, all of which every
+    match played in rounds keeps, so the demo states a subclass adding nothing at all.
     """
-
-    rounds: int
-
-
-def hand_of(seat: int) -> ZoneId:
-    return f"hand:{seat}"
 
 
 def tossed(move: Move) -> Play:
@@ -71,28 +66,20 @@ class TossGame(RoundGame[MatchState]):
     """A match of rounds in which every seat tosses one card face up, in turn from the seat leading the round.
 
     A seat scores what its card is worth, the round's tally is added into the standing as it closes, the seat
-    after its leader takes up the next one, and the match runs the rounds it was built for. This is the round
-    layer's exercise rather than a game worth playing: a leader, a turn order, a re-deal between rounds and a
-    score that accumulates are the whole of it.
+    after its leader takes up the next one, and the match runs to the conclusion its table was opened with. This
+    is the round layer's exercise rather than a game worth playing: a leader, a turn order, a re-deal between
+    rounds and a score that accumulates are the whole of it.
     """
 
-    def __init__(
-        self,
-        players: int,
-        deck: Deck,
-        *,
-        rounds: int,
-        rng: Random | None = None,
-    ) -> None:
-        self._rounds = rounds
-        super().__init__(players, deck, rng=rng)
-
     def zones(self, players: int, deck: Deck) -> Zones:
-        hands = {hand_of(seat): Zone(id=hand_of(seat), owner=seat, visibility=HAND) for seat in range(players)}
         return {
-            **hands,
-            STOCK: Zone(id=STOCK, visibility=PILE, cards=to_game_cards(deck, face_down=True)),
-            DISCARD: Zone(id=DISCARD, visibility=PILE),
+            **hands(players),
+            STOCK: Zone(
+                id=STOCK,
+                visibility=PILE,
+                cards=to_game_cards(deck, face_down=True),
+            ),
+            **discard(),
         }
 
     def _validate_players(self, players: int) -> None:
@@ -103,8 +90,8 @@ class TossGame(RoundGame[MatchState]):
         if does_contain_jokers(deck):
             raise ValueError("This game is played with suited cards alone")
 
-    def _initialize(self, players: int) -> MatchState:
-        return MatchState(phase=MatchPhase.BETWEEN_ROUNDS, points=(0,) * players, rounds=self._rounds)
+    def initial_state(self, players: int) -> MatchState:
+        return MatchState(phase=MatchPhase.BETWEEN_ROUNDS, points=(0,) * players)
 
     def _final_validation(self, position: Position[MatchState]) -> None:
         short = tuple(
@@ -152,9 +139,6 @@ class TossGame(RoundGame[MatchState]):
 
     def round_over(self, position: Position[MatchState]) -> bool:
         return len(position.board.zone(DISCARD).cards) >= position.players
-
-    def match_over(self, position: Position[MatchState]) -> bool:
-        return position.state.round_number >= position.state.rounds
 
     def legal_moves(self, position: Position[MatchState]) -> Moves:
         return tuple(
@@ -216,13 +200,13 @@ class WinnerGame(TossGame):
 class UnscoredGame(TossGame):
     """A match that states no standing before its first round, which the close of that round writes."""
 
-    def _initialize(self, players: int) -> MatchState:
-        return MatchState(phase=MatchPhase.BETWEEN_ROUNDS, rounds=self._rounds)
+    def initial_state(self, players: int) -> MatchState:
+        return MatchState(phase=MatchPhase.BETWEEN_ROUNDS)
 
 
 def a_match(rules: type[TossGame], seed: int, rounds: int) -> TossGame:
-    """A fresh table of the given rules, seated for three and drawing from a generator of that seed."""
-    return rules(players=SEATS, deck=DECK, rounds=rounds, rng=Random(seed))
+    """A fresh table of the given rules, seated for three, running that many rounds off a generator of that seed."""
+    return rules(players=SEATS, deck=DECK, conclusion=Conclusion(rounds=rounds), rng=Random(seed))
 
 
 def toss_a_card(game: Game[MatchState]) -> Transaction[MatchState]:

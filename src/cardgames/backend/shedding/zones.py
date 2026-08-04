@@ -4,14 +4,10 @@ from cardwork.decks.deck import Deck
 from cardwork.decks.decks import to_game_cards
 from cardwork.zones import presets
 from cardwork.zones.zone import Zone, ZoneId, Zones
+from cardwork.zones.zones import discard, hands
 
-HAND: Final[str] = "hand"
+HAND: Final[ZoneId] = "hand"
 STOCK: Final[ZoneId] = "stock"
-DISCARD: Final[ZoneId] = "discard"
-
-
-def hand_of(seat: int) -> ZoneId:
-    return f"{HAND}:{seat}"
 
 
 def shedding_zones(players: int, deck: Deck) -> Zones:
@@ -24,20 +20,12 @@ def shedding_zones(players: int, deck: Deck) -> Zones:
     The stock is dealt from one end of its run and drawn from the other, which a shuffled pile of backs is
     indifferent to: `rules.drawn_from` states which end a turn takes, and it is the end a player points at.
     """
-    hands = {
-        hand_of(seat): Zone(
-            id=hand_of(seat),
-            owner=seat,
-            visibility=presets.HAND,
-        )
-        for seat in range(players)
-    }
     return {
-        **hands,
+        **hands(players),
         STOCK: Zone(
             id=STOCK,
             visibility=presets.PILE,
             cards=to_game_cards(deck, face_down=True),
         ),
-        DISCARD: Zone(id=DISCARD, visibility=presets.PILE),
+        **discard(),
     }

@@ -245,7 +245,7 @@ CONTESTS: Final[tuple[ContestCase, ...]] = (
 
 @pytest.mark.parametrize("case", CONTESTS, ids=descriptions(CONTESTS))
 def test_a_ranking_settles_one_hand_against_another(case: ContestCase) -> None:
-    order = POKER.order()
+    order = POKER.order
     left = POKER.strongest(case.left)
     right = POKER.strongest(case.right)
 
@@ -256,7 +256,7 @@ def test_a_ranking_settles_one_hand_against_another(case: ContestCase) -> None:
 
 
 def test_a_ranking_picks_the_winners_out_of_a_table() -> None:
-    order = POKER.order()
+    order = POKER.order
     hands = tuple(POKER.strongest(cards) for cards in (FIVES, ROYAL_FLUSH, KINGS))
 
     assert order.argmaxima(hands) == (1,)
@@ -264,7 +264,7 @@ def test_a_ranking_picks_the_winners_out_of_a_table() -> None:
 
 
 def test_a_ranking_names_every_seat_that_shares_the_top() -> None:
-    order = POKER.order()
+    order = POKER.order
     hands = tuple(POKER.strongest(cards) for cards in (KINGS, FIVES, OTHER_KINGS))
 
     assert order.argmaxima(hands) == (0, 2)
@@ -275,7 +275,7 @@ def test_a_ranking_answers_for_the_patterns_it_lists() -> None:
 
     assert three_of_a_suit is not None
     with pytest.raises(KeyError, match="takes no place"):
-        POKER.order().key(three_of_a_suit)
+        POKER.order.key(three_of_a_suit)
 
 
 def test_a_ranking_gives_every_pattern_one_place() -> None:

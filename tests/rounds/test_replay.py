@@ -5,6 +5,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.state import MatchPhase
 
 from .demo import DECK, SEATS, CountedTossGame, TossGame, WinnerGame
@@ -17,7 +18,7 @@ LONG_MATCH: Final[int] = 4
 def a_match(rules: type[TossGame], data: st.DataObject) -> TossGame:
     """A fresh match of the given rules, drawing from a generator the example chose."""
     seed = data.draw(st.integers(min_value=0, max_value=9999))
-    return rules(players=SEATS, deck=DECK, rounds=LONG_MATCH, rng=Random(seed))
+    return rules(players=SEATS, deck=DECK, conclusion=Conclusion(rounds=LONG_MATCH), rng=Random(seed))
 
 
 def play_out(game: TossGame, data: st.DataObject) -> None:

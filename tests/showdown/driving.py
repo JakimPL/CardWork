@@ -10,6 +10,7 @@ from cardwork.decks.deck import Deck
 from cardwork.decks.standard import standard_deck
 from cardwork.moves.actions import Play
 from cardwork.moves.move import Move, Moves
+from cardwork.rounds.conclusion import Conclusion
 from cardwork.transactions.transaction import Transaction, Transactions
 from cardwork.zones.zone import ZoneId, cards_of
 
@@ -26,7 +27,7 @@ type Chooser = Callable[[Moves], Move]
 
 def a_match(players: int, rounds: int, seed: int) -> ShowdownGame:
     """A fresh table of that many seats, built for that many rounds, drawing from a generator of that seed."""
-    return ShowdownGame(players=players, deck=DECK, rounds=rounds, rng=Random(seed))
+    return ShowdownGame(players=players, deck=DECK, conclusion=Conclusion(rounds=rounds), rng=Random(seed))
 
 
 def commit(game: ShowdownGame, seat: int, holding: Holding, index: int) -> Transaction[ShowdownState]:

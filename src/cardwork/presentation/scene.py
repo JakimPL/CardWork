@@ -2,7 +2,6 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Final
 
-from cardwork.presentation.award import Award
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
 from cardwork.presentation.layout import Layout
@@ -10,6 +9,7 @@ from cardwork.presentation.plaque import Plaque
 from cardwork.presentation.readout import Readout
 from cardwork.presentation.slot import Slot
 from cardwork.presentation.tally import Tally
+from cardwork.states.award import Award
 
 SEAT_NAME: Final[str] = "Seat {seat}"
 

@@ -10,6 +10,7 @@ from cardtable.catalogue import (
 )
 from cardtable.games import GameName
 from cardwork.presentation.layout import Layout
+from cardwork.rounds.conclusion import Conclusion
 from tests.cases import descriptions
 
 from .config import GLYPHS
@@ -28,6 +29,7 @@ from .tables import (
 )
 
 SEATED = 1
+A_LEAD = 2
 WATCHING: int | None = None
 
 
@@ -98,6 +100,15 @@ def test_a_match_of_showdown_runs_the_rounds_asked_for() -> None:
 
 def test_a_match_of_shedding_runs_the_rounds_asked_for() -> None:
     assert a_shedding_match(SETTINGS).position.state.rounds == ROUNDS
+
+
+def test_every_game_a_host_opens_runs_to_the_ending_its_table_states() -> None:
+    """One conclusion opens any of them, which is what a match length stated by the table rather than the rules buys."""
+    settings = SETTINGS.model_copy(update={"conclusion": Conclusion(lead=A_LEAD)})
+
+    for match in (a_passing_match(settings), a_showdown_match(settings), a_shedding_match(settings)):
+        assert match.position.state.lead == A_LEAD
+        assert match.position.state.rounds is None
 
 
 def test_a_game_is_opened_under_the_name_the_settings_give_the_table() -> None:

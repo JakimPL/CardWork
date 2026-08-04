@@ -8,9 +8,9 @@ needs to know, and two games with different rules consult it with different read
 The package is the answer to one question asked four ways:
 
 ```python
-matches(cards, pattern, evaluation)   # are these cards that combination, all of them?
+matches(cards, pattern, evaluation)  # are these cards that combination, all of them?
 contains(cards, pattern, evaluation)  # do these cards hold it somewhere?
-find(cards, pattern, evaluation)      # the strongest instance of it they hold
+find(cards, pattern, evaluation)  # the strongest instance of it they hold
 find_all(cards, pattern, evaluation)  # every instance, strongest first
 ```
 
@@ -91,15 +91,15 @@ of one rank.
 Poker then reads as the rules of poker:
 
 ```python
-HIGH_CARD       = AnyCards(places=1)
-PAIR            = SameRank(places=2)
-TRIPLET         = SameRank(places=3)
-QUADRUPLET      = SameRank(places=4)
-TWO_PAIR        = Beside(parts=(PAIR, PAIR))
-FULL_HOUSE      = Beside(parts=(TRIPLET, PAIR))
-STRAIGHT        = Run(places=5)
-FLUSH           = SameSuit(places=5)
-STRAIGHT_FLUSH  = Together(parts=(STRAIGHT, FLUSH))
+HIGH_CARD = AnyCards(places=1)
+PAIR = SameRank(places=2)
+TRIPLET = SameRank(places=3)
+QUADRUPLET = SameRank(places=4)
+TWO_PAIR = Beside(parts=(PAIR, PAIR))
+FULL_HOUSE = Beside(parts=(TRIPLET, PAIR))
+STRAIGHT = Run(places=5)
+FLUSH = SameSuit(places=5)
+STRAIGHT_FLUSH = Together(parts=(STRAIGHT, FLUSH))
 ```
 
 A pattern says itself in words, so `str(FULL_HOUSE)` reads `3 of a rank beside 2 of a rank`. Several decks
@@ -141,10 +141,10 @@ A `Combination` is one instance: the cards that make it beside what each of them
 ```python
 found = find((SEVEN_OF_SPADES, SEVEN_OF_HEARTS, RED_JOKER), TRIPLET, REGULAR_EVALUATION)
 
-found.cards     # (7♠, 7♥, *♥)
-found.reading   # (7♠, 7♥, 7♦)
+found.cards  # (7♠, 7♥, *♥)
+found.reading  # (7♠, 7♥, 7♦)
 found.strength  # (5,) — the place of the seven
-found.low_ace   # False
+found.low_ace  # False
 ```
 
 `reading[place]` answers for `cards[place]`, so a game can tell which card played which part.
@@ -226,10 +226,10 @@ separates them by suit states that rule itself.
 A `Ranking` lists the patterns a game recognises, weakest first, beside the reading it finds them by:
 
 ```python
-POKER.strongest(hand)     # the best combination the hand forms
-POKER.order()             # a Preorder[Combination]: pattern first, strength within it
-POKER.order().compare(mine, yours)
-POKER.order().argmaxima(hands)   # every seat that shares the top
+POKER.strongest(hand)  # the best combination the hand forms
+POKER.order  # a Preorder[Combination]: pattern first, strength within it
+POKER.order.compare(mine, yours)
+POKER.order.argmaxima(hands)  # every seat that shares the top
 ```
 
 `order()` is a `Preorder` from `cardwork.ordering.preorder`, so comparing two hands and picking the winners
@@ -244,7 +244,7 @@ out of a table are calls it already carries. A combination whose pattern the ran
 `cardwork.cards.points` states; the one rank that changes worth with its company is the ace of a run:
 
 ```python
-REGULAR_SCORING.of(find(wheel, STRAIGHT, REGULAR_EVALUATION))     # 1 + 2 + 3 + 4 + 5
+REGULAR_SCORING.of(find(wheel, STRAIGHT, REGULAR_EVALUATION))  # 1 + 2 + 3 + 4 + 5
 REGULAR_SCORING.of(find(broadway, STRAIGHT, REGULAR_EVALUATION))  # 10 × 5
 ```
 
@@ -262,7 +262,9 @@ TRIPLET = SameRank(places=3)
 THREE_OF_A_SUIT = SameSuit(places=3)
 
 contains(hand, TRIPLET, evaluation) or contains(hand, THREE_OF_A_SUIT, evaluation)
-matches(hand, SameRank(places=4), evaluation) or matches(hand, SameSuit(places=4), evaluation)
+matches(hand, SameRank(places=4), evaluation) or matches(
+    hand, SameSuit(places=4), evaluation
+)
 ```
 
 Its evaluation counts copies, since several standard decks are in play and three spade cards are three of a
@@ -275,7 +277,9 @@ every time, so it reads `REGULAR_ORDER` from `cardwork.cards.order` and asks thi
 size the selection decides:
 
 ```python
-matches(named, SameRank(places=len(named)), evaluation)     # two of a rank, three of one, four of one
+matches(
+    named, SameRank(places=len(named)), evaluation
+)  # two of a rank, three of one, four of one
 ```
 
 A pattern built per question is what lets one line stand for a pair, a triplet and four of a rank alike, and

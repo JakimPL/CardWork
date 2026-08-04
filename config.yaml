@@ -3,7 +3,8 @@ game: passing
 table:
   name: cardtable
   players: 3
-  rounds: 3
+  conclusion:
+    lead: 2
   grace_seconds: 2.0
 
 artwork:

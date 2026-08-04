@@ -1,11 +1,11 @@
 from collections.abc import Mapping
 from typing import Final
 
+from cardgames.backend.passing.rules import AWARD
 from cardgames.backend.passing.state import PassingPhase, PassingState
-from cardgames.backend.passing.zones import PILE, STACK, hand_of
+from cardgames.backend.passing.zones import PILE
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation import presets
-from cardwork.presentation.award import Award
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
@@ -15,6 +15,8 @@ from cardwork.presentation.scope import Scope
 from cardwork.presentation.slot import Slot
 from cardwork.presentation.tally import Tally
 from cardwork.rounds.state import MatchPhase
+from cardwork.zones.zone import hand_of
+from cardwork.zones.zones import STACK
 
 TITLE: Final[str] = "Passing"
 
@@ -42,8 +44,6 @@ PHASES: Final[Mapping[str, str]] = {
 }
 
 INTERLUDES: Final[Mapping[str, Interlude]] = presets.match_interludes()
-
-AWARD: Final[Award] = Award.HIGHEST
 
 
 def slots_of(seat: int) -> tuple[Slot, ...]:

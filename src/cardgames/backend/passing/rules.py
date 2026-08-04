@@ -8,11 +8,12 @@ from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.patterns.same_rank import SameRank
 from cardwork.combinations.patterns.same_suit import SameSuit
 from cardwork.combinations.policy import Duplicates, Evaluation
+from cardwork.states.award import Award
 
 HAND_SIZE: Final[int] = 3
 HAND_ON_TURN: Final[int] = HAND_SIZE + 1
 THREE_ALIKE: Final[int] = 3
-WINNING_LEAD: Final[int] = 2
+AWARD: Final[Award] = Award.HIGHEST
 ROUND_POINT: Final[int] = 1
 NOTHING: Final[int] = 0
 

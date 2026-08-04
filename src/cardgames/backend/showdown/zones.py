@@ -5,9 +5,9 @@ from cardwork.decks.deck import Deck
 from cardwork.decks.decks import to_game_cards
 from cardwork.zones import presets
 from cardwork.zones.zone import Zone, ZoneId, Zones
+from cardwork.zones.zones import discard
 
 STOCK: Final[ZoneId] = "stock"
-DISCARD: Final[ZoneId] = "discard"
 TRAY: Final[str] = "tray"
 SEALED_CARD: Final[int] = 0
 
@@ -68,5 +68,5 @@ def showdown_zones(players: int, deck: Deck) -> Zones:
             visibility=presets.PILE,
             cards=to_game_cards(deck, face_down=True),
         ),
-        DISCARD: Zone(id=DISCARD, visibility=presets.PILE),
+        **discard(),
     }

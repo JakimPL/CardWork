@@ -15,6 +15,7 @@ from cardtable.interface import joining
 from cardtable.paths import ASSETS, CONFIGURATION, INTERFACE
 from cardtable.service import LogLevel, Service
 from cardtable.settings import Settings
+from cardwork.rounds.conclusion import Conclusion
 
 from .config import CONFIGURED, GLYPHS, a_config_file
 
@@ -27,6 +28,9 @@ SETTINGS: Final[Settings] = CONFIGURED.table
 KARE: Final[Artwork] = Artwork(pack=PackName.KARE, back="crosshatch")
 SEATING: Final[int] = 4
 TITLE_AND_SEED: Final[int] = 2
+A_LEAD: Final[int] = 3
+A_TARGET: Final[int] = 40
+A_COUNT: Final[int] = 6
 
 DEPARTING: Final[tuple[str, ...]] = (
     "--game",
@@ -55,7 +59,7 @@ DEPARTING: Final[tuple[str, ...]] = (
 
 DEPARTED: Final[Configuration] = Configuration(
     game=GameName.SHOWDOWN,
-    table=Settings(name="other-baize", players=4, rounds=5, seed=11, grace_seconds=1.5),
+    table=Settings(name="other-baize", players=4, conclusion=Conclusion(rounds=5), seed=11, grace_seconds=1.5),
     artwork=Artwork(pack=PackName.SVG, back="atlas"),
     service=Service(host="0.0.0.0", port=9001, log_level=LogLevel.DEBUG),
 )
@@ -91,6 +95,30 @@ def test_a_value_a_command_line_leaves_alone_stays_the_configured_one(tmp_path: 
     assert departed.artwork == CONFIGURED.artwork
     assert departed.service == CONFIGURED.service
     assert departed.table == CONFIGURED.table.model_copy(update={"players": SEATING})
+
+
+def test_a_clause_a_command_line_names_states_how_long_the_match_runs(tmp_path: Path) -> None:
+    """A clause given replaces the configured ending whole, so a run asking for a lead runs to that alone."""
+    departed = reading(a_config_file(tmp_path, CONFIGURED), "--lead", str(A_LEAD))
+
+    assert departed.table.conclusion == Conclusion(lead=A_LEAD)
+
+
+def test_a_run_naming_no_clause_at_all_runs_to_the_ending_its_file_states(tmp_path: Path) -> None:
+    departed = reading(a_config_file(tmp_path, CONFIGURED), "--players", str(SEATING))
+
+    assert departed.table.conclusion == CONFIGURED.table.conclusion
+
+
+def test_a_run_naming_two_clauses_ends_on_whichever_arrives_first(tmp_path: Path) -> None:
+    departed = reading(a_config_file(tmp_path, CONFIGURED), "--target", str(A_TARGET), "--rounds", str(A_COUNT))
+
+    assert departed.table.conclusion == Conclusion(target=A_TARGET, rounds=A_COUNT)
+
+
+def test_a_clause_below_the_least_a_match_runs_to_is_turned_away(tmp_path: Path) -> None:
+    with pytest.raises(ValidationError):
+        reading(a_config_file(tmp_path, CONFIGURED), "--rounds", "0")
 
 
 def test_a_run_asking_for_no_pack_draws_the_glyphs_the_page_carries(tmp_path: Path) -> None:

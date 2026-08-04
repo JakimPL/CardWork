@@ -4,7 +4,6 @@ import pytest
 from pydantic import ValidationError
 
 from cardwork.moves.kind import ActionKind
-from cardwork.presentation.award import Award
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
@@ -13,6 +12,7 @@ from cardwork.presentation.readout import Readout
 from cardwork.presentation.scope import Scope
 from cardwork.presentation.slot import Slot
 from cardwork.presentation.spread import Spread
+from cardwork.states.award import Award
 from cardwork.zones.zone import ZoneId
 
 from .demo import (

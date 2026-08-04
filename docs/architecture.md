@@ -1039,18 +1039,28 @@ Deciding which zone a deck starts in means knowing the game, so it belongs to th
 ### A match is a game plus bookkeeping
 
 Most games worth writing are a series of rounds: dealt afresh, led by a seat in turn, scored into a
-standing until the standing decides the match. `cardwork.rounds` states that shape once. `RoundGame` fills
-in `advance` and leaves a game five hooks, every one of them about a single round; `RoundState` carries the
-standing beside the tally of the round in play; `Redeal` gathers, shuffles and deals out what the last
-round left where it lay, drawing again where a game asks something of the round it opens on. A round boundary is an ordinary settlement transaction, so projection, replay,
-events and the adapter need nothing new — which is the whole reason the layer is small. `docs/rounds.md`
-states it whole.
+standing until the standing meets the ending the table was opened with. `cardwork.rounds` states that shape
+once. `RoundGame` fills in `advance` and leaves a game five hooks, four of them about a single round;
+`RoundState` carries the standing beside the tally of the round in play; `Redeal` gathers, shuffles and deals
+out what the last round left where it lay, drawing again where a game asks something of the round it opens on.
+A round boundary is an ordinary settlement transaction, so projection, replay, events and the adapter need
+nothing new — which is the whole reason the layer is small. `docs/rounds.md` states it whole.
+
+**How long a match runs is a setting of the table, and it travels in the record.** `Conclusion` holds the three
+clauses a match played in rounds can end on — a count of rounds, a score some seat reaches, a lead one seat
+holds over the next best — and states at least one of them, so a match with no ending is unconstructible. A
+table is opened with one, `RoundGame` stamps its clauses onto the cursor the first round opens on, and
+`match_over` reads them there. So the ending obeys P2's spirit as the shuffle does: it is data in the journal
+rather than an attribute of the object that dealt, a replayed position describes the match it was always going
+to be, and `Readout` reaches it by the one route every figure of a cursor reaches a client by. Which end of the
+standing *wins* is the game's own rule rather than the table's, so it stands beside the clauses as `award` and
+its vocabulary, `Award`, sits in `cardwork.states` beside the `points` tuple it reads.
 
 The two games in `cardgames` are the worked examples, and between them they exercise both shapes of turn:
 
 | the game | plays | reads for |
 |---|---|---|
-| `cardgames.backend.passing` | a sequential turn: one exchange with the pile, then a pass round the table | an outcome a rules question over `combinations` decides, and a match the standing ends |
+| `cardgames.backend.passing` | a sequential turn: one exchange with the pile, then a pass round the table | an outcome a rules question over `combinations` decides, and a match ending on a lead rather than a count |
 | `cardgames.backend.showdown` | a simultaneous turn: every seat commits one sealed card, and they turn over together | `to_act` holding every seat, `HIDDEN` zones, and a turn settled behind no move at all |
 | `cardgames.backend.shedding` | a turn of two minds: shed a set of one rank, or draw a card and pass it on | a move naming several cards, a hand that grows, and a game that added no primitive below it |
 

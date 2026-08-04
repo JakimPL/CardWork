@@ -1,11 +1,18 @@
 from collections.abc import Mapping
 from typing import Final
 
+from cardgames.backend.showdown.rules import AWARD
 from cardgames.backend.showdown.state import ShowdownPhase, ShowdownState
-from cardgames.backend.showdown.zones import DISCARD, HOLDINGS, STOCK, blind_of, hand_of, tray_of, zone_of
+from cardgames.backend.showdown.zones import (
+    HOLDINGS,
+    STOCK,
+    blind_of,
+    hand_of,
+    tray_of,
+    zone_of,
+)
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation import presets
-from cardwork.presentation.award import Award
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
@@ -16,6 +23,7 @@ from cardwork.presentation.slot import Slot
 from cardwork.presentation.spread import Spread
 from cardwork.presentation.tally import Tally
 from cardwork.rounds.state import MatchPhase
+from cardwork.zones.zones import DISCARD
 
 TITLE: Final[str] = "Showdown"
 
@@ -45,8 +53,6 @@ PHASES: Final[Mapping[str, str]] = {
 }
 
 INTERLUDES: Final[Mapping[str, Interlude]] = presets.match_interludes()
-
-AWARD: Final[Award] = Award.HIGHEST
 
 
 def slots_of(seat: int) -> tuple[Slot, ...]:

@@ -4,7 +4,7 @@ from typing import Final
 
 import pytest
 
-from cardgames.backend.showdown.game import ONE_ROUND, ShowdownGame
+from cardgames.backend.showdown.game import ShowdownGame
 from cardgames.backend.showdown.rules import (
     BLIND_SIZE,
     FIRST_TURN,
@@ -18,6 +18,7 @@ from cardwork.decks.decks import jokers
 from cardwork.decks.standard import standard_deck
 from cardwork.effects.effects import Effects
 from cardwork.positions.position import Position
+from cardwork.rounds.conclusion import ONE_ROUND, Conclusion
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
 from tests.cases import Case, descriptions
@@ -25,7 +26,6 @@ from tests.cases import Case, descriptions
 from .driving import DECK, FULL_TABLE, ROUNDS, SEATS, SEED, TWO_SEATS, a_match
 
 FIRST_ROUND: Final[int] = 1
-NO_ROUNDS: Final[int] = 0
 TOO_MANY_SEATS: Final[int] = 6
 TOO_FEW_SEATS: Final[int] = 1
 NO_CARDS: Final[int] = 0
@@ -138,14 +138,9 @@ def test_a_table_seats_two_to_five_players() -> None:
         a_match(TOO_FEW_SEATS, ROUNDS, SEED)
 
 
-def test_a_match_runs_at_least_one_round() -> None:
-    with pytest.raises(ValueError, match=f"at least {ONE_ROUND} round"):
-        a_match(SEATS, NO_ROUNDS, SEED)
-
-
 def test_a_deck_short_of_a_standard_one_is_refused() -> None:
     with pytest.raises(ValueError, match="one standard deck"):
-        ShowdownGame(players=SEATS, deck=DECK[:-1], rounds=ROUNDS, rng=Random(SEED))
+        ShowdownGame(players=SEATS, deck=DECK[:-1], conclusion=Conclusion(rounds=ROUNDS), rng=Random(SEED))
 
 
 def test_a_deck_carrying_jokers_is_refused() -> None:
@@ -153,11 +148,11 @@ def test_a_deck_carrying_jokers_is_refused() -> None:
         ShowdownGame(
             players=SEATS,
             deck=standard_deck() + jokers(black=1, red=1),
-            rounds=ROUNDS,
+            conclusion=Conclusion(rounds=ROUNDS),
             rng=Random(SEED),
         )
 
 
 def test_a_deal_leaving_a_seat_short_of_the_five_it_reads_is_refused() -> None:
     with pytest.raises(ValueError, match=f"other than {HAND_SIZE} cards to read"):
-        ShortDealGame(players=SEATS, deck=DECK, rounds=ROUNDS, rng=Random(SEED))
+        ShortDealGame(players=SEATS, deck=DECK, conclusion=Conclusion(rounds=ROUNDS), rng=Random(SEED))

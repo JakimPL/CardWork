@@ -15,16 +15,13 @@ from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.states.state import GameState, Points
 from cardwork.zones.presets import HAND, PILE
-from cardwork.zones.zone import Zone, ZoneId, Zones
+from cardwork.zones.zone import Zone, ZoneId, Zones, hand_of
+from cardwork.zones.zones import discard, hands
 
 SEATS: Final[int] = 3
 HAND_SIZE: Final[int] = 3
 RANKS: Final[tuple[Rank, ...]] = (Rank.ACE, Rank.KING, Rank.QUEEN)
 DECK: Final[Deck] = tuple(Card(rank=rank, suit=suit) for suit in Suit for rank in RANKS)
-
-
-def hand_of(seat: int) -> ZoneId:
-    return f"hand:{seat}"
 
 
 def tray_of(seat: int) -> ZoneId:
@@ -52,11 +49,10 @@ class DiscardGame(Game[GameState]):
     """
 
     def zones(self, players: int, deck: Deck) -> Zones:
-        hands = {hand_of(seat): Zone(id=hand_of(seat), owner=seat, visibility=HAND) for seat in range(players)}
         return {
-            **hands,
+            **hands(players),
             "draw": Zone(id="draw", visibility=PILE, cards=to_game_cards(deck, face_down=True)),
-            "discard": Zone(id="discard", visibility=PILE),
+            **discard(),
         }
 
     def _validate_players(self, players: int) -> None:

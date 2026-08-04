@@ -123,16 +123,16 @@ export interface components {
          *     string that happens to match.
          * @enum {string}
          */
-        ActionKind: "play" | "take" | "give" | "reject" | "discard" | "declare";
+        ActionKind: "pass" | "play" | "take" | "give" | "reject" | "discard" | "declare";
         AnyAction: components["schemas"]["Play"] | components["schemas"]["Take"] | components["schemas"]["Give"] | components["schemas"]["Reject"] | components["schemas"]["Discard"] | components["schemas"]["Declare"];
         /**
          * Award
-         * @description Which end of the standing a match is won at.
+         * @description Which end of a standing a match is won at.
          *
-         *     A match is decided on `points`, and whether the seat holding the most of them or the fewest holds the match is
-         *     a rule of the game: one scoring what a seat takes reads `HIGHEST`, and one scoring what it is caught with
-         *     reads `LOWEST`. So an interface names the seat a match belongs to by reading the standing at the end the
-         *     layout points it to, and the direction stays with the game that knows it.
+         *     A match is decided on `points`, and whether the seat holding the most of them or the fewest takes it is a rule
+         *     of the game: one scoring what a seat wins reads `HIGHEST`, and one scoring what it is caught with reads
+         *     `LOWEST`. It stands beside the tally it reads, so the rules settling a match on a lead and the interface
+         *     naming the seat that took it ask the same question of the same standing.
          * @enum {string}
          */
         Award: "highest" | "lowest";

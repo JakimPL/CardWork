@@ -14,6 +14,7 @@ from cardtable.interface import joining
 from cardtable.paths import ASSETS, CONFIGURATION, INTERFACE
 from cardtable.service import LogLevel, Service
 from cardtable.settings import Settings
+from cardwork.rounds.conclusion import Conclusion
 
 PROGRAM: Final[str] = "cardtable"
 DESCRIPTION: Final[str] = "Open one table of a CardWork game for local play."
@@ -35,7 +36,9 @@ def parser() -> ArgumentParser:
     )
     arguments.add_argument("--table", help="the name the table answers under")
     arguments.add_argument("--players", type=int, help="how many seats the table holds")
-    arguments.add_argument("--rounds", type=int, help="how many rounds a match of rounds runs")
+    arguments.add_argument("--rounds", type=int, help="how many rounds the match runs")
+    arguments.add_argument("--target", type=int, help="the score a seat reaches to end the match")
+    arguments.add_argument("--lead", type=int, help="the lead over the next best seat that ends the match")
     arguments.add_argument("--seed", type=int, help="the seed every shuffle of the match is drawn from")
     arguments.add_argument(
         "--grace-seconds",
@@ -63,6 +66,22 @@ def chosen[ValueT](given: ValueT | None, stated: ValueT) -> ValueT:
     return stated if given is None else given
 
 
+def a_conclusion(stated: Conclusion, arguments: Namespace) -> Conclusion:
+    """How long a run's match lasts: the clauses its command line states, or the ones its configuration does.
+
+    A clause named on the command line states the ending whole, so `--rounds 5` runs five rounds of whatever the
+    file was configured to run to. Naming a clause beside the configured ones is asked for by stating both.
+
+    Raises:
+        ValidationError: when a clause given falls below the least a match runs to.
+    """
+    given = (arguments.rounds, arguments.target, arguments.lead)
+    if all(clause is None for clause in given):
+        return stated
+
+    return Conclusion(rounds=arguments.rounds, target=arguments.target, lead=arguments.lead)
+
+
 def a_table(stated: Settings, arguments: Namespace) -> Settings:
     """The table a run opens: the configured one, holding every value its command line states instead.
 
@@ -73,7 +92,7 @@ def a_table(stated: Settings, arguments: Namespace) -> Settings:
     return Settings(
         name=chosen(arguments.table, stated.name),
         players=chosen(arguments.players, stated.players),
-        rounds=chosen(arguments.rounds, stated.rounds),
+        conclusion=a_conclusion(stated.conclusion, arguments),
         seed=chosen(arguments.seed, stated.seed),
         grace_seconds=chosen(arguments.grace_seconds, stated.grace_seconds),
     )

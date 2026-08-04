@@ -1,12 +1,23 @@
 from abc import ABC, abstractmethod
 from random import Random
+from typing import Final
 
+from cardwork.decks.deck import Deck
 from cardwork.effects.effects import Effects, SetState
 from cardwork.games.game import Game
 from cardwork.moves.move import Move
 from cardwork.positions.position import Position
+from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.state import MatchPhase, RoundStateT
 from cardwork.states.state import Points
+
+NOTHING: Final[int] = 0
+
+
+def standing(position: Position[RoundStateT]) -> Points:
+    """The score of record as it stands, which reads as a tally of nothing at a table yet to score a round."""
+    points = position.state.points
+    return points if points is not None else (NOTHING,) * position.players
 
 
 class RoundGame(Game[RoundStateT], ABC):
@@ -15,27 +26,58 @@ class RoundGame(Game[RoundStateT], ABC):
     A game states what one round is — the cards it deals, the cursor it opens on, what happens inside it and
     when it has run out — and this layer sequences the match around that. The first round opens as the table
     is built, a finished round is scored into the standing, the seat after its leader takes up the next one,
-    and the match closes once the game calls the standing decided.
+    and the match closes once the standing meets the `Conclusion` the table was opened with.
 
     Writing one is answering these:
 
     | hook | states |
     |---|---|
+    | `initial_state(players)` | the cursor the table opens on, before a card has moved |
     | `deal_round(position, leader, rng)` | the cards a fresh round is dealt, for which `Redeal` is the usual answer |
     | `opening_state(position, leader)` | the cursor a round opens on: the phase it runs in, and who acts |
     | `advance_round(position, move, rng)` | what the rules owe inside a round, exactly as `advance` states it |
     | `round_over(position)` | whether the round in play has run out |
-    | `match_over(position)` | whether the standing has decided the match |
 
-    `next_leader` and `score_round` arrive with the answer most matches want, so a game that seats its rounds
-    by the standing, or awards a match point to the winner of each round, overrides one of those two.
+    `next_leader`, `score_round` and `match_over` arrive with the answer most matches want, so a game that seats
+    its rounds by the standing, awards a match point to the winner of each round, or ends on something the
+    standing cannot state overrides one of those three.
 
     `MatchPhase` holds the two phases this layer runs in, and every phase beside those two says a round is in play,
-    which leaves a game free to name its own. A table opens between rounds:
+    which leaves a game free to name its own. A table opens between rounds, and the clauses it runs to are stamped
+    onto the cursor it states:
 
-        def _initialize(self, players: int) -> ShowdownState:
-            return ShowdownState(phase=MatchPhase.BETWEEN_ROUNDS, points=(0,) * players, rounds=self._rounds)
+        def initial_state(self, players: int) -> ShowdownState:
+            return ShowdownState(phase=MatchPhase.BETWEEN_ROUNDS, points=(0,) * players, award=AWARD)
     """
+
+    def __init__(
+        self,
+        players: int,
+        deck: Deck,
+        *,
+        conclusion: Conclusion,
+        rng: Random | None = None,
+    ) -> None:
+        """A table seated for that many players, dealing from that deck, running to that conclusion.
+
+        Args:
+            players: how many seats the table holds.
+            deck: the cards the table is dealt from, which the game's own validation reads.
+            conclusion: the clauses the match ends on, stamped onto the cursor the table opens on so that a
+                position describes the ending it was running to wherever it is read.
+            rng: the generator every shuffle and every seat drawn for a round comes from.
+        """
+        self._conclusion = conclusion
+        super().__init__(players, deck, rng=rng)
+
+    def _initialize(self, players: int) -> RoundStateT:
+        """The cursor the table opens on, carrying the clauses the match runs to.
+
+        A game states the rest of it as `initial_state`, and the conclusion is stamped over that here, so a game
+        writes the phase and the tally its table opens with and names its ending in one place only: the conclusion
+        the table was opened with.
+        """
+        return self.initial_state(players).with_changes(**dict(self._conclusion))
 
     def advance(
         self,
@@ -109,14 +151,13 @@ class RoundGame(Game[RoundStateT], ABC):
         and the one that opens the next clears it.
         """
         state = position.state
-        standing = state.points if state.points is not None else (0,) * position.players
         closed = state.with_changes(
             phase=MatchPhase.BETWEEN_ROUNDS,
             to_act=frozenset(),
             points=tuple(
                 before + won
                 for before, won in zip(
-                    standing,
+                    standing(position),
                     self.score_round(position),
                     strict=True,
                 )
@@ -149,6 +190,16 @@ class RoundGame(Game[RoundStateT], ABC):
 
         return (led + 1) % position.players
 
+    def match_over(self, position: Position[RoundStateT]) -> bool:
+        """Whether the standing has decided the match, which the clauses the cursor carries answer.
+
+        Asked between rounds with the round that just closed already scored, so the standing read here is the one
+        that round was added into and a match ends at a boundary with every round played out. A game whose match
+        ends on something a standing cannot state — a seat left holding every card, a contract made — states that
+        here instead.
+        """
+        return position.state.concluded(standing(position))
+
     def score_round(
         self,
         position: Position[RoundStateT],
@@ -167,6 +218,17 @@ class RoundGame(Game[RoundStateT], ABC):
     ) -> Effects[RoundStateT]:
         """The cards lie where `zones` laid them, since the first deal is the first round's own."""
         return ()
+
+    @abstractmethod
+    def initial_state(self, players: int) -> RoundStateT:
+        """The cursor the table opens on: the phase it stands in, its tally of nothing, and the end it is won at.
+
+        A table opens between rounds, since the first round is the first boundary, and the clauses the match runs
+        to are stamped over whatever this states.
+
+        Args:
+            players: how many seats the table holds, which is the width of the standing it opens with.
+        """
 
     @abstractmethod
     def deal_round(
@@ -216,7 +278,3 @@ class RoundGame(Game[RoundStateT], ABC):
     @abstractmethod
     def round_over(self, position: Position[RoundStateT]) -> bool:
         """Whether the round in play has run out, asked once it owes nothing further."""
-
-    @abstractmethod
-    def match_over(self, position: Position[RoundStateT]) -> bool:
-        """Whether the standing has decided the match, asked between rounds with every round scored."""

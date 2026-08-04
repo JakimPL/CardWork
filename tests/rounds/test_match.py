@@ -1,5 +1,7 @@
 from random import Random
+from typing import Final
 
+from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.state import MatchPhase
 from cardwork.states.state import Points
 from cardwork.transactions.transaction import Transactions
@@ -23,6 +25,12 @@ from .demo import (
 )
 
 SEEDS = range(12)
+TARGET: Final[int] = 100
+A_SHORT_TARGET: Final[int] = 12
+A_SHORT_LEAD: Final[int] = 2
+LONG_ENOUGH: Final[int] = 40
+LEADING: Final[int] = 0
+CHASING: Final[int] = 1
 
 
 def first_leader(seed: int) -> int:
@@ -162,10 +170,43 @@ def test_a_match_that_states_no_standing_takes_the_tally_of_its_first_round_as_o
 
 
 def test_a_match_of_one_round_closes_on_that_round() -> None:
-    game = TossGame(players=SEATS, deck=DECK, rounds=1, rng=Random(SEED))
+    game = TossGame(players=SEATS, deck=DECK, conclusion=Conclusion(rounds=1), rng=Random(SEED))
 
     toss_the_round(game)
     game.settle()
 
     assert game.state.phase == MatchPhase.MATCH_OVER
     assert game.state.round_number == 1
+
+
+def test_the_table_a_match_opens_on_carries_the_clauses_it_runs_to() -> None:
+    game = TossGame(players=SEATS, deck=DECK, conclusion=Conclusion(target=TARGET), rng=Random(SEED))
+
+    assert game.snapshot(0).state.rounds is None
+    assert game.snapshot(0).state.target == TARGET
+    assert game.state.target == TARGET
+
+
+def test_a_match_to_a_score_closes_once_a_seat_reaches_it() -> None:
+    game = TossGame(players=SEATS, deck=DECK, conclusion=Conclusion(target=A_SHORT_TARGET), rng=Random(SEED))
+
+    while game.state.phase != MatchPhase.MATCH_OVER:
+        toss_the_round(game)
+        game.settle()
+
+    assert max(game.state.points) >= A_SHORT_TARGET
+    assert game.state.round_number < LONG_ENOUGH
+    assert game.settle() == ()
+
+
+def test_a_match_to_a_lead_closes_once_one_seat_pulls_that_far_clear() -> None:
+    game = WinnerGame(players=SEATS, deck=DECK, conclusion=Conclusion(lead=A_SHORT_LEAD), rng=Random(SEED))
+
+    while game.state.phase != MatchPhase.MATCH_OVER:
+        toss_the_round(game)
+        game.settle()
+
+    standing = sorted(game.state.points, reverse=True)
+
+    assert standing[LEADING] - standing[CHASING] >= A_SHORT_LEAD
+    assert game.settle() == ()

@@ -16,6 +16,7 @@ from cardtable.games import GameName
 from cardtable.hosting import Hosted
 from cardtable.settings import Settings
 from cardwork.presentation.scene import Scene
+from cardwork.rounds.conclusion import Conclusion
 from tests.cases import Case
 
 from .config import GLYPHS
@@ -31,7 +32,7 @@ BASE_URL: Final[str] = "http://cardwork"
 SETTINGS: Final[Settings] = Settings(
     name=TABLE,
     players=PLAYERS,
-    rounds=ROUNDS,
+    conclusion=Conclusion(rounds=ROUNDS),
     seed=SEED,
     grace_seconds=NO_GRACE,
 )

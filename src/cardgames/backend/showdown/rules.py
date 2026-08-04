@@ -6,6 +6,7 @@ from cardwork.cards.game import CardOrJoker
 from cardwork.cards.orders import REGULAR_ORDER
 from cardwork.cards.points import REGULAR_POINTS, PointTable
 from cardwork.ordering.preorder import Preorder
+from cardwork.states.award import Award
 from cardwork.states.state import Points
 
 HAND_SIZE: Final[int] = 5
@@ -19,6 +20,7 @@ STRONGEST: Final[int] = 0
 
 STRENGTH: Final[Preorder[Card]] = REGULAR_ORDER
 POINTS: Final[PointTable] = REGULAR_POINTS
+AWARD: Final[Award] = Award.HIGHEST
 
 
 def suited(card: CardOrJoker) -> Card:

@@ -40,4 +40,9 @@ def cards_of(zone: Zone) -> CardsOrJokers:
     return tuple(game_card.card for game_card in zone.cards)
 
 
+def hand_of(seat: int) -> ZoneId:
+    """The zone id of the hand one seat holds, which is what the rules read against."""
+    return f"hand:{seat}"
+
+
 Zones = Mapping[ZoneId, Zone]

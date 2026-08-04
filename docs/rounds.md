@@ -1,19 +1,20 @@
 # Rounds
 
 `cardwork.rounds` plays a match as a series of rounds: each one dealt afresh, led by a seat in turn, scored
-into a standing as it closes, until the standing decides the match. Both games written on this framework are
-that shape, and so is nearly every game worth writing — a hand of poker, a deal of bridge, a leg of cribbage.
+into a standing as it closes, until the standing meets the ending the table was opened with. Every game written
+on this framework is that shape, and so is nearly every game worth writing — a hand of poker, a deal of bridge,
+a leg of cribbage.
 
 The layer sits above `games` and adds no cursor, no second journal and no rule of play. A game states what
 one round *is*; this states the match around it.
 
 ```python
 class ShowdownGame(RoundGame[ShowdownState]):
+    def initial_state(self, players): ...          # the cursor the table opens on
     def deal_round(self, position, leader, rng): ...    # the cards a fresh round gets
     def opening_state(self, position, leader): ... # the cursor it opens on
     def advance_round(self, position, move, rng): ...  # everything inside it
     def round_over(self, position): ...            # whether it has run out
-    def match_over(self, position): ...            # whether the standing has decided the match
 ```
 
 ---
@@ -21,9 +22,9 @@ class ShowdownGame(RoundGame[ShowdownState]):
 ## 1. Who owns what
 
 **A round belongs to the game; the match belongs to the layer.** The five hooks above are the whole of what a
-game states, and every one of them is about a single round. Opening the first one, closing a finished one into
-the standing, seating the next leader and calling the match over are the same four steps in every game, so
-they are written once here.
+game states, and every one of them but the first is about a single round. Opening the first one, closing a
+finished one into the standing, seating the next leader and calling the match over are the same four steps in
+every game, so they are written once here.
 
 **One cursor, two tallies.** `RoundState` extends `GameState` rather than standing beside it, so a round
 boundary is an ordinary settlement transaction and projection, replay, events and the adapter need nothing
@@ -37,21 +38,42 @@ new.
 | `round_number` | how many rounds have opened, standing at `BEFORE_THE_FIRST_ROUND` before the first deal |
 | `leader` | the seat the round in play opened on, read as `led_by` once a round is open |
 | `round_points` | what the round in play has scored, added into `points` as it closes |
+| `award` | which end of the standing this match is won at, which the game stamps |
+| `rounds`, `target`, `lead` | the clauses the match ends on, which the table states |
 
 Two tallies rather than one, because a client watching a round wants both: the standing it is playing for and
 the round it is playing. `led_by` is the leader read as the integer it is inside an open round, and it raises
 before the first round, where no seat leads.
 
-**Match configuration lives in the state.** How many rounds a match runs, or what lead ends it, is a field of
-a game's own state subclass rather than an attribute of the game object:
+**How long a match runs is the table's to state; which end wins it is the game's.** `Conclusion` is what a
+table is opened with, and it holds the three clauses a match played in rounds can end on:
 
 ```python
-class MatchState(RoundState):
-    rounds: int
+game = SheddingGame(players=3, deck=standard_deck(), conclusion=Conclusion(rounds=3), rng=Random(7))
 ```
 
-A replayed position then describes itself: how many rounds this table was ever going to play is read from the
-record, like everything else about it.
+| clause | ends the match once |
+|---|---|
+| `rounds` | that many rounds have been played |
+| `target` | some seat holds that score, whether reaching it wins the match or loses it |
+| `lead` | the seat at the winning end of the standing leads the next best by that margin |
+
+A conclusion states at least one of them and refuses to be built stating none, so a match with no ending to
+reach is unconstructible rather than discovered at the table. Several stated together end it on the first the
+standing meets — five hundred points or ten rounds, whichever arrives first. `RoundGame.__init__` stamps them
+onto the cursor its game's `initial_state` returns, so **the clauses travel in the record**: a replayed position
+describes the ending it was always running to, like everything else about it, and every game shares one route
+to a client for it, since `Readout` names a field of the cursor by name.
+
+The direction is the other half and belongs to the game, which is why it is `award` on the state rather than a
+clause of the conclusion: `Award.HIGHEST` where a seat scores what it wins and `Award.LOWEST` where it scores
+what it is caught with. Only `lead` reads it to end a match — a target is reached by whichever seat gets there
+first either way — but a winner is named by it in every case, which is why `Award` lives in `cardwork.states`
+beside the `points` tuple it is about, low enough for these rules and for `cardwork.presentation` both.
+
+**`match_over` therefore arrives with an answer.** `RoundState.concluded(standing)` reads the clauses against
+the standing, and a game states nothing at all unless its match ends on something a standing cannot say — a
+seat left holding every card, a contract made — in which case it overrides the hook as before.
 
 **Phases are named, and two of them are reserved.** `MatchPhase` holds the two this layer runs the table in, and
 every phase beside those two says a round is in play, which leaves a game free to name its own — as a `StrEnum`
@@ -63,8 +85,8 @@ class TossPhase(StrEnum):
     COUNTING = "counting"
 
 
-def _initialize(self, players: int) -> MatchState:
-    return MatchState(phase=MatchPhase.BETWEEN_ROUNDS, points=(0,) * players, rounds=self._rounds)
+def initial_state(self, players: int) -> MatchState:
+    return MatchState(phase=MatchPhase.BETWEEN_ROUNDS, points=(0,) * players, award=AWARD)
 ```
 
 A member carries its value, so a phase read back from the journal or arriving off the wire compares against
@@ -123,10 +145,10 @@ reveals what was sealed or hands a trick to the seat that won it does that in it
 boundary sees it. Answer with an empty run once the round owes nothing: that is what hands the table on to
 `round_over`.
 
-**Two hooks arrive with an answer.** `next_leader` draws a seat at random before the first round and takes the
-seat after the leader thereafter, which is the rotation both games want. `score_round` awards the tally the
-round kept. A game that seats its rounds by the standing, or counts rounds won rather than points scored,
-overrides one of the two:
+**Three hooks arrive with an answer.** `next_leader` draws a seat at random before the first round and takes the
+seat after the leader thereafter, which is the rotation every game here wants. `score_round` awards the tally the
+round kept. `match_over` reads the conclusion off the cursor. A game that seats its rounds by the standing, or
+counts rounds won rather than points scored, overrides one of the three:
 
 ```python
 def score_round(self, position: Position[MatchState]) -> Points:
@@ -213,24 +235,26 @@ stops a table rather than drawing at it for ever.
 
 ## 5. What a game states for itself
 
-**A game of four cards** (`cardgames.backend.passing`) plays rounds until one seat leads the next best by two, so its
-`match_over` reads the standing. Its round writes its own outcome — a hand that wins, or a pile run out — into
-a phase of its own as the move that settles it lands, and `round_over` reads that phase. A round scores one
-point to its winner and nothing to anybody in a draw, which its `round_points` states as the win lands.
+**A game of four cards** (`cardgames.backend.passing`) is played to a lead of two, which its table states as
+`Conclusion(lead=2)`. Its round writes its own outcome — a hand that wins, or a pile run out — into a phase of
+its own as the move that settles it lands, and `round_over` reads that phase. A round scores one point to its
+winner and nothing to anybody in a draw, which its `round_points` states as the win lands.
 `docs/games/passing.md` states the game whole.
 
-**A game of ten turns** (`cardgames.backend.showdown`) plays the number of rounds it was built for, so its
-`match_over` compares `round_number` against a field of its own state. Each of its ten turns adds what the
-turn was worth into `round_points`, and its `round_over` reads the two holdings of every seat, which the tenth
-turn leaves run out. A turn of it is the settlement step §2 describes: every seat commits at once, and the
-reveal that scores the turn and opens the next answers no move of its own. `docs/games/showdown.md` states the
-game whole.
+**A game of ten turns** (`cardgames.backend.showdown`) is played to a count of rounds, which its table states as
+`Conclusion(rounds=n)`. Each of its ten turns adds what the turn was worth into `round_points`, and its
+`round_over` reads the two holdings of every seat, which the tenth turn leaves run out. A turn of it is the
+settlement step §2 describes: every seat commits at once, and the reveal that scores the turn and opens the next
+answers no move of its own. `docs/games/showdown.md` states the game whole.
 
-**A game of matched sets** (`cardgames.backend.shedding`) plays the rounds it was built for as well, and reads its
+**A game of matched sets** (`cardgames.backend.shedding`) is played to a count of rounds as well, and reads its
 round out of the hands: `round_over` reads a phase of its own, which the move that empties a hand writes, and
 which a settlement writes where the stock has run out with no seat holding a set. The award is read off the
 hands as they lie rather than accumulated as the round runs, so `round_points` is written once, in the
 transaction that closes the round. `docs/games/shedding.md` states the game whole.
 
-Between them they override neither `next_leader` nor `score_round`: a seat drawn for the first round and the
-next seat after, with the round's tally added into the standing, is what all three of them wanted.
+Between them they override none of `next_leader`, `score_round` and `match_over`: a seat drawn for the first
+round and the next seat after, with the round's tally added into the standing and the ending read off the
+clauses the table stated, is what all three of them wanted. The three clauses are one vocabulary, so any of
+these games runs to any of the three endings — a two-round `passing` match and a `shedding` match to fifty
+points are both a line of configuration, not a line of code.

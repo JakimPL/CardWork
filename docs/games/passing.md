@@ -2,8 +2,8 @@
 
 `cardgames.backend.passing` is a game of four cards: three in every hand, a fourth travelling round the table, and a
 win falling to the seat the moment three of the four it holds read as one rank or one suit. It seats two to
-eight, plays over any number of whole standard decks and any number of jokers, and runs until one seat leads
-the next best by two points.
+eight, plays over any number of whole standard decks and any number of jokers, and runs to the ending its table
+states, which is a lead of two points over the next best seat where it is played as it was written.
 
 It is the first game written on this framework, so what it needs and what it inherits are worth reading
 together: it states four modules of its own — the cursor, the table, the rules, the hooks — and asks
@@ -11,7 +11,8 @@ together: it states four modules of its own — the cursor, the table, the rules
 everything else.
 
 ```python
-game = PassingGame(players=4, deck=standard_decks(1, black_jokers=1, red_jokers=1), rng=Random(7))
+game = PassingGame(players=4, deck=standard_decks(1, black_jokers=1, red_jokers=1),
+                   conclusion=Conclusion(lead=2), rng=Random(7))
 ```
 
 ---
@@ -58,9 +59,10 @@ holding a win and no stretch of latency comes between holding one and being give
 win ends its round at once, a pile of forty-odd cards outlives no run of play, which leaves the drawn round a
 rule the game keeps rather than one it reaches.
 
-**The match belongs to the first seat leading the next best by two points.** The first round is led by a seat
-drawn at random, each later round by the seat after the previous leader, which is what `RoundGame` arrives
-with.
+**The match belongs to the first seat leading the next best by the margin its table was opened with**, which
+is two points where this is played as it was written and any of `Conclusion`'s three clauses where a table asks
+for something else (`docs/rounds.md` §1). The first round is led by a seat drawn at random, each later round by
+the seat after the previous leader, which is what `RoundGame` arrives with.
 
 ---
 
@@ -170,11 +172,15 @@ deal of the next round. The match belongs to the seat holding the most points, w
 
 ## 6. What it asked the framework for
 
-Three things this game needed that the layers below it gained for every game after it:
+Four things this game needed that the layers below it gained for every game after it:
 
 - **`deal_round(position, leader, rng)`** takes the leader, because a deal that gives one seat a card the others
   do not get has to know which seat leads. The seat is drawn before the cards go out, so the leader is there to
   be handed over.
+- **`Conclusion(lead=...)`** ends a match on a margin rather than a count, which this is the only game here
+  played to. The two games after it wanted a count, so the layer holds all three clauses and every game reads
+  its ending off the cursor rather than writing a `match_over` of its own (`docs/rounds.md` §1). `Award` came
+  down to `cardwork.states` with it, since reading a lead and naming a winner are the same question.
 - **`Redeal.admitted(counts, rng, admits)`** deals what a game asks of the round it opens on, drawing again for
   as long as a draw is refused. This game asks that the leader's four cards read no win yet; the next game to
   want a hand with a move in it states that instead, and the drawing is written once.

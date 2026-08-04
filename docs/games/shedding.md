@@ -2,14 +2,15 @@
 
 `cardgames.backend.shedding` is a game of matched sets laid down: a turn sheds two cards or more reading as one
 rank, or draws one card off the stock, and the round goes to the seat left holding the fewest cards. It seats
-two to six, plays over one standard deck, and runs the number of rounds it was built for.
+two to six, plays over one standard deck, and runs to the ending its table states, which is a count of rounds
+where it is played as it was written.
 
 It is the third game written on this framework and the first whose move names several cards at once, so the two
 things worth reading it for are the multi-card intent and the choice a turn carries: a pair goes down now, or it
 waits for the third of its rank to arrive.
 
 ```python
-game = SheddingGame(players=3, deck=standard_deck(), rounds=3, rng=Random(7))
+game = SheddingGame(players=3, deck=standard_deck(), conclusion=Conclusion(rounds=3), rng=Random(7))
 ```
 
 ---
@@ -41,9 +42,10 @@ until the stock has run out and no seat holds a set — a seat with neither is p
 it may do — and the shortest hand at the table takes it, every one of them where several stand equally short.
 `rules.taken_by` reads the award off the hands as they lie, so one rule scores either close.
 
-**The match belongs to the standing once it has played the rounds it was built for.** The first round is led by
-a seat drawn at random, each later round by the seat after the previous leader, which is what `RoundGame`
-arrives with.
+**The match belongs to the standing once the clauses its table was opened with are met**, which is a count of
+rounds where this is played as it was written and any of `Conclusion`'s three where a table asks for something
+else (`docs/rounds.md` §1). The first round is led by a seat drawn at random, each later round by the seat after
+the previous leader, which is what `RoundGame` arrives with.
 
 ---
 
@@ -116,9 +118,10 @@ against the one `phase` field:
 | `MatchPhase.BETWEEN_ROUNDS` | between two rounds |
 | `MatchPhase.MATCH_OVER` | at rest, the match played out |
 
-`SheddingState` adds `winner`, which names the seat that went out and reads None through a round in play and
-through a round the stock ran out of, and `rounds`, the number of rounds the match was built for — kept on the
-state so a replayed position describes how long it was ever going to run.
+`SheddingState` adds `winner` alone, which names the seat that went out and reads None through a round in play
+and through a round the stock ran out of. How long the match runs stands on `RoundState` as the clauses its
+table was opened with, so a replayed position describes the ending it was always running to without this game
+keeping a field for it.
 
 **A turn answers for itself, and a turn nobody can take is answered by the settlement.** The cards a move moves
 and the seat the turn travels to land in the transaction the move commits; the round it closes lands there too,
@@ -200,4 +203,5 @@ it were written to make good on. What it does is put what stands there under a l
 
 Everything else it consults as it stands: `Redeal` for the gather and the deal, `rotation` and `next_seat` for
 the seats a round deals and travels in, `cards_of` for reading a zone as the rules read it, the `HAND` and `PILE`
-visibility presets, and `RoundGame` for the match around the round.
+visibility presets, and `RoundGame` for the match around the round — including `match_over`, which reads the
+`Conclusion` its table was opened with, so this game states not one line about how long it runs.

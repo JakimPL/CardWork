@@ -6,12 +6,12 @@ from pydantic import Field, model_validator
 
 from cardwork.models.base import BaseFrozen
 from cardwork.moves.kind import ActionKind
-from cardwork.presentation.award import Award
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
 from cardwork.presentation.plaque import Plaque
 from cardwork.presentation.readout import Readout
 from cardwork.presentation.slot import Slot
+from cardwork.states.award import Award
 from cardwork.zones.zone import ZoneId
 
 
