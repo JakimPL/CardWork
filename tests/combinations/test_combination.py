@@ -5,9 +5,15 @@ import pytest
 from pydantic import ValidationError
 
 from cardwork.cards.card import Card
-from cardwork.cards.cards import KING_OF_HEARTS, KING_OF_SPADES, RED_JOKER
+from cardwork.cards.cards import (
+    KING_OF_CLUBS,
+    KING_OF_DIAMONDS,
+    KING_OF_HEARTS,
+    KING_OF_SPADES,
+    RED_JOKER,
+)
 from cardwork.cards.game import CardOrJoker
-from cardwork.combinations.combination import BY_STRENGTH, Combination
+from cardwork.combinations.combination import BY_STRENGTH, ByReading, Combination
 from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.poker import PAIR, TRIPLET
 from cardwork.combinations.policy import REGULAR_EVALUATION
@@ -47,6 +53,25 @@ def test_combinations_of_one_strength_stand_alongside_each_other() -> None:
     assert BY_STRENGTH.equivalent(PAIR_OF_KINGS, PAIR_OF_KINGS.model_copy())
     assert BY_STRENGTH.compare(PAIR_OF_KINGS, lower) == 1
     assert BY_STRENGTH.maxima((lower, PAIR_OF_KINGS)) == (PAIR_OF_KINGS,)
+
+
+def test_combinations_reading_the_same_cards_stand_alongside_each_other() -> None:
+    by_reading = ByReading(REGULAR_EVALUATION)
+    stood_in = PAIR_OF_KINGS.model_copy(update={"cards": (KING_OF_SPADES, RED_JOKER)})
+    given_the_other_way = PAIR_OF_KINGS.model_copy(update={"reading": (KING_OF_HEARTS, KING_OF_SPADES)})
+
+    assert by_reading.equivalent(PAIR_OF_KINGS, stood_in)
+    assert by_reading.equivalent(PAIR_OF_KINGS, given_the_other_way)
+
+
+def test_the_suits_of_a_reading_settle_a_tie_of_rank() -> None:
+    by_reading = ByReading(REGULAR_EVALUATION)
+    lower_kings = PAIR_OF_KINGS.model_copy(
+        update={"cards": (KING_OF_DIAMONDS, KING_OF_CLUBS), "reading": (KING_OF_DIAMONDS, KING_OF_CLUBS)}
+    )
+
+    assert BY_STRENGTH.equivalent(PAIR_OF_KINGS, lower_kings)
+    assert by_reading.compare(PAIR_OF_KINGS, lower_kings) == 1
 
 
 @dataclass(frozen=True)

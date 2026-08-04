@@ -6,7 +6,12 @@ from cardwork.boards.board import Board
 from cardwork.decks.deck import Deck
 from cardwork.effects.effects import Effects, Reorder
 from cardwork.effects.fold import fold
-from cardwork.exceptions import ArrangementRefused, NotYourTurn, StalePosition, UndoUnavailable
+from cardwork.exceptions import (
+    ArrangementRefused,
+    NotYourTurn,
+    StalePosition,
+    UndoUnavailable,
+)
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.states.state import StateT
@@ -343,7 +348,12 @@ class Game(ABC, Generic[StateT]):
         effects = self.expand(position, move, rng)
         return effects + self.advance(fold(effects, position), move, rng)
 
-    def _confirm_arrangement(self, zone: ZoneId, order: tuple[int, ...], seat: int) -> None:
+    def _confirm_arrangement(
+        self,
+        zone: ZoneId,
+        order: tuple[int, ...],
+        seat: int,
+    ) -> None:
         """Confirm a seat holds a zone it may lay out, and that the order names each of its positions once.
 
         Naming the seat's own standing rather than the board's contents is what keeps a refusal from

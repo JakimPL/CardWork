@@ -60,9 +60,24 @@ def showdown_zones(players: int, deck: Deck) -> Zones:
         zone.id: zone
         for seat in range(players)
         for zone in (
-            Zone(id=hand_of(seat), owner=seat, visibility=presets.HAND, ordered=False),
-            Zone(id=blind_of(seat), owner=seat, visibility=presets.HIDDEN, ordered=True),
-            Zone(id=tray_of(seat), owner=seat, visibility=presets.HIDDEN, ordered=True),
+            Zone(
+                id=hand_of(seat),
+                owner=seat,
+                visibility=presets.HAND,
+                ordered=False,
+            ),
+            Zone(
+                id=blind_of(seat),
+                owner=seat,
+                visibility=presets.HIDDEN,
+                ordered=True,
+            ),
+            Zone(
+                id=tray_of(seat),
+                owner=seat,
+                visibility=presets.HIDDEN,
+                ordered=True,
+            ),
         )
     }
     return {

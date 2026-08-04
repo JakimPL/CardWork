@@ -267,6 +267,33 @@ POKER.order.argmaxima(best)  # every seat that shares the top
 winners out of a table are calls it already carries. A combination whose pattern the ranking leaves out
 raises `KeyError`, which keeps a ranking's answer to the patterns it names.
 
+### One winner every time
+
+`order` holds two pairs of kings alongside each other, since strength is stated in ranks. A game that needs
+a winner out of every contest asks `total_order`, which refines that order with `ByReading` — the cards a
+combination reads as, the strongest first, each placed by rank and then by suit as the evaluation places
+them:
+
+```python
+POKER.total_order  # pattern, then strength, then the cards themselves
+POKER_ORDER  # the same order over the regular reading of the deck
+
+mine = POKER.strongest((KING_OF_SPADES, KING_OF_HEARTS, TWO_OF_CLUBS))
+yours = POKER.strongest((KING_OF_DIAMONDS, KING_OF_CLUBS, THREE_OF_CLUBS))
+
+POKER.order.compare(mine, yours)  # 0 — two pairs of kings
+POKER_ORDER.compare(mine, yours)  # 1 — the spade settles it
+```
+
+This runs the fifty-two single cards by rank and then by suit, the seventy-eight pairs above them the same
+way, and so on up the patterns: every one of the 22175 combinations a standard deck forms under `POKER`
+takes a place of its own. Reading is what a place answers to, so a joker standing in for the king of hearts
+takes the place the king of hearts takes, and several decks in play let two combinations read the same cards
+and stand alongside each other.
+
+Being a refinement, it settles ties and leaves the ranking's own rule standing: a pair of fives still beats
+the ace of spades alone, and a full house of twos over aces still stands below one of threes over kings.
+
 ---
 
 ## 5. Points

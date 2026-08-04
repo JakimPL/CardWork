@@ -4,7 +4,7 @@ from typing import Annotated, Self
 from pydantic import Field, SerializeAsAny, model_validator
 
 from cardwork.cards.game import CardOrJoker
-from cardwork.combinations.combination import BY_STRENGTH, Combination
+from cardwork.combinations.combination import BY_STRENGTH, ByReading, Combination
 from cardwork.combinations.detect import find
 from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.policy import Evaluation
@@ -55,6 +55,23 @@ class Ranking(BaseFrozen):
             KeyError: when a combination answers a pattern this ranking leaves out.
         """
         return Composite(ByPattern(self.patterns), BY_STRENGTH)
+
+    @property
+    def total_order(self) -> Preorder[Combination]:
+        """Combinations by their pattern, by their strength within it, and then by the cards they read as.
+
+        This refines `order` with the reading, so two combinations share a place exactly where they read as
+        the same cards: single cards run by rank and then by suit, the pairs above them run the same way, and
+        so on up the patterns. A game that needs one winner out of every contest asks here, and one that
+        holds two pairs of kings equal asks `order`.
+
+        One standard deck settles every contest this way. Several decks in play let one card be held twice,
+        and two combinations reading the same cards stand alongside each other.
+
+        Raises:
+            KeyError: when a combination answers a pattern this ranking leaves out.
+        """
+        return Composite(ByPattern(self.patterns), BY_STRENGTH, ByReading(self.evaluation))
 
     def strongest(self, cards: Iterable[CardOrJoker]) -> Combination | None:
         """The best combination the cards form, or None where they form none the ranking recognises.

@@ -2,6 +2,7 @@ from typing import Final
 
 from cardwork.cards.orders import ACE_LOW_RANKS
 from cardwork.cards.rank import Ranks
+from cardwork.combinations.combination import Combination
 from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.patterns.any_cards import AnyCards
 from cardwork.combinations.patterns.beside import Beside
@@ -11,6 +12,7 @@ from cardwork.combinations.patterns.same_suit import SameSuit
 from cardwork.combinations.patterns.together import Together
 from cardwork.combinations.policy import REGULAR_EVALUATION
 from cardwork.combinations.ranking import Ranking
+from cardwork.ordering.preorder import Preorder
 
 POKER_HAND: Final[int] = 5
 WHEEL: Final[Ranks] = ACE_LOW_RANKS[:POKER_HAND]
@@ -39,3 +41,5 @@ POKER: Final[Ranking] = Ranking(
     ),
     evaluation=REGULAR_EVALUATION,
 )
+
+POKER_ORDER: Final[Preorder[Combination]] = POKER.total_order

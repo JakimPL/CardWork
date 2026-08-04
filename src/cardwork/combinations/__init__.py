@@ -1,4 +1,4 @@
-from cardwork.combinations.combination import BY_STRENGTH, ByStrength, Combination
+from cardwork.combinations.combination import BY_STRENGTH, ByReading, ByStrength, Combination
 from cardwork.combinations.demand import ANY_CARD, Demand
 from cardwork.combinations.matching import Matching
 from cardwork.combinations.pattern import Pattern
@@ -9,6 +9,7 @@ from cardwork.combinations.poker import (
     HIGH_CARD,
     PAIR,
     POKER,
+    POKER_ORDER,
     QUADRUPLET,
     STRAIGHT,
     STRAIGHT_FLUSH,
@@ -29,6 +30,7 @@ __all__ = [
     "HIGH_CARD",
     "PAIR",
     "POKER",
+    "POKER_ORDER",
     "QUADRUPLET",
     "REGULAR_EVALUATION",
     "REGULAR_SCORING",
@@ -38,6 +40,7 @@ __all__ = [
     "TWO_PAIR",
     "WHEEL",
     "ByPattern",
+    "ByReading",
     "ByStrength",
     "Combination",
     "Demand",

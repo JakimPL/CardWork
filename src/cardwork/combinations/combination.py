@@ -4,6 +4,7 @@ from pydantic import SerializeAsAny, model_validator
 
 from cardwork.cards.game import CardsOrJokers
 from cardwork.combinations.pattern import Pattern, Reading
+from cardwork.combinations.policy import Evaluation
 from cardwork.models.base import BaseFrozen
 from cardwork.ordering.preorder import Key, Preorder
 
@@ -56,6 +57,24 @@ class ByStrength(Preorder[Combination]):
 
     def key(self, value: Combination) -> Key:
         return value.strength
+
+
+class ByReading(Preorder[Combination]):
+    """Combinations by the cards they read as, the strongest card first, under one reading of the deck.
+
+    A pattern states its strength in ranks, so a pair of kings shares a place with every other pair of kings.
+    This order reads the cards themselves — each by rank and then by suit, as the evaluation places them — and
+    so gives two combinations one place exactly where they read as the same cards. Refining a strength order
+    with it is how a game that needs one winner out of every contest states that rule.
+
+    A joker reads as the card it stands in for, so it takes the place that card takes.
+    """
+
+    def __init__(self, evaluation: Evaluation) -> None:
+        self._cards = evaluation.card_order()
+
+    def key(self, value: Combination) -> Key:
+        return tuple(place for card in self._cards.descending(value.reading) for place in self._cards.key(card))
 
 
 BY_STRENGTH: Final[Preorder[Combination]] = ByStrength()

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from itertools import combinations
 from typing import Final
 
 import pytest
@@ -32,6 +33,8 @@ from cardwork.cards.cards import (
     TWO_OF_SPADES,
 )
 from cardwork.cards.game import CardOrJoker
+from cardwork.cards.rank import Rank
+from cardwork.cards.suit import Suit
 from cardwork.combinations.detect import find
 from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.patterns.same_suit import SameSuit
@@ -41,6 +44,7 @@ from cardwork.combinations.poker import (
     HIGH_CARD,
     PAIR,
     POKER,
+    POKER_ORDER,
     QUADRUPLET,
     STRAIGHT,
     STRAIGHT_FLUSH,
@@ -268,6 +272,62 @@ def test_a_ranking_names_every_seat_that_shares_the_top() -> None:
     hands = tuple(POKER.strongest(cards) for cards in (KINGS, FIVES, OTHER_KINGS))
 
     assert order.argmaxima(hands) == (0, 2)
+
+
+@dataclass(frozen=True)
+class SettledCase(Case):
+    left: tuple[CardOrJoker, ...]
+    right: tuple[CardOrJoker, ...]
+    comparison: int
+
+
+SETTLED: Final[tuple[SettledCase, ...]] = (
+    SettledCase(
+        description="the suits settle two pairs of kings",
+        left=KINGS,
+        right=OTHER_KINGS,
+        comparison=1,
+    ),
+    SettledCase(
+        description="the rank of a single card runs before its suit",
+        left=(ACE_OF_CLUBS,),
+        right=(KING_OF_SPADES,),
+        comparison=1,
+    ),
+    SettledCase(
+        description="a pair of fives stands above the ace of spades alone",
+        left=FIVES,
+        right=(ACE_OF_SPADES, KING_OF_SPADES),
+        comparison=1,
+    ),
+)
+
+
+@pytest.mark.parametrize("case", SETTLED, ids=descriptions(SETTLED))
+def test_a_total_order_settles_the_contests_a_ranking_holds_alongside(case: SettledCase) -> None:
+    left = POKER.strongest(case.left)
+    right = POKER.strongest(case.right)
+
+    assert left is not None
+    assert right is not None
+    assert POKER_ORDER.compare(left, right) == case.comparison
+    assert POKER_ORDER.compare(right, left) == -case.comparison
+
+
+def test_a_total_order_gives_every_single_card_and_every_pair_a_place_of_its_own() -> None:
+    deck = tuple(Card(rank=rank, suit=suit) for rank in Rank for suit in Suit)
+    singles = tuple(find((card,), HIGH_CARD, REGULAR_EVALUATION) for card in deck)
+    pairs = tuple(
+        find(alike, PAIR, REGULAR_EVALUATION) for alike in combinations(deck, 2) if alike[0].rank == alike[1].rank
+    )
+
+    assert all(found is not None for found in singles + pairs)
+    single_places = {POKER_ORDER.key(found) for found in singles if found is not None}
+    pair_places = {POKER_ORDER.key(found) for found in pairs if found is not None}
+
+    assert len(single_places) == len(deck)
+    assert len(pair_places) == len(pairs)
+    assert min(pair_places) > max(single_places)
 
 
 def test_a_ranking_answers_for_the_patterns_it_lists() -> None:
