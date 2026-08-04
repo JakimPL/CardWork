@@ -10,7 +10,13 @@ from cardgames.backend.passing.rules import (
     declares,
 )
 from cardgames.backend.passing.state import PassingPhase, PassingState
-from cardgames.backend.passing.zones import PILE, STACK, TOP_OF_THE_PILE, hand_of, passing_zones
+from cardgames.backend.passing.zones import (
+    PILE,
+    STACK,
+    TOP_OF_THE_PILE,
+    hand_of,
+    passing_zones,
+)
 from cardwork.decks.deck import Deck, Indices
 from cardwork.decks.standard import ONE_DECK, standard_multiplicity
 from cardwork.effects.effects import Effects, MoveCards, SetFace, SetState

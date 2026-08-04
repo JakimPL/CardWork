@@ -1350,6 +1350,19 @@ thereafter, so the position on screen and the sequence a move quotes stay in ste
 dropped. A commit carries the cursor and the moves it opened alongside the zones it changed, so applying one
 takes no further request.
 
+**A stream is held for the page in front of the player.** A browser allows about six connections to one
+address at a time, and an open stream spends one of them for as long as it stands. One tab per seat — which is
+how a single machine seats several players, and the only way a seating of seven is read at all — spends every
+connection on streams, and what a tab wants next waits its turn: the `POST` carrying a move sits in the
+browser's queue, and a tab that joined once the rest were streaming holds the position it joined on and reads
+a table that stands still. So `play/viewing.ts` holds the stream while the page is in view and lets it go
+while the page is out of view, and `useTable` opens the next one at the commits the tab already holds. The
+journal behind the stream is what makes that exact: a tab coming back into view is served every commit it
+missed out of the record itself, so looking away costs a player the watching of what happened and nothing else.
+A client says `Live` once its stream has opened rather than once it has joined, which leaves a tab that is
+waiting for a connection saying so. A deployment reached over HTTP/2 multiplexes one connection per origin and
+the limit lifts; the gate costs it a request per tab switch.
+
 **A tab is told which table it plays at, and as whom, in the fragment of its own address.** The host prints
 one address per seat as it opens a table, and a browser sends a fragment to nobody: the page reads the table
 and the token out of it as it loads, and offers the token in a header from then on. So a player joins by
@@ -1595,7 +1608,7 @@ stands in for a class of bug rather than a case:
 | `history[n] == journal.replay(n)` for every `n`, after a random legal sequence | the memo and the record drifting apart, which would make `base_seq` name a position that never existed |
 | A `Transaction` survives a JSON round-trip with every effect field intact | the discriminated unions degrading to their abstract bases |
 | Card conservation over `starting_deck` on every dealt table | a zone layout that loses or duplicates a card |
-| A stream resumed from `Last-Event-ID` delivers exactly what a client missed | the reconnect path, which is the one thing a client cannot work around |
+| A stream resumed from `Last-Event-ID` delivers exactly what a client missed | the resumption path, which a dropped stream and a tab coming back into view both travel |
 
 The adapter's suite drives the real routes in-process — through an HTTP transport for the
 request/response endpoints and through a direct-ASGI harness for the streams (§10, *Why FastAPI*) — and

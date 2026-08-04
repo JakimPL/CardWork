@@ -24,6 +24,13 @@ def passing_zones(players: int, deck: Deck) -> Zones:
     hands = {hand_of(seat): Zone(id=hand_of(seat), owner=seat, visibility=presets.HAND) for seat in range(players)}
     return {
         **hands,
-        PILE: Zone(id=PILE, visibility=presets.PILE, cards=to_game_cards(deck, face_down=True)),
+        PILE: Zone(
+            id=PILE,
+            visibility=presets.PILE,
+            cards=to_game_cards(
+                deck,
+                face_down=True,
+            ),
+        ),
         STACK: Zone(id=STACK, visibility=presets.PILE),
     }

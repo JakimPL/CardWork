@@ -185,7 +185,14 @@ class ShowdownGame(RoundGame[ShowdownState]):
         the last of them, and land in one transaction, so a client reads a turn whole.
         """
         if move is not None:
-            committed_by: Effects[ShowdownState] = (SetState(state=self._committed(position, move)),)
+            committed_by: Effects[ShowdownState] = (
+                SetState(
+                    state=self._committed(
+                        position,
+                        move,
+                    )
+                ),
+            )
             return committed_by
 
         return self._turn_settled(position)
@@ -306,7 +313,14 @@ class ShowdownGame(RoundGame[ShowdownState]):
         the last turn the round played.
         """
         state = position.state
-        playing = frozenset(seat for seat in range(position.players) if self._holding(position, seat))
+        playing = frozenset(
+            seat
+            for seat in range(position.players)
+            if self._holding(
+                position,
+                seat,
+            )
+        )
         return state.with_changes(
             round_points=awarded(state.round_points, winner, taken),
             to_act=playing,

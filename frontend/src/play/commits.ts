@@ -14,6 +14,11 @@ export function advanced(view: PositionView, event: EventView): PositionView {
   return event.seq < view.seq ? view : applyCommit(view, event);
 }
 
+/** How many commits a client holds once one off the stream is applied, which is the one it asks for next. */
+export function reachedBy(event: EventView): number {
+  return event.seq + APPLIED;
+}
+
 /**
  * The view a client holds once one commit has landed on it.
  *
@@ -24,7 +29,7 @@ export function advanced(view: PositionView, event: EventView): PositionView {
 export function applyCommit(view: PositionView, event: EventView): PositionView {
   return {
     observer: view.observer,
-    seq: event.seq + APPLIED,
+    seq: reachedBy(event),
     zones: rearranged(view.zones, event),
     state: event.state,
     legal: event.legal,

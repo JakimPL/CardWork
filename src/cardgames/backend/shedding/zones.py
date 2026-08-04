@@ -24,9 +24,20 @@ def shedding_zones(players: int, deck: Deck) -> Zones:
     The stock is dealt from one end of its run and drawn from the other, which a shuffled pile of backs is
     indifferent to: `rules.drawn_from` states which end a turn takes, and it is the end a player points at.
     """
-    hands = {hand_of(seat): Zone(id=hand_of(seat), owner=seat, visibility=presets.HAND) for seat in range(players)}
+    hands = {
+        hand_of(seat): Zone(
+            id=hand_of(seat),
+            owner=seat,
+            visibility=presets.HAND,
+        )
+        for seat in range(players)
+    }
     return {
         **hands,
-        STOCK: Zone(id=STOCK, visibility=presets.PILE, cards=to_game_cards(deck, face_down=True)),
+        STOCK: Zone(
+            id=STOCK,
+            visibility=presets.PILE,
+            cards=to_game_cards(deck, face_down=True),
+        ),
         DISCARD: Zone(id=DISCARD, visibility=presets.PILE),
     }

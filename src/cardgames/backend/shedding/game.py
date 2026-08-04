@@ -14,7 +14,13 @@ from cardgames.backend.shedding.rules import (
     taken_by,
 )
 from cardgames.backend.shedding.state import SheddingPhase, SheddingState
-from cardgames.backend.shedding.zones import DISCARD, HAND, STOCK, hand_of, shedding_zones
+from cardgames.backend.shedding.zones import (
+    DISCARD,
+    HAND,
+    STOCK,
+    hand_of,
+    shedding_zones,
+)
 from cardwork.cards.game import CardsOrJokers
 from cardwork.decks.deck import Deck
 from cardwork.decks.standard import is_standard_deck
@@ -210,7 +216,16 @@ class SheddingGame(RoundGame[SheddingState]):
             for places in sets_in(self._held_by(position, seat))
         )
         stock = len(position.board.zone(STOCK).cards)
-        draws = (Move(player=seat, action=Take(group=STOCK, indices=drawn_from(stock))),) if stock > NO_CARDS else ()
+        draws = (
+            (
+                Move(
+                    player=seat,
+                    action=Take(group=STOCK, indices=drawn_from(stock)),
+                ),
+            )
+            if stock > NO_CARDS
+            else ()
+        )
         return sheds + draws
 
     def _validate_shed(
@@ -277,7 +292,11 @@ class SheddingGame(RoundGame[SheddingState]):
         )
         return laid
 
-    def _drew(self, position: Position[SheddingState], seat: int) -> Effects[SheddingState]:
+    def _drew(
+        self,
+        position: Position[SheddingState],
+        seat: int,
+    ) -> Effects[SheddingState]:
         """The card at the end of the stock taken into the hand, face down as everything in a hand is."""
         drew: Effects[SheddingState] = (
             MoveCards(
@@ -289,13 +308,24 @@ class SheddingGame(RoundGame[SheddingState]):
         )
         return drew
 
-    def _held_by(self, position: Position[SheddingState], seat: int) -> CardsOrJokers:
+    def _held_by(
+        self,
+        position: Position[SheddingState],
+        seat: int,
+    ) -> CardsOrJokers:
         """The cards one seat holds, as the rules read them."""
         return cards_of(position.board.zone(hand_of(seat)))
 
-    def _may_act(self, position: Position[SheddingState], seat: int) -> bool:
+    def _may_act(
+        self,
+        position: Position[SheddingState],
+        seat: int,
+    ) -> bool:
         """Whether one seat has a turn to take from this position."""
-        return may_act(self._held_by(position, seat), len(position.board.zone(STOCK).cards))
+        return may_act(
+            self._held_by(position, seat),
+            len(position.board.zone(STOCK).cards),
+        )
 
     def _acted(
         self,

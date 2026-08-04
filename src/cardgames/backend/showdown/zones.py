@@ -63,6 +63,10 @@ def showdown_zones(players: int, deck: Deck) -> Zones:
     }
     return {
         **seated,
-        STOCK: Zone(id=STOCK, visibility=presets.PILE, cards=to_game_cards(deck, face_down=True)),
+        STOCK: Zone(
+            id=STOCK,
+            visibility=presets.PILE,
+            cards=to_game_cards(deck, face_down=True),
+        ),
         DISCARD: Zone(id=DISCARD, visibility=presets.PILE),
     }

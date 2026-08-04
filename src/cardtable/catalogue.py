@@ -14,14 +14,22 @@ from cardwork.decks.deck import Deck
 from cardwork.decks.standard import standard_deck, standard_decks
 
 ONE_DECK: Final[int] = 1
-PASSING_DECK: Final[Deck] = standard_decks(ONE_DECK, black_jokers=1, red_jokers=1)
+PASSING_DECK: Final[Deck] = standard_decks(
+    ONE_DECK,
+    black_jokers=1,
+    red_jokers=1,
+)
 SHOWDOWN_DECK: Final[Deck] = standard_deck()
 SHEDDING_DECK: Final[Deck] = standard_deck()
 
 
 def a_passing_match(settings: Settings) -> PassingGame:
     """A match of `passing` over one deck with a joker of either colour, which its rules read a win through."""
-    return PassingGame(players=settings.players, deck=PASSING_DECK, rng=Random(settings.seed))
+    return PassingGame(
+        players=settings.players,
+        deck=PASSING_DECK,
+        rng=Random(settings.seed),
+    )
 
 
 def a_showdown_match(settings: Settings) -> ShowdownGame:

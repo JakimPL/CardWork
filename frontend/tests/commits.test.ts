@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { advanced, applyCommit } from "../src/play/commits";
+import { advanced, applyCommit, reachedBy } from "../src/play/commits";
 import { aCommit, aView, card, HAND, PILE, SEATED, STACK } from "./tables";
 
 describe("a commit applied to the view a client holds", () => {
@@ -58,5 +58,9 @@ describe("a commit off the stream", () => {
     const after = advanced(read, aCommit(4, [{ zone: HAND, before: [], after: [card("9", "♦")] }]));
 
     expect(after).toBe(read);
+  });
+
+  it("says which commit a client asks for next, which is what a stream opened afresh picks up at", () => {
+    expect(reachedBy(aCommit(4, []))).toBe(5);
   });
 });

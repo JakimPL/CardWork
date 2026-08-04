@@ -46,7 +46,11 @@ def reads_alike(cards: Sequence[CardOrJoker]) -> bool:
     This is the whole rule a shed is held to, and `SameRank` at as many places as there are cards states it:
     a pair, a triplet and four of a rank all answer to it, and cards of two ranks answer to none of them.
     """
-    return len(cards) >= SHED_LEAST and matches(cards, SameRank(places=len(cards)), SHEDDING_EVALUATION)
+    return len(cards) >= SHED_LEAST and matches(
+        cards,
+        SameRank(places=len(cards)),
+        SHEDDING_EVALUATION,
+    )
 
 
 def alike_places(hand: Sequence[CardOrJoker]) -> Mapping[Rank, tuple[int, ...]]:

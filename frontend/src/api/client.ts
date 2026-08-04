@@ -86,6 +86,10 @@ export async function sendMove(seat: Seat, command: MoveRequest): Promise<MoveAc
  * `Last-Event-ID` a dropped stream resumes from — this carries, so a client that falls off catches up from
  * the commit it acknowledged.
  *
+ * One stream stands for as long as it is held, whichever way the page it was opened in is turned. Whether a
+ * table is worth a connection just now is the caller's to weigh, which `play/viewing.ts` weighs by what the
+ * player is looking at.
+ *
  * @param seat - the table followed and the token it is followed as.
  * @param since - the first commit wanted, which is the count of commits the client already holds.
  * @param following - what to do as the stream opens, carries a commit, drops, or is refused outright.
