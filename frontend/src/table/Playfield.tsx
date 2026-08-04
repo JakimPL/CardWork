@@ -10,8 +10,9 @@ import { classes } from "./classes";
 import { answering } from "./clicks";
 import { Header } from "./Header";
 import { clears } from "./keys";
-import { own, shared, stations } from "./placing";
-import { Station } from "./Station";
+import { own, ringOf, shared, SIDES } from "./placing";
+import { Sitting } from "./Sitting";
+import { crowding } from "./sizing";
 import { StatusLine } from "./StatusLine";
 import { Zones } from "./Zones";
 
@@ -30,9 +31,10 @@ interface PlayfieldProps {
  *
  * The three bands are the whole page and they fit the window between them, so a player reads the table without
  * scrolling for any part of it. The middle band is the table itself: the zones every seat shares lie at the
- * centre of it and the other players sit round them, each with the cards the table reads of them, which is what
- * a game of cards looks like. Every zone drawn, every figure read and every word of the phase comes from the
- * layout the game stated, which is what leaves this page holding no knowledge of any game.
+ * centre of it and the other players sit round three sides of them — up the left, across the top and down the
+ * right — each with the cards the table reads of them, which is what a game of cards looks like. Every zone
+ * drawn, every figure read and every word of the phase comes from the layout the game stated, which is what
+ * leaves this page holding no knowledge of any game.
  *
  * Three presses put the cards in hand back down, which between them cover every way a table is played: a click
  * on the page away from the cards, a press of the other button wherever it lands, and `Escape`. The first is the
@@ -49,6 +51,7 @@ export function Playfield({
 }: PlayfieldProps): ReactElement {
   const playing = usePlay(seat, layout, view, refresh);
   const { clear } = playing;
+  const ring = ringOf(layout);
 
   useEffect(() => {
     const pressed = (event: KeyboardEvent): void => {
@@ -71,11 +74,12 @@ export function Playfield({
       role="presentation"
     >
       <Header layout={layout} view={view} playing={playing} />
-      <main className="felt">
-        {stations(layout).map((station) => (
-          <Station
-            key={station.seat}
-            station={station}
+      <main className="felt" style={crowding(ring)}>
+        {SIDES.map((side) => (
+          <Sitting
+            key={side}
+            side={side}
+            seats={ring[side]}
             layout={layout}
             view={view}
             arrivals={arrivals}

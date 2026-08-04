@@ -4,12 +4,24 @@ import { turnOf } from "../play/seats";
 /** Where a group of zones sits on the page, which follows from the seat the zones belong to. */
 export type Placement = "shared" | "own" | "station";
 
+/** Which side of the table a seat sits at, read from the near edge the seat reading the page holds. */
+export type Side = "left" | "across" | "right";
+
+/** The three sides of a table, in the order play runs round them. */
+export const SIDES: readonly Side[] = ["left", "across", "right"];
+
+/** The seats drawn round the table, gathered by the side of it they sit at. */
+export type Ring = Record<Side, Station[]>;
+
 /** One seat drawn round the table: whose it is, how far round it sits, and the zones the table reads of it. */
 export interface Station {
   seat: number;
   turn: number;
   slots: Slot[];
 }
+
+/** The two seats a pair of them makes, which is what a table divides its other seats into sides by. */
+const PAIRED = 2;
 
 /** The zones one owner holds, in the order the layout places them. */
 function ownedBy(layout: Layout, owner: number | null): Slot[] {
@@ -38,6 +50,42 @@ export function stations(layout: Layout): Station[] {
     .map((plaque) => ({ seat: plaque.seat, turn: turnOf(layout, plaque.seat), slots: ownedBy(layout, plaque.seat) }))
     .filter((station) => station.slots.length > 0)
     .sort((one, other) => one.turn - other.turn);
+}
+
+/**
+ * The seats round the table gathered by the side of it they sit at, in the order play runs.
+ *
+ * A table is read from the near edge, which the seat reading the page holds: the seats it plays into first sit up
+ * the left of it, the ones facing it across the top, and the rest down the right, which is a card table as it is
+ * drawn. So a table of four reads left, across and right, and a table of seven two seats up each side and two
+ * across, and the middle of it belongs to the zones every seat shares.
+ *
+ * Each side is a run of its own on the page, so the room a seat takes is the room its neighbours give way by: no
+ * seat is drawn over another and no name is covered, whatever the cards at either of them come to.
+ */
+export function ringOf(layout: Layout): Ring {
+  const seated = stations(layout);
+  const across = facingAcross(seated.length);
+  const aside = (seated.length - across) / PAIRED;
+  return {
+    left: seated.slice(0, aside),
+    across: seated.slice(aside, aside + across),
+    right: seated.slice(aside + across),
+  };
+}
+
+/**
+ * How many seats face the near edge, which is what the seats beside them pair off into sides around.
+ *
+ * A table whose other seats pair off seats two of them across, and one otherwise, so every pair left over takes
+ * one seat up each side and a table of any size reads as a ring.
+ */
+function facingAcross(seated: number): number {
+  if (seated === 0) {
+    return 0;
+  }
+
+  return seated % PAIRED === 0 ? PAIRED : 1;
 }
 
 /** Whether the table draws a seat's own cards, which is what leaves a move onto it landing on those cards. */

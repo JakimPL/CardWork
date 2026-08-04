@@ -33,6 +33,17 @@ export function aHolding(seat: number): Slot {
 /** The seats around this one, each with the cards the table reads of them. */
 export const AROUND: Slot[] = SEATS.filter((seat) => seat !== SEAT).map(aHolding);
 
+/** A table of any size, every seat of it holding a hand the rest of the table reads the backs of. */
+export function aTableOf(players: number, observer: number): Layout {
+  const seats = [...Array(players).keys()];
+  return aLayout({
+    observer,
+    players,
+    slots: seats.map(aHolding),
+    plaques: seats.map((seat) => ({ seat, name: `Seat ${seat}`, counts: [] })),
+  });
+}
+
 /** A plaque for every seat, each counting the hand that seat holds. */
 export const PLAQUES: Plaque[] = SEATS.map((seat) => ({
   seat,

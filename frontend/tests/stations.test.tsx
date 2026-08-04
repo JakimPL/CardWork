@@ -7,7 +7,8 @@ import { NOTHING_LANDED } from "../src/play/arrivals";
 import type { Selection } from "../src/play/selection";
 import { offersOf, prospect } from "../src/play/selection";
 import { Header } from "../src/table/Header";
-import { drawnAt, own, shared, stations } from "../src/table/placing";
+import { drawnAt, own, ringOf, shared, SIDES, stations } from "../src/table/placing";
+import { Sitting } from "../src/table/Sitting";
 import { Station } from "../src/table/Station";
 import {
   aGive,
@@ -15,6 +16,7 @@ import {
   aLayout,
   aPlaying,
   AROUND,
+  aTableOf,
   aTake,
   aView,
   card,
@@ -170,6 +172,42 @@ describe("a card passed to another player", () => {
 
     expect([...plaques.matchAll(/class="landing"/g)]).toHaveLength(1);
     expect(plaques).toContain(`aria-label="${GIVING.caption}: Seat 2"`);
+  });
+});
+
+/** What one side of the table holds, read out of the page between that side and the next. */
+function sideOf(page: string, side: string): string {
+  const from = page.indexOf(`class="sitting ${side}"`);
+  const rest = page.slice(from + 1);
+  const next = rest.indexOf('class="sitting ');
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
+describe("the sides of a table", () => {
+  it("stands each seat in the run of the side it sits at, in the order play runs round them", () => {
+    const table = aTableOf(7, 0);
+    const ring = ringOf(table);
+    const page = renderToStaticMarkup(
+      <>
+        {SIDES.map((side) => (
+          <Sitting
+            key={side}
+            side={side}
+            seats={ring[side]}
+            layout={table}
+            view={POSITION}
+            arrivals={NOTHING_LANDED}
+            playing={aPlaying(prospect([], null))}
+          />
+        ))}
+      </>,
+    );
+
+    expect(stationed(page)).toBe(6);
+    expect(sideOf(page, "left")).toContain("Seat 2");
+    expect(sideOf(page, "left")).not.toContain("Seat 3");
+    expect(sideOf(page, "across")).toContain("Seat 4");
+    expect(sideOf(page, "right")).toContain("Seat 6");
   });
 });
 

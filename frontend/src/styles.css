@@ -8,6 +8,15 @@
  * `--card-height` is the one figure the cards are drawn from, and everything a card is measured by is derived
  * from it on the slot rather than at the root, so a group of zones the page draws smaller states that height
  * once and the cards inside it follow.
+ *
+ * A group states its own height as the lesser of what it is drawn upright at and what its room allows: the
+ * script hands over how many cards wide the group lies, and the height follows from the proportions of a card.
+ * So a hand of three is drawn as large as the window has height for, and a holding beside a row of five as large
+ * as the width leaves them both.
+ *
+ * Every card is drawn at the one height `--dealt`, the cards in hand and the cards on the table alike, and the
+ * seats standing one above another at a side of the table are what it gives way to, so a table of many seats
+ * draws all of its cards smaller together.
  */
 
 :root {
@@ -24,13 +33,16 @@
   --acting: #f0c040;
   --live: #6fcf97;
   --hint: #8fd0ff;
-  --faded: 0.42;
+  --drained: 0.3;
+  --quieted: 0.6;
   --gap: clamp(4px, 0.8vh, 12px);
-  --dealt: clamp(48px, min(22vh, 11vw), 200px);
-  --across-the-table: 0.55;
+  --least: 48px;
+  --dealt: clamp(var(--least), 22vh, 200px);
+  --felt-share: 56vh;
   --card-height: var(--dealt);
   --radius: calc(var(--dealt) * 0.07);
-  --held: 5;
+  --overlap: 0.42;
+  --widths: 1;
   --caption: clamp(10px, 1.5vh, 14px);
 }
 
@@ -139,15 +151,53 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* The table: the zones every seat shares at the centre of it, and the other players sitting round them. */
+/*
+ * The table: the zones every seat shares at the centre of it, and the other players sitting round three sides.
+ *
+ * Each side is a run of its own and the middle a column between them, so the room a seat takes is room its
+ * neighbours give way by rather than room they are drawn over. A table of any size lies inside the felt, and
+ * every name on it stays legible.
+ *
+ * The felt states the one height every card on it is drawn at, the heaps in the middle and the holdings round the
+ * sides alike, and gives way from the height of a card in hand by however many seats stand one above another at a
+ * side of it. So a card another player holds is the size of the card on the pile, whatever the size of the table.
+ */
 
 .felt {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  --on-the-table: max(var(--least), min(var(--dealt), calc(var(--felt-share) / var(--stacked) - var(--caption) * 5)));
+
+  display: grid;
+  grid-template:
+    "left across right" auto
+    "left middle right" minmax(0, 1fr)
+    / auto minmax(0, 1fr) auto;
+  place-items: center;
+  gap: var(--gap);
   min-height: 0;
   padding: var(--gap);
+}
+
+.sitting {
+  display: flex;
+  gap: var(--gap);
+  justify-content: center;
+}
+
+.sitting.left {
+  grid-area: left;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+}
+
+.sitting.across {
+  grid-area: across;
+  align-items: flex-end;
+}
+
+.sitting.right {
+  grid-area: right;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .controls {
@@ -159,27 +209,48 @@ body {
   border-top: 1px solid var(--edge);
 }
 
+/*
+ * One group of zones, drawn at the height its own room affords: the height it stands upright at, or the height
+ * the cards it lies as many wide as have width for, whichever is the lesser of the two.
+ */
+
 .zones {
+  --card-height: min(var(--upright), calc(var(--room) / var(--widths) * 96 / 71));
+
   display: flex;
   align-items: flex-end;
   gap: calc(var(--gap) * 2);
 }
 
+.zones.own {
+  --upright: var(--dealt);
+  --room: calc(100vw - var(--gap) * 12);
+}
+
 .zones.shared {
+  --upright: var(--on-the-table);
+  --room: calc(44vw - var(--gap) * 8);
+
+  grid-area: middle;
   justify-content: center;
 }
 
+.zones.station {
+  --upright: var(--on-the-table);
+  --room: calc(28vw - var(--gap) * 4);
+
+  gap: var(--gap);
+}
+
 /*
- * One other player where they sit, which the script places by the part of the felt their seat holds.
+ * One other player, whose name stands over the cards the table reads of them.
  *
- * The cards of a seat read across the table are drawn smaller than the ones in hand, so a full table of them
- * lies inside the felt at any window the page is read at.
+ * The seats up one side of the table share the height it has for them, so a table of many seats draws the cards
+ * of each at the size that stands all of them clear of each other, which is the size the whole table is drawn at.
  */
 
 .station {
-  --card-height: calc(var(--dealt) * var(--across-the-table));
-
-  position: absolute;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -187,9 +258,6 @@ body {
   padding: calc(var(--gap) / 2) var(--gap);
   border: 1px solid transparent;
   border-radius: var(--radius);
-  left: calc(var(--across) * 1%);
-  top: calc(var(--up) * 1%);
-  transform: translate(-50%, -50%);
 }
 
 .station.acting {
@@ -202,16 +270,12 @@ body {
   box-shadow: 0 0 0 2px rgb(111 207 151 / 45%);
 }
 
-.station .zones {
-  gap: var(--gap);
-}
-
 .slot {
   --card-width: calc(var(--card-height) * 71 / 96);
   --radius: calc(var(--card-height) * 0.07);
   --depth: calc(var(--card-height) * 0.03);
-  --face: clamp(14px, calc(var(--card-height) * 0.4), 74px);
-  --index: clamp(9px, calc(var(--card-height) * 0.17), 30px);
+  --face: clamp(14px, calc(var(--card-height) * 0.4), 128px);
+  --index: clamp(9px, calc(var(--card-height) * 0.17), 54px);
 
   display: flex;
   flex-direction: column;
@@ -357,16 +421,18 @@ button.card {
 }
 
 /*
- * A card a press stops at, which fades back rather than marking itself.
+ * A card a press stops at, which goes quiet rather than marking itself.
  *
  * Nothing on the table is ever lit for being playable, since a card marked out reads as a card already chosen.
  * What a player reads instead is the cards that have gone quiet: at rest the ones no move names, and once cards
  * are in hand the ones no move holding those could name beside them.
+ *
+ * A quiet card is drained of its colour and its light, and stays as solid as any other. A card is paper, so a
+ * card lying over another covers it: the cards of a fan read as a fan whichever of them have gone quiet.
  */
 
 .card.dimmed {
-  opacity: var(--faded);
-  filter: saturate(0.35);
+  filter: saturate(var(--drained)) brightness(var(--quieted));
 }
 
 .card.selected {
@@ -376,7 +442,11 @@ button.card {
   transform: translateY(calc(var(--card-height) * -0.12));
 }
 
-/* A card coming to rest where it was played, which it reaches from the holding it was played out of. */
+/*
+ * A card coming to rest where it was played, which it reaches from the holding it was played out of.
+ *
+ * It travels rather than fading in, so a card landing among others covers what it lands over the whole way.
+ */
 
 .card.arriving {
   animation: landing 200ms ease-out;
@@ -384,31 +454,21 @@ button.card {
 
 @keyframes landing {
   from {
-    opacity: 0.35;
-    transform: translateY(calc(var(--card-height) * 0.5));
+    transform: translateY(calc(var(--card-height) * 0.5)) scale(0.94);
   }
 
   to {
-    opacity: 1;
     transform: none;
   }
 }
 
 /*
- * How far a fan overlaps itself, which follows the number of cards in it: a handful lies open enough to read
- * every face, and a holding of a dozen and more closes up to the width the window has for it.
+ * How far a fan overlaps itself, which the script works out from the number of cards in it: a handful lies open
+ * enough to read every face, and a holding of a dozen and more closes up to the room its zone has.
  */
 
-.slot.fan .cards {
-  --overlap: clamp(
-    var(--card-width) * 0.42,
-    var(--card-width) * (0.42 + (var(--held) - 7) * 0.04),
-    var(--card-width) * 0.72
-  );
-}
-
 .slot.fan .card + .card {
-  margin-left: calc(var(--overlap) * -1);
+  margin-left: calc(var(--card-width) * var(--overlap) * -1);
 }
 
 .slot.fan button.card:hover {

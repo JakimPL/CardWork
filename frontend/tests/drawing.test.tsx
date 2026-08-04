@@ -82,6 +82,11 @@ describe("the table one seat reads", () => {
     expect(page).toContain(">♣</span>");
   });
 
+  it("says how many cards wide each group of zones lies, which is the room its cards are drawn to", () => {
+    expect(held()).toContain("--widths:2.16");
+    expect(middle()).toContain("--widths:2");
+  });
+
   it("holds in the panel it plays from the zones of its own seat and no other", () => {
     const table = aLayout({ slots: [HELD, ...AROUND, DEALT_FROM, LAID_ON], plaques: PLAQUES });
     const cards = drawn(

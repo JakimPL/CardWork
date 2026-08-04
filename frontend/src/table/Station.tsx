@@ -9,7 +9,6 @@ import type { Playing } from "../play/usePlay";
 import { classes } from "./classes";
 import { clicking } from "./clicks";
 import type { Station as Seated } from "./placing";
-import { stationing } from "./sizing";
 import { Zones } from "./Zones";
 
 interface StationProps {
@@ -25,7 +24,7 @@ interface StationProps {
  *
  * A card table is read by what lies in front of each player, so a seat's cards are drawn at the place round the
  * table it holds, counting from the seat reading the page. What a holding says from across the table is how many
- * cards it has, which it carries beside the backs standing for them.
+ * cards it has, which it carries beside the backs standing for them, and the name of the seat stands over both.
  *
  * A seat the cards in hand can be sent to lies under a place to send them, so a card is passed by pointing at
  * the player it goes to.
@@ -35,10 +34,7 @@ export function Station({ station, layout, view, arrivals, playing }: StationPro
   const landing = offerTo(playing.standing, { commit: "seat", seat: station.seat });
   const name = nameOf(layout, station.seat);
   return (
-    <div
-      className={classes("station", acting && "acting", landing !== null && "live")}
-      style={stationing(station.turn, layout.players)}
-    >
+    <div className={classes("station", acting && "acting", landing !== null && "live")}>
       {landing !== null && (
         <button
           type="button"

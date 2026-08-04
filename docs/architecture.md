@@ -1359,10 +1359,13 @@ down holds a credential.
 **A move is built by pointing, and a selection alone sends nothing.** `play/selection.ts` reads each move the
 table says is open through the gesture matching it (§9), which yields the zone the move's positions address
 and the place it commits onto. From there, one selection resolves into what the player sees: with nothing
-picked up, every position any move names is *open* — the standing hint that these are the cards in play — and
-picking one narrows the open set to the positions a move holding it could still name, which is the further
-highlighting a two- and three-card discard needs. A move whose positions are exactly those in hand is *armed*,
-and the places the armed moves land on are the ones that light up. Clicking such a place is the whole of
+picked up, every position any move names is *open*, and picking one narrows the open set to the positions a move
+holding it could still name, which is the further narrowing a two- and three-card discard needs. What a player
+reads of that is the cards left out of it — a card no move could name is drawn quiet, drained of its colour and
+its light, so the cards in play are the ones lying plainly there and nothing is ever lit for being playable. A
+quiet card is as solid as any other, since a card is paper and a card lying over another covers it, so a fan
+reads as a fan whichever of its cards have gone quiet. A move whose positions are exactly those in hand is
+*armed*, and the places the armed moves land on are the ones that light up. Clicking such a place is the whole of
 committing, so no click on a card can send anything by accident; clicking a card in hand puts it back down,
 clicking a card no move names puts the selection down, and clicking the page clears it. The renderer holds no
 count and no rank in any of it: multi-card selection is the general case and a one-card move is where it
@@ -1387,19 +1390,30 @@ had.
 
 **The page fits the window.** One screen high, `overflow: hidden`, three rows of `auto 1fr auto`: the
 standing of every seat across the top, the table in the middle, the seat's own holdings and the line
-saying where play stands at the bottom. Every card is measured from a single height that follows the shorter
-side of the viewport, at the proportions of a real one, so the same table reads at any size without a scrollbar
-anywhere. A card is read by its corner, which is the part of it the card lying over it leaves showing, and a fan
-closes up as it fills: a handful lies open enough to read every face and a holding of a dozen and more tightens
-to the width there is for it, so a hand of four and a hand of seventeen are the same drawing at two overlaps.
+saying where play stands at the bottom. Every card is measured from one height at the proportions of a real one,
+and each group of zones takes the lesser of two heights: the one the window's own height affords it, and the one
+the width leaves the cards it lies as many wide as. The script counts that width in cards — a heap as one, a row
+as all of them, a fan as its overlap — and the sheet turns it into a height, so the panel a player plays from
+draws a hand of three as large as the page has room for and a holding beside a row of five as large as the two of
+them fit, at any size of window and without a scrollbar anywhere. Every card on the table is drawn at one height,
+a holding read from across it at the height of the card on the pile, since both of them are cards lying on the
+same table; and how many seats stand one above another at a side of it is the figure that height gives way to, so
+a table of eight draws its cards smaller than a table of four does and all of them alike. A card is read by its
+corner, which is the part
+of it the card lying over it leaves showing, and a fan closes up as it fills: a handful lies open enough to read
+every face and a holding of a dozen and more tightens to the room its zone has, so a hand of four and a hand of
+seventeen are the same drawing at two overlaps.
 
 **Every player sits somewhere, and the page works out where.** `table/placing.ts` reads a layout's slots by the
-seat each one belongs to and yields the three groups the page draws: the shared zones in the middle, the
-observer's own in the panel below, and a station for every other seat whose cards the table draws. A station is
-placed round an ellipse by `sizing.ts`, at `turn = (seat - observer + players) % players` from the near edge the
-observer holds — so a table of four reads left, across and right, which is how a card table is drawn, and a
-spectator counts from the first seat instead. The cards of a station are drawn smaller than the ones in hand, so
-a full table of holdings lies inside the felt at any window. A seat the layout draws no cards for takes no
+seat each one belongs to and yields the groups the page draws: the shared zones in the middle, the observer's own
+in the panel below, and a station for every other seat whose cards the table draws. The stations are gathered
+into the three sides of a table by `ringOf`, ordered by `turn = (seat - observer + players) % players` from the
+near edge the observer holds: the seats it plays into first up the left, the ones facing it across the top, and
+the rest down the right, two facing where the seats beside them pair off and one where they do not. So a table of
+four reads left, across and right, a table of seven two seats up each side and two across, and a spectator reads
+the ring from the first seat instead. Each side is a run of its own between the middle of the felt and the edge of
+it, so the room one seat takes is room its neighbours give way by: no seat is drawn over another and no name is
+covered, whatever the cards at either of them come to. A seat the layout draws no cards for takes no
 station: its holding is a figure on its plaque, which is how a game keeps a zone off the table altogether.
 
 **A move onto a player lands on that player's cards.** A `Commit.SEAT` gesture arms the station of the seat the
