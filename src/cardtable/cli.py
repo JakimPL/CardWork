@@ -104,14 +104,15 @@ def address(service: Service) -> str:
     return f"http://{service.host}:{service.port}"
 
 
-def announcement(hosted: Hosted, service: Service) -> str:
+def announcement(hosted: Hosted, settings: Settings, service: Service) -> str:
     """The lines a person reads once a table is open: which address takes which seat, and which watches it.
 
     A seat is held by whoever opens its own address, so one of these lines is the whole of what a player is
-    handed, and the line holding no token watches the table.
+    handed, and the line holding no token watches the table. The seed stands among them because a table left
+    to itself draws one: a run reading it back deals this match again.
     """
     reached = address(service)
-    lines = [f"Table {hosted.table!r} is open at {reached}"]
+    lines = [f"Table {hosted.table!r} is open at {reached}", f"  dealt from seed {settings.seed}"]
     lines.extend(
         f"  seat {seat}: {joining(reached, hosted.table, token)}" for seat, token in sorted(hosted.tokens.items())
     )
@@ -133,7 +134,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     """
     configuration = configured(parser().parse_args(argv))
     hosted = opened(configuration.game, configuration.table)
-    print(announcement(hosted, configuration.service), flush=True)
+    print(announcement(hosted, configuration.table, configuration.service), flush=True)
     uvicorn.run(
         hosted.app,
         host=configuration.service.host,

@@ -15,8 +15,8 @@ class Configuration(BaseFrozen):
     A file states this and a run reads it, which leaves every value a person turns in one place they can
     read, and leaves a command line stating only where a particular run departs from it. Each field is asked
     for outright, so a value the file leaves out is refused as the file is read rather than met as a surprise
-    at the table; the seed and the port stand at settled numbers, since a local run deals the same match and
-    answers at the same address until it is told to do otherwise.
+    at the table; the port stands at a settled number, since a local run answers at the same address until it
+    is told to do otherwise, and a run stating no seed draws one, so each table deals a match of its own.
 
     `read` builds one from the file a run is pointed at, which is the only way a configuration arrives.
     """

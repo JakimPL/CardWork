@@ -1,10 +1,9 @@
 game: passing
 
 table:
-  name: green-baize
+  name: cardtable
   players: 3
   rounds: 3
-  seed: 20260803
   grace_seconds: 2.0
 
 service:

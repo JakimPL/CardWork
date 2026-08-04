@@ -44,5 +44,13 @@ types:
 	uv run python scripts/openapi.py
 	npm --prefix frontend run types
 
+TABLE_ARGUMENTS = \
+	$(if $(GAME),--game $(GAME)) \
+	$(if $(PLAYERS),--players $(PLAYERS)) \
+	$(if $(ROUNDS),--rounds $(ROUNDS)) \
+	$(if $(SEED),--seed $(SEED)) \
+	$(if $(GRACE),--grace-seconds $(GRACE)) \
+	$(if $(PORT),--port $(PORT))
+
 play:
-	uv run cardtable $(if $(GAME),--game $(GAME)) $(if $(PLAYERS),--players $(PLAYERS))
+	uv run cardtable $(TABLE_ARGUMENTS) $(ARGS)

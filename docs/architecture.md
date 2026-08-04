@@ -1293,10 +1293,11 @@ open games whose cursors are of different shapes through the one entry point.
 repository holds the game played, the table it is played at and where that table answers, and
 `Configuration.read` validates the whole of it as it is read: every field is asked for outright, so a value
 left out is refused at the file rather than met as a surprise at the table, and a key the configuration holds
-no field for is refused with it. The seed and the port stand at settled numbers, since a local run deals the
-same match and answers at the same address until it is told otherwise. Each option of the command line stands
-empty until it is given, and an option left alone is answered by the file — so a value a person turns lives
-in one place, and `make play` passes on only what it was handed.
+no field for is refused with it. The port stands at a settled number, since a local run answers at the same
+address until it is told otherwise, and a run stating no seed draws one, so each table deals a match of its
+own and the announcement names the seed it drew for a run that wants that match again. Each option of the
+command line stands empty until it is given, and an option left alone is answered by the file — so a value a
+person turns lives in one place, and `make play` passes on only what it was handed.
 
 **Every path a run reads is stated in `paths`, at the foot of the host.** One module climbs from its own
 file to the checkout, and the artwork, the interface and its build are named from there — so a directory

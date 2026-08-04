@@ -21,7 +21,9 @@ TABLE: Final[str] = "green-baize"
 TOKENS: Final[dict[int, str]] = {0: "token-nought", 1: "token-one"}
 BUILT: Final[Path] = Path("frontend") / "dist"
 SERVICE: Final[Service] = Service(host="127.0.0.1", port=8000, log_level=LogLevel.INFO)
+SETTINGS: Final[Settings] = CONFIGURED.table
 SEATING: Final[int] = 4
+TITLE_AND_SEED: Final[int] = 2
 
 DEPARTING: Final[tuple[str, ...]] = (
     "--game",
@@ -108,13 +110,13 @@ def test_a_run_told_to_read_a_file_that_stands_nowhere_says_so(tmp_path: Path) -
 
 
 def test_the_announcement_names_the_address_a_browser_reaches_the_table_at() -> None:
-    announced = announcement(a_hosted_table(BUILT), SERVICE)
+    announced = announcement(a_hosted_table(BUILT), SETTINGS, SERVICE)
 
     assert address(SERVICE) in announced.splitlines()[0]
 
 
 def test_the_announcement_names_the_table_and_a_token_for_every_seat() -> None:
-    announced = announcement(a_hosted_table(BUILT), SERVICE)
+    announced = announcement(a_hosted_table(BUILT), SETTINGS, SERVICE)
 
     assert TABLE in announced
     assert all(token in announced for token in TOKENS.values())
@@ -122,23 +124,32 @@ def test_the_announcement_names_the_table_and_a_token_for_every_seat() -> None:
 
 def test_the_announcement_hands_each_seat_the_address_that_takes_it() -> None:
     """One line per seat, which is the whole of what a player is handed: the address opens the table as them."""
-    announced = announcement(a_hosted_table(BUILT), SERVICE).splitlines()
+    announced = announcement(a_hosted_table(BUILT), SETTINGS, SERVICE).splitlines()
 
-    assert all(joining(address(SERVICE), TABLE, token) in announced[seat + 1] for seat, token in TOKENS.items())
+    assert all(
+        joining(address(SERVICE), TABLE, token) in announced[seat + TITLE_AND_SEED] for seat, token in TOKENS.items()
+    )
+
+
+def test_the_announcement_names_the_seed_the_match_was_dealt_from() -> None:
+    """A table left to draw its own seed says which one it drew, so the match it dealt can be dealt again."""
+    announced = announcement(a_hosted_table(BUILT), SETTINGS, SERVICE)
+
+    assert str(SETTINGS.seed) in announced
 
 
 def test_the_announcement_hands_a_tab_the_address_that_watches_the_table() -> None:
-    announced = announcement(a_hosted_table(BUILT), SERVICE)
+    announced = announcement(a_hosted_table(BUILT), SETTINGS, SERVICE)
 
     assert joining(address(SERVICE), TABLE, None) in announced
 
 
 def test_the_announcement_says_where_a_page_would_be_read_from_when_none_is_built() -> None:
-    assert str(INTERFACE) in announcement(a_hosted_table(None), SERVICE)
+    assert str(INTERFACE) in announcement(a_hosted_table(None), SETTINGS, SERVICE)
 
 
 def test_the_announcement_of_a_table_serving_a_page_says_nothing_of_a_build() -> None:
-    assert str(INTERFACE) not in announcement(a_hosted_table(BUILT), SERVICE)
+    assert str(INTERFACE) not in announcement(a_hosted_table(BUILT), SETTINGS, SERVICE)
 
 
 def test_a_run_opens_the_table_it_is_configured_for_and_answers_for_it_where_it_was_told_to(
