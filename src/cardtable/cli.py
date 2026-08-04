@@ -5,17 +5,19 @@ from typing import Final
 
 import uvicorn
 
+from cardtable.artwork import Artwork, PackName
 from cardtable.catalogue import opened
 from cardtable.config import Configuration
 from cardtable.games import GameName
 from cardtable.hosting import Hosted
 from cardtable.interface import joining
-from cardtable.paths import CONFIGURATION, INTERFACE
+from cardtable.paths import ASSETS, CONFIGURATION, INTERFACE
 from cardtable.service import LogLevel, Service
 from cardtable.settings import Settings
 
 PROGRAM: Final[str] = "cardtable"
 DESCRIPTION: Final[str] = "Open one table of a CardWork game for local play."
+NO_PACK: Final[str] = "none"
 
 
 def parser() -> ArgumentParser:
@@ -40,6 +42,12 @@ def parser() -> ArgumentParser:
         type=float,
         help="how long a closed round stays open for a seat to take its commitment back",
     )
+    arguments.add_argument(
+        "--pack",
+        choices=(*(name.value for name in PackName), NO_PACK),
+        help=f"which pack of card artwork the table draws with, and {NO_PACK!r} for the glyphs the page carries",
+    )
+    arguments.add_argument("--back", help="which back of that pack every face-down card lies under")
     arguments.add_argument("--host", help="the address the server listens on")
     arguments.add_argument("--port", type=int, help="the port the server listens on")
     arguments.add_argument(
@@ -71,6 +79,27 @@ def a_table(stated: Settings, arguments: Namespace) -> Settings:
     )
 
 
+def a_pack(given: str | None, stated: PackName | None) -> PackName | None:
+    """Which artwork a run draws with: the pack its command line names, the glyphs where it names none of
+    them, and the configured pack where it names nothing at all."""
+    if given is None:
+        return stated
+
+    return None if given == NO_PACK else PackName(given)
+
+
+def an_artwork(stated: Artwork, arguments: Namespace) -> Artwork:
+    """The cards a run draws with: the configured pack and back, under whatever its command line states.
+
+    Raises:
+        ValidationError: when a run states a back by an empty name, which names no design of any pack.
+    """
+    return Artwork(
+        pack=a_pack(arguments.pack, stated.pack),
+        back=chosen(arguments.back, stated.back),
+    )
+
+
 def a_service(stated: Service, arguments: Namespace) -> Service:
     """Where a run answers: the configured address and log level, under whatever its command line states.
 
@@ -95,6 +124,7 @@ def configured(arguments: Namespace) -> Configuration:
     return Configuration(
         game=chosen(arguments.game, stated.game),
         table=a_table(stated.table, arguments),
+        artwork=an_artwork(stated.artwork, arguments),
         service=a_service(stated.service, arguments),
     )
 
@@ -104,7 +134,22 @@ def address(service: Service) -> str:
     return f"http://{service.host}:{service.port}"
 
 
-def announcement(hosted: Hosted, settings: Settings, service: Service) -> str:
+def drawing(hosted: Hosted, artwork: Artwork) -> str | None:
+    """What a run says of the cards it draws, and nothing at all where it draws the glyphs it asked for.
+
+    A pack asked for and a pack in service are two different things, since the artwork is fetched rather
+    than committed: a run naming one that has yet to land says where a fetch would have written it.
+    """
+    if hosted.artwork is not None:
+        return f"  drawn from the {artwork.pack} pack, face down under {artwork.back}"
+
+    if artwork.pack is None:
+        return None
+
+    return f"  drawn as glyphs, since no {artwork.pack} pack stands at {ASSETS}"
+
+
+def announcement(hosted: Hosted, settings: Settings, artwork: Artwork, service: Service) -> str:
     """The lines a person reads once a table is open: which address takes which seat, and which watches it.
 
     A seat is held by whoever opens its own address, so one of these lines is the whole of what a player is
@@ -113,6 +158,10 @@ def announcement(hosted: Hosted, settings: Settings, service: Service) -> str:
     """
     reached = address(service)
     lines = [f"Table {hosted.table!r} is open at {reached}", f"  dealt from seed {settings.seed}"]
+    drawn = drawing(hosted, artwork)
+    if drawn is not None:
+        lines.append(drawn)
+
     lines.extend(
         f"  seat {seat}: {joining(reached, hosted.table, token)}" for seat, token in sorted(hosted.tokens.items())
     )
@@ -133,8 +182,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     long as the table lasts and a buffered line would reach a log file after the game rather than before it.
     """
     configuration = configured(parser().parse_args(argv))
-    hosted = opened(configuration.game, configuration.table)
-    print(announcement(hosted, configuration.table, configuration.service), flush=True)
+    hosted = opened(configuration.game, configuration.table, configuration.artwork)
+    print(
+        announcement(hosted, configuration.table, configuration.artwork, configuration.service),
+        flush=True,
+    )
     uvicorn.run(
         hosted.app,
         host=configuration.service.host,

@@ -3,16 +3,21 @@ from typing import Final
 
 from yaml import safe_dump
 
+from cardtable.artwork import Artwork
 from cardtable.config import Configuration
 from cardtable.games import GameName
 from cardtable.service import LogLevel, Service
 from cardtable.settings import Settings
 
 FILE: Final[str] = "config.yaml"
+BACK: Final[str] = "crosshatch"
+
+GLYPHS: Final[Artwork] = Artwork(pack=None, back=BACK)
 
 CONFIGURED: Final[Configuration] = Configuration(
     game=GameName.PASSING,
     table=Settings(name="baize", players=3, rounds=2, seed=7, grace_seconds=0.5),
+    artwork=GLYPHS,
     service=Service(host="127.0.0.1", port=9000, log_level=LogLevel.WARNING),
 )
 

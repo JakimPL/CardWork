@@ -3,6 +3,7 @@ from typing import Self
 
 from yaml import safe_load
 
+from cardtable.artwork import Artwork
 from cardtable.games import GameName
 from cardtable.service import Service
 from cardtable.settings import Settings
@@ -10,7 +11,7 @@ from cardwork.models.base import BaseFrozen
 
 
 class Configuration(BaseFrozen):
-    """The whole of one run: the game played, the table it is played at, and where that table answers.
+    """The whole of one run: the game played, the table it is played at, how it is drawn, and where it answers.
 
     A file states this and a run reads it, which leaves every value a person turns in one place they can
     read, and leaves a command line stating only where a particular run departs from it. Each field is asked
@@ -23,6 +24,7 @@ class Configuration(BaseFrozen):
 
     game: GameName
     table: Settings
+    artwork: Artwork
     service: Service
 
     @classmethod

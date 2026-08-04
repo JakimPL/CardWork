@@ -6,6 +6,10 @@ table:
   rounds: 3
   grace_seconds: 2.0
 
+artwork:
+  pack: kare
+  back: crosshatch
+
 service:
   host: 127.0.0.1
   port: 8421

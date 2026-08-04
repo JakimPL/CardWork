@@ -18,6 +18,7 @@ from cardtable.settings import Settings
 from cardwork.presentation.scene import Scene
 
 from ..cases import Case
+from .config import GLYPHS
 
 TABLE: Final[str] = "green-baize"
 UNSERVED: Final[str] = "no-such-table"
@@ -81,9 +82,10 @@ async def playing(game: GameName) -> AsyncIterator[tuple[AsyncClient, Hosted]]:
     """One table of that game open through the host, answering as a client reaching it does.
 
     The application's own lifespan runs around the client, so the table ends these tests holding no timer
-    the way it ends its service under a server.
+    the way it ends its service under a server. The table draws with the glyphs its page carries, which
+    leaves these reading the endpoints alone whether or not the checkout has fetched a pack.
     """
-    hosted = opened(game, SETTINGS)
+    hosted = opened(game, SETTINGS, GLYPHS)
     async with hosted.app.router.lifespan_context(hosted.app):
         async with AsyncClient(transport=ASGITransport(app=hosted.app), base_url=BASE_URL) as client:
             yield client, hosted

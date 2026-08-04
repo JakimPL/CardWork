@@ -185,8 +185,8 @@ uv run cardtable --game showdown --players 4      # or: make play GAME=showdown 
 ```
 
 `config.yaml` states the run: the game played, the table's name and seating, the seed and grace window it
-deals and settles with, and the address it answers at. Every option of the command line stands empty until
-it is given, so it states where one run departs from that file:
+deals and settles with, the cards it is drawn with, and the address it answers at. Every option of the
+command line stands empty until it is given, so it states where one run departs from that file:
 
 ```yaml
 game: passing
@@ -197,6 +197,10 @@ table:
   rounds: 3
   seed: 20260803
   grace_seconds: 2.0
+
+artwork:
+  pack: kare
+  back: crosshatch
 
 service:
   host: 127.0.0.1
@@ -280,5 +284,11 @@ deuces carry, since Solitaire wanted no joker and the library holds none. Every 
 the size it was drawn, a pixel to a square, so it reads at any size as the edges a hand placed in 1990. `svg`
 is a public-domain drawing per card and a public-domain back besides.
 
-Neither is needed: `Suit` values are `♠♥♦♣` and `Rank` values are `2` through `A`, so a readable card draws
-from the JSON alone.
+`artwork:` says which pack a table draws with and which of that pack's backs its face-down cards lie under,
+and `--pack` and `--back` state either for one run. A table serves the pack it was fetched at `/artwork`,
+stating what it holds at `/artwork/manifest.json`, so the page is told the size a card was written at and the
+one back this table deals rather than carrying a list of files.
+
+Neither pack is needed. `pack: null`, or `--pack none`, draws every card from the glyphs the page carries,
+which is also what a checkout that has fetched nothing reads: `Suit` values are `♠♥♦♣` and `Rank` values are
+`2` through `A`, so a readable card draws from the JSON alone.

@@ -7,6 +7,7 @@ from cardgames.backend.showdown.game import ShowdownGame
 from cardgames.frontend.passing.layout import PASSING_SCENE
 from cardgames.frontend.shedding.layout import SHEDDING_SCENE
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
+from cardtable.artwork import Artwork
 from cardtable.games import GameName
 from cardtable.hosting import Hosted, serve
 from cardtable.settings import Settings
@@ -52,19 +53,20 @@ def a_shedding_match(settings: Settings) -> SheddingGame:
     )
 
 
-def opened(game: GameName, settings: Settings) -> Hosted:
+def opened(game: GameName, settings: Settings, artwork: Artwork) -> Hosted:
     """The game named, dealt from the deck its rules are written for and put into service.
 
     This is the one place a game and a transport meet, and the one module of the whole repository naming
     `cardgames`: the rules, the scene they are read through and the adapter serving both come together here
-    and nowhere else, which is what leaves each of the three ignorant of the other two.
+    and nowhere else, which is what leaves each of the three ignorant of the other two. The artwork travels
+    through untouched, since which cards a table is drawn with is the same question whichever game it plays.
     """
     match game:
         case GameName.PASSING:
-            return serve(a_passing_match(settings), PASSING_SCENE, settings)
+            return serve(a_passing_match(settings), PASSING_SCENE, settings, artwork)
 
         case GameName.SHOWDOWN:
-            return serve(a_showdown_match(settings), SHOWDOWN_SCENE, settings)
+            return serve(a_showdown_match(settings), SHOWDOWN_SCENE, settings, artwork)
 
         case GameName.SHEDDING:
-            return serve(a_shedding_match(settings), SHEDDING_SCENE, settings)
+            return serve(a_shedding_match(settings), SHEDDING_SCENE, settings, artwork)

@@ -8,8 +8,9 @@ from cardserver.app import create_app
 from cardserver.identity import TokenSeats
 from cardserver.protocol import Presentation, Table, TableId
 from cardserver.registry import TableRegistry
+from cardtable.artwork import Artwork, serve_artwork
 from cardtable.interface import serve_interface
-from cardtable.paths import INTERFACE
+from cardtable.paths import ASSETS, INTERFACE
 from cardtable.seats import tokens_for
 from cardtable.settings import Settings
 from cardwork.states.state import GameState
@@ -26,6 +27,7 @@ class Hosted:
     app: FastAPI
     table: TableId
     tokens: Mapping[int, str]
+    artwork: Path | None
     interface: Path | None
 
 
@@ -33,11 +35,14 @@ def serve[StateT: GameState](
     table: Table[StateT],
     presentation: Presentation,
     settings: Settings,
+    artwork: Artwork,
 ) -> Hosted:
     """Put one table into service: the game, the arrangement it is read through, and a token for each seat.
 
     Everything a player interface needs answers from the single application this builds — the endpoints of
-    the table under `/tables`, and the page itself at the root where a build of it exists.
+    the table under `/tables`, the cards it draws with under `/artwork` where a pack has been fetched, and
+    the page itself at the root where a build of it exists. The artwork goes on ahead of the page, since the
+    page is mounted at the root and everything answering for itself is registered before it.
     """
     registry = TableRegistry[StateT](settings.grace_seconds)
     registry.open(settings.name, table, presentation)
@@ -48,5 +53,6 @@ def serve[StateT: GameState](
         app=app,
         table=settings.name,
         tokens=tokens,
+        artwork=serve_artwork(app, ASSETS, artwork),
         interface=serve_interface(app, INTERFACE),
     )

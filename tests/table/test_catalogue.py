@@ -7,6 +7,7 @@ from cardtable.games import GameName
 from cardwork.presentation.layout import Layout
 
 from ..cases import descriptions
+from .config import GLYPHS
 from .tables import (
     CASES,
     LAYOUT,
@@ -95,4 +96,4 @@ def test_a_match_of_shedding_runs_the_rounds_asked_for() -> None:
 
 
 def test_a_game_is_opened_under_the_name_the_settings_give_the_table() -> None:
-    assert opened(GameName.PASSING, SETTINGS).table == SETTINGS.name
+    assert opened(GameName.PASSING, SETTINGS, GLYPHS).table == SETTINGS.name

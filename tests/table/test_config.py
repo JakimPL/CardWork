@@ -18,6 +18,7 @@ ONE_MATCH: Final[int] = 1
 SPARE: Final[dict[str, object]] = {
     "game": GameName.SHOWDOWN.value,
     "table": {"name": "baize", "players": 2, "rounds": 1, "grace_seconds": 0.0},
+    "artwork": {"pack": None, "back": "crosshatch"},
     "service": {"host": "0.0.0.0", "log_level": LogLevel.DEBUG.value},
 }
 
@@ -74,6 +75,13 @@ def test_a_seating_no_table_admits_is_turned_away_as_the_file_is_read(tmp_path: 
 
     with pytest.raises(ValidationError):
         Configuration.read(a_file_stating(tmp_path, alone))
+
+
+def test_a_pack_no_fetch_writes_is_turned_away_as_the_file_is_read(tmp_path: Path) -> None:
+    unfetched = {**SPARE, "artwork": {"pack": "tarot", "back": "crosshatch"}}
+
+    with pytest.raises(ValidationError):
+        Configuration.read(a_file_stating(tmp_path, unfetched))
 
 
 def test_a_log_level_no_server_answers_to_is_turned_away(tmp_path: Path) -> None:

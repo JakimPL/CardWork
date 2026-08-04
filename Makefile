@@ -50,6 +50,8 @@ TABLE_ARGUMENTS = \
 	$(if $(ROUNDS),--rounds $(ROUNDS)) \
 	$(if $(SEED),--seed $(SEED)) \
 	$(if $(GRACE),--grace-seconds $(GRACE)) \
+	$(if $(PACK),--pack $(PACK)) \
+	$(if $(BACK),--back $(BACK)) \
 	$(if $(PORT),--port $(PORT))
 
 play:
