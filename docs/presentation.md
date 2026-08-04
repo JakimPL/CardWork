@@ -170,18 +170,25 @@ Three places where the vocabulary stops at what the games ask for, each followin
   written, and `Declare` is the intent waiting for it (`architecture.md` §5.3).
 - **`Spread.STACK` reads by the last card**, since that is the end a game lays on. A heap dealt from its other
   end holds cards nobody reads, and a heap of backs reads alike from either end, so the field naming which end
-  faces up arrives with the first game that deals readable cards from position zero.
+  faces up arrives with the first game that deals readable cards from position zero. A game whose players draw
+  off a heap states the end they draw from instead, which is what `cardgames.backend.shedding` does
+  (`docs/games/shedding.md` §2).
 - **`Region` names two places**, because a game states which zones a player owns and the interface states where
   the page puts them. A third region arrives with a game that wants one.
 
 ---
 
-## 7. The two worked examples
+## 7. The three worked examples
 
-`cardgames.frontend.passing` and `cardgames.frontend.showdown` state a `Scene` apiece — constants for what the
-table shares and three functions of a seat for what it holds — and each lays out every observer from it, with
-every zone id concrete. Between them they exercise both addressings §1 sets out, and `docs/games/passing.md` §5
-and `docs/games/showdown.md` §5 read them out zone by zone.
+`cardgames.frontend.passing`, `cardgames.frontend.showdown` and `cardgames.frontend.shedding` state a `Scene`
+apiece — constants for what the table shares and three functions of a seat for what it holds — and each lays out
+every observer from it, with every zone id concrete. Between them they exercise both addressings §1 sets out,
+and §5 of each game's own document reads its scene out zone by zone.
+
+The third of them commits onto a zone the observer owns: its draw picks a card on the shared table and sends it
+onto the seat's own hand, which is the pairing read in the direction the two before it never took. The
+vocabulary needed nothing for it, since a gesture names the zone its indices address and the place a player
+points at, and whose zone either one is was never part of what it states.
 
 They are held to their own rules by test: every move a game's `legal_moves` offers a seat is matched against
 the layout that seat is served, and the gesture it resolves to has to pick in a zone the projection holds and

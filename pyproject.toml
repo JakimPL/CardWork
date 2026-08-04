@@ -160,13 +160,19 @@ layers = ["frontend", "backend"]
 name = "Passing stands apart"
 type = "forbidden"
 source_modules = ["cardgames.*.passing"]
-forbidden_modules = ["cardgames.*.showdown"]
+forbidden_modules = ["cardgames.*.showdown", "cardgames.*.shedding"]
 
 [[tool.importlinter.contracts]]
 name = "Showdown stands apart"
 type = "forbidden"
 source_modules = ["cardgames.*.showdown"]
-forbidden_modules = ["cardgames.*.passing"]
+forbidden_modules = ["cardgames.*.passing", "cardgames.*.shedding"]
+
+[[tool.importlinter.contracts]]
+name = "Shedding stands apart"
+type = "forbidden"
+source_modules = ["cardgames.*.shedding"]
+forbidden_modules = ["cardgames.*.passing", "cardgames.*.showdown"]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib --strict-markers"

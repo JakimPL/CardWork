@@ -271,5 +271,17 @@ suit even where two of them are the same spade.
 **A game of single cards** (`cardgames.backend.showdown`) compares one card against another and needs one winner
 every time, so it reads `REGULAR_ORDER` from `cardwork.cards.order` and asks this package nothing.
 
+**A game of matched sets** (`cardgames.backend.shedding`) asks one question of a selection a player made, at a
+size the selection decides:
+
+```python
+matches(named, SameRank(places=len(named)), evaluation)     # two of a rank, three of one, four of one
+```
+
+A pattern built per question is what lets one line stand for a pair, a triplet and four of a rank alike, and
+`matches` is the reading that holds the cards to being the whole of it — a selection with a card of another rank
+in it answers to no size at all. Its evaluation leaves jokers unwild, since the one standard deck it is played
+with holds none.
+
 A game states its own evaluation, its own patterns and its own ranking. What it inherits is the reading:
 one tally per question, one instance per shape, and a strength it can compare, order and score.

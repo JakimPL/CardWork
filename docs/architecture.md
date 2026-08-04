@@ -30,6 +30,7 @@ all rest on:
 | `docs/presentation.md` | how a game states its own table for a player: regions, spreads, gestures, plaques |
 | `docs/games/passing.md` | a game of four cards, in which a fourth circulates and three reading alike win |
 | `docs/games/showdown.md` | a game of ten sealed turns, every seat committing one card at once |
+| `docs/games/shedding.md` | a game of matched sets, a turn shedding several cards of one rank or drawing one |
 
 ---
 
@@ -1051,6 +1052,7 @@ The two games in `cardgames` are the worked examples, and between them they exer
 |---|---|---|
 | `cardgames.backend.passing` | a sequential turn: one exchange with the pile, then a pass round the table | an outcome a rules question over `combinations` decides, and a match the standing ends |
 | `cardgames.backend.showdown` | a simultaneous turn: every seat commits one sealed card, and they turn over together | `to_act` holding every seat, `HIDDEN` zones, and a turn settled behind no move at all |
+| `cardgames.backend.shedding` | a turn of two minds: shed a set of one rank, or draw a card and pass it on | a move naming several cards, a hand that grows, and a game that added no primitive below it |
 
 ---
 

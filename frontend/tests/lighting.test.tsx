@@ -1,14 +1,28 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import type { Plaque as Standing, Readout, Slot } from "../src/api/layout";
+import type { Layout, Plaque as Standing, Readout, Slot } from "../src/api/layout";
 import type { PositionView } from "../src/api/views";
 import { NOTHING_LANDED } from "../src/play/arrivals";
 import type { Selection } from "../src/play/selection";
 import { offersOf, prospect } from "../src/play/selection";
 import { Header } from "../src/table/Header";
 import { Zones } from "../src/table/Zones";
-import { aGive, aLayout, aPlaying, aTake, aView, card, GIVING, HAND, offering, PILE, STACK, TAKING } from "./tables";
+import {
+  aGive,
+  aLayout,
+  aPlaying,
+  aTake,
+  aView,
+  card,
+  DRAWING,
+  GIVING,
+  HAND,
+  offering,
+  PILE,
+  STACK,
+  TAKING,
+} from "./tables";
 
 const HELD: Slot = { zone: HAND, label: "Your hand", region: "seat", spread: "fan", place: 0, counted: false };
 const DEALT_FROM: Slot = { zone: PILE, label: "Pile", region: "table", spread: "stack", place: 0, counted: true };
@@ -44,11 +58,19 @@ const POSITION: PositionView = aView(
 /** The turn `passing` gives a seat: either of two cards exchanged with the pile or passed to the next seat. */
 const A_TURN = offering(POSITION, [aTake([0]), aTake([2]), aGive(2, [0]), aGive(2, [2])]);
 
-function drawn(view: PositionView, selection: Selection | null, region: "seat" | "table"): string {
-  const playing = aPlaying(prospect(offersOf(LAYOUT, view), selection));
+/** The draw `shedding` offers, which names the card at the end of the heap and no other position of it. */
+const DRAWS = aLayout({ slots: [HELD, DEALT_FROM, LAID_ON], plaques: SEATS, gestures: [DRAWING] });
+const A_DRAW = offering(POSITION, [aTake([3])]);
+
+function rendered(layout: Layout, view: PositionView, selection: Selection | null, region: "seat" | "table"): string {
+  const playing = aPlaying(prospect(offersOf(layout, view), selection));
   return renderToStaticMarkup(
-    <Zones region={region} layout={LAYOUT} view={view} arrivals={NOTHING_LANDED} playing={playing} />,
+    <Zones region={region} layout={layout} view={view} arrivals={NOTHING_LANDED} playing={playing} />,
   );
+}
+
+function drawn(view: PositionView, selection: Selection | null, region: "seat" | "table"): string {
+  return rendered(LAYOUT, view, selection, region);
 }
 
 function standing(view: PositionView, selection: Selection | null): string {
@@ -91,6 +113,23 @@ describe("the cards a player may press", () => {
     );
 
     expect(watched).not.toContain("<button");
+  });
+});
+
+describe("a heap a player draws off", () => {
+  it("lights the card it shows, which is the card a draw off the end of it names", () => {
+    const table = rendered(DRAWS, A_DRAW, null, "table");
+
+    expect([...table.matchAll(/class="card back open"/g)]).toHaveLength(1);
+    expect([...table.matchAll(/<button/g)]).toHaveLength(1);
+  });
+
+  it("sends the card onto the holding the game names, which is the seat's own", () => {
+    const seat = rendered(DRAWS, A_DRAW, { zone: PILE, indices: [3] }, "seat");
+
+    expect(seat).toContain("slot fan live");
+    expect(seat).toContain(`aria-label="${DRAWING.caption}"`);
+    expect([...seat.matchAll(/class="landing"/g)]).toHaveLength(1);
   });
 });
 

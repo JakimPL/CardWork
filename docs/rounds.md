@@ -206,5 +206,11 @@ turn leaves run out. A turn of it is the settlement step §2 describes: every se
 reveal that scores the turn and opens the next answers no move of its own. `docs/games/showdown.md` states the
 game whole.
 
+**A game of matched sets** (`cardgames.backend.shedding`) plays the rounds it was built for as well, and reads its
+round out of the hands: `round_over` reads a phase of its own, which the move that empties a hand writes, and
+which a settlement writes where the stock has run out with no seat holding a set. The award is read off the
+hands as they lie rather than accumulated as the round runs, so `round_points` is written once, in the
+transaction that closes the round. `docs/games/shedding.md` states the game whole.
+
 Between them they override neither `next_leader` nor `score_round`: a seat drawn for the first round and the
-next seat after, with the round's tally added into the standing, is what both of them wanted.
+next seat after, with the round's tally added into the standing, is what all three of them wanted.

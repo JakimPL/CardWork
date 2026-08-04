@@ -11,3 +11,4 @@ class GameName(StrEnum):
 
     PASSING = "passing"
     SHOWDOWN = "showdown"
+    SHEDDING = "shedding"

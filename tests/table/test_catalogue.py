@@ -2,7 +2,7 @@ from http import HTTPStatus
 
 import pytest
 
-from cardtable.catalogue import a_passing_match, a_showdown_match, opened
+from cardtable.catalogue import a_passing_match, a_shedding_match, a_showdown_match, opened
 from cardtable.games import GameName
 from cardwork.presentation.layout import Layout
 
@@ -88,6 +88,10 @@ def test_a_match_of_passing_is_dealt_for_the_seats_asked_for() -> None:
 
 def test_a_match_of_showdown_runs_the_rounds_asked_for() -> None:
     assert a_showdown_match(SETTINGS).position.state.rounds == ROUNDS
+
+
+def test_a_match_of_shedding_runs_the_rounds_asked_for() -> None:
+    assert a_shedding_match(SETTINGS).position.state.rounds == ROUNDS
 
 
 def test_a_game_is_opened_under_the_name_the_settings_give_the_table() -> None:

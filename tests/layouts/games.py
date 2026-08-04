@@ -5,9 +5,12 @@ from typing import Final
 
 from cardgames.backend.passing.game import PassingGame
 from cardgames.backend.passing.state import PassingPhase
+from cardgames.backend.shedding.game import SheddingGame
+from cardgames.backend.shedding.state import SheddingPhase
 from cardgames.backend.showdown.game import ShowdownGame
 from cardgames.backend.showdown.state import ShowdownPhase
 from cardgames.frontend.passing.layout import PASSING_SCENE
+from cardgames.frontend.shedding.layout import SHEDDING_SCENE
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
 from cardwork.decks.standard import standard_deck, standard_decks
 from cardwork.games.game import Game
@@ -62,6 +65,16 @@ def a_showdown_table() -> ShowdownGame:
     )
 
 
+def a_shedding_table() -> SheddingGame:
+    """A shedding table of three seats, dealt from one standard deck and built for two rounds."""
+    return SheddingGame(
+        players=PLAYERS,
+        deck=standard_deck(),
+        rounds=ROUNDS,
+        rng=Random(SEED),
+    )
+
+
 CASES: Final[tuple[LayoutCase, ...]] = (
     LayoutCase(
         description="passing lays out a hand against the pile and the stack",
@@ -82,5 +95,15 @@ CASES: Final[tuple[LayoutCase, ...]] = (
         gestures=2,
         counts=3,
         phases=tuple(ShowdownPhase) + tuple(MatchPhase),
+    ),
+    LayoutCase(
+        description="shedding lays out a hand against the stock it draws from and the cards it sheds",
+        scene=SHEDDING_SCENE,
+        table=a_shedding_table,
+        held=1,
+        shared=2,
+        gestures=2,
+        counts=1,
+        phases=tuple(SheddingPhase) + tuple(MatchPhase),
     ),
 )

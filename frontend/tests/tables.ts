@@ -40,6 +40,16 @@ export const GIVING: Gesture = {
   caption: "Pass this card to the next seat",
 };
 
+/** A gesture taking a card off a heap the table shares onto the seat's own hand, as a game drawing from stock does. */
+export const DRAWING: Gesture = {
+  kind: "take",
+  group: PILE,
+  picked: PILE,
+  commit: "zone",
+  target: HAND,
+  caption: "Draw this card into your hand",
+};
+
 /** A gesture sending several cards at once, which is the shape a game discarding a set of them takes. */
 export const DISCARDING: Gesture = {
   kind: "discard",

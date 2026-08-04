@@ -2,8 +2,10 @@ from random import Random
 from typing import Final
 
 from cardgames.backend.passing.game import PassingGame
+from cardgames.backend.shedding.game import SheddingGame
 from cardgames.backend.showdown.game import ShowdownGame
 from cardgames.frontend.passing.layout import PASSING_SCENE
+from cardgames.frontend.shedding.layout import SHEDDING_SCENE
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
 from cardtable.games import GameName
 from cardtable.hosting import Hosted, serve
@@ -14,6 +16,7 @@ from cardwork.decks.standard import standard_deck, standard_decks
 ONE_DECK: Final[int] = 1
 PASSING_DECK: Final[Deck] = standard_decks(ONE_DECK, black_jokers=1, red_jokers=1)
 SHOWDOWN_DECK: Final[Deck] = standard_deck()
+SHEDDING_DECK: Final[Deck] = standard_deck()
 
 
 def a_passing_match(settings: Settings) -> PassingGame:
@@ -26,6 +29,16 @@ def a_showdown_match(settings: Settings) -> ShowdownGame:
     return ShowdownGame(
         players=settings.players,
         deck=SHOWDOWN_DECK,
+        rounds=settings.rounds,
+        rng=Random(settings.seed),
+    )
+
+
+def a_shedding_match(settings: Settings) -> SheddingGame:
+    """A match of `shedding` over one standard deck, running the rounds the settings ask of it."""
+    return SheddingGame(
+        players=settings.players,
+        deck=SHEDDING_DECK,
         rounds=settings.rounds,
         rng=Random(settings.seed),
     )
@@ -44,3 +57,6 @@ def opened(game: GameName, settings: Settings) -> Hosted:
 
         case GameName.SHOWDOWN:
             return serve(a_showdown_match(settings), SHOWDOWN_SCENE, settings)
+
+        case GameName.SHEDDING:
+            return serve(a_shedding_match(settings), SHEDDING_SCENE, settings)

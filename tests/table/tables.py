@@ -7,6 +7,7 @@ from typing import Final
 from httpx import ASGITransport, AsyncClient
 
 from cardgames.frontend.passing.layout import PASSING_SCENE
+from cardgames.frontend.shedding.layout import SHEDDING_SCENE
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
 from cardserver.identity import SEAT_HEADER
 from cardserver.schemas import MoveRequest
@@ -61,6 +62,11 @@ CASES: Final[tuple[HostCase, ...]] = (
         description="a game of sealed cards turned over at once",
         game=GameName.SHOWDOWN,
         scene=SHOWDOWN_SCENE,
+    ),
+    HostCase(
+        description="a game of sets shed from a hand that grows",
+        game=GameName.SHEDDING,
+        scene=SHEDDING_SCENE,
     ),
 )
 

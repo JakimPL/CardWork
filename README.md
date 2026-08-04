@@ -9,13 +9,14 @@ Four packages:
 - **`cardserver`** — a FastAPI adapter that puts tables into service over HTTP and server-sent events.
 - **`cardgames`** — the games written on it, each stated twice over: `backend` holds a game's rules and
   `frontend` the layout a player reads them through. `passing` is a game of four cards played in turn;
-  `showdown`, a game of ten turns played at once.
+  `showdown`, a game of ten turns played at once; `shedding`, a game of matched sets laid down several cards
+  at a time.
 - **`cardtable`** — the host: it opens a table of a chosen game, hands out a token per seat, and serves
   the player interface beside the endpoints. The one place a game and a transport meet.
 
 `docs/architecture.md` is the design and the reasoning behind it; `docs/combinations.md`, `docs/rounds.md`,
-`docs/presentation.md` and `docs/games/` state the parts a game reaches for and the two games themselves. What
-follows is enough to start.
+`docs/presentation.md` and `docs/games/` state the parts a game reaches for and the three games themselves.
+What follows is enough to start.
 
 ## Getting set up
 
@@ -135,6 +136,7 @@ Rules that more than one game wants live in the framework, each in a layer of it
 |---|---|---|
 | `cardgames.backend.passing` | a sequential turn: one exchange with the pile, then a pass round the table | a game whose rules ask a question about cards |
 | `cardgames.backend.showdown` | a simultaneous turn: every seat commits one sealed card, and they turn over together | a game whose turn belongs to the whole table |
+| `cardgames.backend.shedding` | a turn of two minds: shed a set of one rank, or draw a card and pass it on | a game whose move names several cards, and one that asked the layers below it for nothing |
 
 `tests/games/demo.py` is a smaller exercise game: a simultaneous round with sealed commitments, a reveal,
 scoring and take-backs.
