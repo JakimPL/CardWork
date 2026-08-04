@@ -7,8 +7,7 @@ from cardwork.cards.rank import Rank
 from cardwork.cards.suit import Suit
 from cardwork.combinations.demand import ANY_CARD, Demand
 from cardwork.combinations.shape import Shape
-
-from ..cases import Case, descriptions
+from tests.cases import Case, descriptions
 
 TWO_KINGS: Final[Shape] = Shape(demands=(Demand.of_rank(Rank.KING),) * 2, low_ace=False)
 TWO_QUEENS: Final[Shape] = Shape(demands=(Demand.of_rank(Rank.QUEEN),) * 2, low_ace=False)

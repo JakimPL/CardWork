@@ -57,8 +57,7 @@ from cardwork.combinations.poker import (
     TWO_PAIR,
 )
 from cardwork.combinations.policy import REGULAR_EVALUATION, Duplicates, Evaluation
-
-from ..cases import Case, descriptions
+from tests.cases import Case, descriptions
 
 COLLAPSING: Final[Evaluation] = Evaluation(
     ranks=REGULAR_EVALUATION.ranks,

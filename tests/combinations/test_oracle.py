@@ -31,8 +31,7 @@ from cardwork.combinations.poker import (
     WHEEL,
 )
 from cardwork.combinations.policy import REGULAR_EVALUATION
-
-from ..cases import Case
+from tests.cases import Case
 
 PAIR_CARDS: Final[int] = 2
 TRIPLET_CARDS: Final[int] = 3

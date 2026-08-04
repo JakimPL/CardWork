@@ -19,8 +19,8 @@ from cardgames.backend.showdown.state import ShowdownPhase
 from cardgames.backend.showdown.zones import DISCARD, STOCK, blind_of, hand_of
 from cardwork.rounds.seating import next_seat
 from cardwork.rounds.state import MatchPhase
+from tests.cases import Case, descriptions
 
-from ..cases import Case, descriptions
 from .driving import (
     FULL_TABLE,
     ROUNDS,

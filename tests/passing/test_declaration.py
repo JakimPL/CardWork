@@ -31,8 +31,8 @@ from cardwork.cards.cards import (
 )
 from cardwork.cards.game import CardsOrJokers
 from cardwork.rounds.state import BEFORE_THE_FIRST_ROUND
+from tests.cases import Case, descriptions
 
-from ..cases import Case, descriptions
 from .driving import (
     JOKERED_DECK,
     SEATS,

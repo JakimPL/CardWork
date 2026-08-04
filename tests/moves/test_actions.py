@@ -15,8 +15,7 @@ from cardwork.moves.actions import (
     group_of,
 )
 from cardwork.moves.move import Move
-
-from ..cases import Case, descriptions
+from tests.cases import Case, descriptions
 
 ACTIONS = (
     Play(group="meld", indices=frozenset({0, 2})),

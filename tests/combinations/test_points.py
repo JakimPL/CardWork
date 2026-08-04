@@ -44,7 +44,7 @@ from cardwork.combinations.policy import REGULAR_EVALUATION
 
 THREE_OF_A_SUIT: Final[Pattern] = SameSuit(places=3)
 
-from ..cases import Case, descriptions
+from tests.cases import Case, descriptions
 
 
 @dataclass(frozen=True)

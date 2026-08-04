@@ -14,8 +14,7 @@ from cardwork.cards.rank import Rank
 from cardwork.cards.suit import Suit
 from cardwork.combinations.demand import ANY_CARD, Demand
 from cardwork.combinations.policy import REGULAR_EVALUATION
-
-from ..cases import Case, descriptions
+from tests.cases import Case, descriptions
 
 KING_OF_SPADES_DEMAND: Final[Demand] = Demand(rank=Rank.KING, suit=Suit.SPADE)
 

@@ -15,8 +15,8 @@ from cardwork.moves.actions import Give
 from cardwork.moves.move import Move
 from cardwork.rounds.seating import next_seat
 from cardwork.rounds.state import MatchPhase
+from tests.cases import Case, descriptions
 
-from ..cases import Case, descriptions
 from .driving import (
     FIRST_CARD,
     JOKERED_DECK,

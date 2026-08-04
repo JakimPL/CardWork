@@ -63,10 +63,28 @@ def opened(game: GameName, settings: Settings, artwork: Artwork) -> Hosted:
     """
     match game:
         case GameName.PASSING:
-            return serve(a_passing_match(settings), PASSING_SCENE, settings, artwork)
+            return serve(
+                a_passing_match(settings),
+                PASSING_SCENE,
+                settings,
+                artwork,
+            )
 
         case GameName.SHOWDOWN:
-            return serve(a_showdown_match(settings), SHOWDOWN_SCENE, settings, artwork)
+            return serve(
+                a_showdown_match(settings),
+                SHOWDOWN_SCENE,
+                settings,
+                artwork,
+            )
 
         case GameName.SHEDDING:
-            return serve(a_shedding_match(settings), SHEDDING_SCENE, settings, artwork)
+            return serve(
+                a_shedding_match(settings),
+                SHEDDING_SCENE,
+                settings,
+                artwork,
+            )
+
+        case _:
+            raise ValueError(f"Unknown game {game!r}, which is not one of {GameName.__members__!r}")

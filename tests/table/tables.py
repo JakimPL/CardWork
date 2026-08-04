@@ -16,8 +16,8 @@ from cardtable.games import GameName
 from cardtable.hosting import Hosted
 from cardtable.settings import Settings
 from cardwork.presentation.scene import Scene
+from tests.cases import Case
 
-from ..cases import Case
 from .config import GLYPHS
 
 TABLE: Final[str] = "green-baize"

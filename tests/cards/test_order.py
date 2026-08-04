@@ -30,8 +30,7 @@ from cardwork.cards.orders import (
 )
 from cardwork.cards.rank import Rank
 from cardwork.cards.suit import Suit
-
-from ..cases import Case, descriptions
+from tests.cases import Case, descriptions
 
 
 @dataclass(frozen=True)

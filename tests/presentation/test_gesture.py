@@ -9,8 +9,8 @@ from cardwork.moves.kind import ActionKind
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
 from cardwork.zones.zone import ZoneId
+from tests.cases import Case, descriptions
 
-from ..cases import Case, descriptions
 from .demo import PILE, STACK, hand_of
 
 PICKED: Final[ZoneId] = hand_of(0)

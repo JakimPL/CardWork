@@ -19,8 +19,8 @@ from cardwork.cards.cards import (
 from cardwork.cards.game import CardsOrJokers
 from cardwork.effects.fold import fold
 from cardwork.rounds.state import MatchPhase
+from tests.cases import Case, descriptions
 
-from ..cases import Case, descriptions
 from .driving import (
     FULL_TABLE,
     ROUNDS,

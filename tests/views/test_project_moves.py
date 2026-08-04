@@ -6,8 +6,7 @@ import pytest
 from cardwork.moves.actions import Give, Play
 from cardwork.moves.move import Move, Moves
 from cardwork.views.projection import project_moves
-
-from ..cases import Case, descriptions
+from tests.cases import Case, descriptions
 
 BY_ZERO: Final[Move] = Move(player=0, action=Play(group="table", indices=frozenset({0})))
 ALSO_BY_ZERO: Final[Move] = Move(player=0, action=Play(group="table", indices=frozenset({1})))

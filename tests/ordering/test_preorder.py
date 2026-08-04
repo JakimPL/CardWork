@@ -6,8 +6,7 @@ import pytest
 from cardwork.ordering.composite import Composite
 from cardwork.ordering.preorder import Key, Preorder
 from cardwork.ordering.tiers import Tiers
-
-from ..cases import Case, descriptions
+from tests.cases import Case, descriptions
 
 
 class ByLength(Preorder[str]):

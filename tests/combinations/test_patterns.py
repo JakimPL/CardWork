@@ -51,8 +51,7 @@ from cardwork.combinations.poker import (
 )
 from cardwork.combinations.policy import REGULAR_EVALUATION, Duplicates, Evaluation
 from cardwork.ordering.preorder import Key
-
-from ..cases import Case, descriptions
+from tests.cases import Case, descriptions
 
 PLACES: Final[Mapping[Rank, int]] = REGULAR_EVALUATION.rank_places()
 SUITED_PLACES: Final[int] = 3

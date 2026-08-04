@@ -8,8 +8,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from cardwork.combinations.matching import UNPLACED, Matching
-
-from ..cases import Case, descriptions
+from tests.cases import Case, descriptions
 
 MOST_OFFERS: Final[int] = 4
 MOST_PLACES: Final[int] = 4

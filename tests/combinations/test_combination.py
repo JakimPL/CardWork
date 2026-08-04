@@ -11,8 +11,7 @@ from cardwork.combinations.combination import BY_STRENGTH, Combination
 from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.poker import PAIR, TRIPLET
 from cardwork.combinations.policy import REGULAR_EVALUATION
-
-from ..cases import Case, descriptions
+from tests.cases import Case, descriptions
 
 KING_PLACE: Final[int] = REGULAR_EVALUATION.rank_places()[KING_OF_SPADES.rank]
 PAIR_OF_KINGS: Final[Combination] = Combination(

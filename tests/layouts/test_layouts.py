@@ -10,8 +10,8 @@ from cardwork.presentation.interlude import Interlude
 from cardwork.presentation.layout import Layout
 from cardwork.presentation.scope import Scope
 from cardwork.rounds.state import MatchPhase
+from tests.cases import descriptions
 
-from ..cases import descriptions
 from .games import CASES, OBSERVERS, PLAYERS, SEATS, LayoutCase
 
 ONE_GESTURE: Final[int] = 1

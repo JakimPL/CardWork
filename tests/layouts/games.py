@@ -18,8 +18,7 @@ from cardwork.presentation.award import Award
 from cardwork.presentation.scene import Scene
 from cardwork.rounds.state import MatchPhase
 from cardwork.states.state import GameState
-
-from ..cases import Case
+from tests.cases import Case
 
 PLAYERS: Final[int] = 3
 SEED: Final[int] = 7

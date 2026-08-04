@@ -34,8 +34,8 @@ from cardwork.cards.cards import (
 )
 from cardwork.cards.joker import Joker
 from cardwork.rounds.seating import rotation
+from tests.cases import Case, descriptions
 
-from ..cases import Case, descriptions
 from .driving import FIRST_CARD, SEATS, commit_the_turn, held_by, revealed
 
 SECOND_TURN: Final[int] = 2

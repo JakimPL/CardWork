@@ -17,8 +17,7 @@ from cardwork.rounds.redeal import DRAWS_MOST, Admits, Redeal
 from cardwork.states.state import GameState
 from cardwork.zones.presets import PILE
 from cardwork.zones.zone import Zone, ZoneId, cards_of
-
-from ..cases import Case, descriptions
+from tests.cases import Case, descriptions
 
 STOCK: Final[ZoneId] = "stock"
 HAND: Final[ZoneId] = "hand:0"

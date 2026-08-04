@@ -18,8 +18,7 @@ from cardwork.cards.cards import (
 from cardwork.cards.game import CardOrJoker
 from cardwork.cards.points import ACE_LOW_POINTS, REGULAR_POINTS, PointTable
 from cardwork.cards.rank import Rank
-
-from ..cases import Case, descriptions
+from tests.cases import Case, descriptions
 
 
 @dataclass(frozen=True)

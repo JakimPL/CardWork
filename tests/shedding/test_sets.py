@@ -31,8 +31,7 @@ from cardwork.cards.cards import (
 from cardwork.cards.game import CardsOrJokers
 from cardwork.cards.rank import Rank
 from cardwork.decks.deck import Indices
-
-from ..cases import Case, descriptions
+from tests.cases import Case, descriptions
 
 FULL_STOCK: Final[int] = 40
 RUN_OUT: Final[int] = 0

@@ -10,8 +10,8 @@ from cardtable.catalogue import (
 )
 from cardtable.games import GameName
 from cardwork.presentation.layout import Layout
+from tests.cases import descriptions
 
-from ..cases import descriptions
 from .config import GLYPHS
 from .tables import (
     CASES,

@@ -13,8 +13,8 @@ from cardwork.effects.effects import Effects
 from cardwork.positions.position import Position
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
+from tests.cases import Case, descriptions
 
-from ..cases import Case, descriptions
 from .driving import (
     DECK,
     ROUNDS,

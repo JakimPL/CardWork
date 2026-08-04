@@ -14,8 +14,7 @@ from cardwork.decks.standard import (
     standard_decks,
     standard_multiplicity,
 )
-
-from ..cases import Case, descriptions
+from tests.cases import Case, descriptions
 
 FULL_DECK_SIZE: Final[int] = 52
 TWO_DECKS: Final[int] = 2

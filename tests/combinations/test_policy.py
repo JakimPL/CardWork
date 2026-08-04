@@ -14,8 +14,7 @@ from cardwork.cards.orders import ACE_LOW_RANKS, RANK_SEQUENCE, SUIT_SEQUENCE
 from cardwork.cards.rank import Rank
 from cardwork.cards.suit import Suit
 from cardwork.combinations.policy import REGULAR_EVALUATION, Duplicates, Evaluation
-
-from ..cases import Case, descriptions
+from tests.cases import Case, descriptions
 
 ACE_LOW_EVALUATION: Final[Evaluation] = Evaluation(
     ranks=ACE_LOW_RANKS,
