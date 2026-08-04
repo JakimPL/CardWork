@@ -287,7 +287,9 @@ is a public-domain drawing per card and a public-domain back besides.
 `artwork:` says which pack a table draws with and which of that pack's backs its face-down cards lie under,
 and `--pack` and `--back` state either for one run. A table serves the pack it was fetched at `/artwork`,
 stating what it holds at `/artwork/manifest.json`, so the page is told the size a card was written at and the
-one back this table deals rather than carrying a list of files.
+one back this table deals rather than carrying a list of files. The page reads that once as it opens and draws
+every card as the picture named for it, measuring the whole table to the shape the pack was written at: a hand
+of Kare pixels lies at the proportions Windows dealt them, drawn a pixel to a square at any size.
 
 Neither pack is needed. `pack: null`, or `--pack none`, draws every card from the glyphs the page carries,
 which is also what a checkout that has fetched nothing reads: `Suit` values are `♠♥♦♣` and `Rank` values are

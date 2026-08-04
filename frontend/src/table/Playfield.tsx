@@ -4,6 +4,7 @@ import type { Layout } from "../api/layout";
 import type { Seat } from "../api/seat";
 import type { PositionView } from "../api/views";
 import type { Arrivals } from "../play/arrivals";
+import { useArtwork } from "../play/useArtwork";
 import { usePlay } from "../play/usePlay";
 import type { Connection } from "../play/useTable";
 import { classes } from "./classes";
@@ -12,7 +13,7 @@ import { Header } from "./Header";
 import { clears } from "./keys";
 import { own, ringOf, shared, SIDES } from "./placing";
 import { Sitting } from "./Sitting";
-import { crowding } from "./sizing";
+import { crowding, shaping } from "./sizing";
 import { StatusLine } from "./StatusLine";
 import { Zones } from "./Zones";
 
@@ -36,6 +37,9 @@ interface PlayfieldProps {
  * drawn, every figure read and every word of the phase comes from the layout the game stated, which is what
  * leaves this page holding no knowledge of any game.
  *
+ * The proportions of a card stand on the page itself, since every card on it is drawn from the one pack the
+ * table serves: a pack written at another shape is drawn at that shape, hand and table alike.
+ *
  * Three presses put the cards in hand back down, which between them cover every way a table is played: a click
  * on the page away from the cards, a press of the other button wherever it lands, and `Escape`. The first is the
  * one a touch screen has, and the other two are what a hand already resting on a mouse or a keyboard reaches for.
@@ -52,6 +56,7 @@ export function Playfield({
   const playing = usePlay(seat, layout, view, refresh);
   const { clear } = playing;
   const ring = ringOf(layout);
+  const artwork = useArtwork();
 
   useEffect(() => {
     const pressed = (event: KeyboardEvent): void => {
@@ -69,6 +74,7 @@ export function Playfield({
   return (
     <div
       className={classes("page", playing.sending && "sending")}
+      style={shaping(artwork)}
       onClick={clear}
       onContextMenu={answering(clear)}
       role="presentation"

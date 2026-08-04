@@ -7,6 +7,7 @@ import { parse } from "yaml";
 
 const CONFIGURATION = fileURLToPath(new URL("../config.yaml", import.meta.url));
 const ENDPOINTS = "/tables";
+const ARTWORK = "/artwork";
 
 interface Service {
   host: string;
@@ -21,8 +22,9 @@ interface Configuration {
  * Where the table answers, read from the one file a run is configured by.
  *
  * A development server holds the page and the table apart, so the two are made one origin by passing the
- * endpoints through. Reading the address here leaves `config.yaml` the single place it is stated, which is
- * what lets a table opened on another port be reached by a page already running.
+ * endpoints through, the cards a table draws with among them. Reading the address here leaves `config.yaml`
+ * the single place it is stated, which is what lets a table opened on another port be reached by a page
+ * already running.
  */
 function served(): string {
   const configuration = parse(readFileSync(CONFIGURATION, "utf-8")) as Configuration;
@@ -34,6 +36,7 @@ export default defineConfig({
   server: {
     proxy: {
       [ENDPOINTS]: { target: served(), changeOrigin: true },
+      [ARTWORK]: { target: served(), changeOrigin: true },
     },
   },
   test: {

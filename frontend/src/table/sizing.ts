@@ -1,11 +1,16 @@
 import type { CSSProperties } from "react";
 
+import type { Artwork } from "../api/artwork";
 import type { Spread } from "../api/layout";
 import type { Ring } from "./placing";
 
 /** The names the sheet reads a fan's overlap and a group's width under, each in cards rather than pixels. */
 const OVERLAP = "--overlap";
 const WIDTHS = "--widths";
+
+/** The names the sheet reads the proportions of a card under, both in the units the artwork was written in. */
+const ASPECT_WIDTH = "--card-aspect-width";
+const ASPECT_HEIGHT = "--card-aspect-height";
 
 /** The name the sheet reads how many seats stand one above another at a side of the table under. */
 const STACKED = "--stacked";
@@ -85,6 +90,19 @@ export function spanning(runs: Run[]): Measured {
  */
 export function crowding(ring: Ring): Measured {
   return { [STACKED]: Math.max(ONE_SEAT, ring.left.length, ring.right.length) };
+}
+
+/**
+ * How tall a card stands to its width, handed to the sheet so a pack is drawn at the shape it was written in.
+ *
+ * Every card is measured from one height, and the width follows from these two figures: a table opened with a
+ * pack states the size its pictures were written at, and a table drawing the glyphs the page carries keeps the
+ * proportions the sheet holds for them.
+ *
+ * @param artwork - the pack in service, where a table was opened with one.
+ */
+export function shaping(artwork: Artwork | null): Measured {
+  return artwork === null ? {} : { [ASPECT_WIDTH]: artwork.width, [ASPECT_HEIGHT]: artwork.height };
 }
 
 /** How many cards wide one zone lies: a heap reads by one card, a row by all of them, a fan by its overlap. */

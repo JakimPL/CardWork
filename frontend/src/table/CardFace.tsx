@@ -1,6 +1,9 @@
 import type { ReactElement } from "react";
 
+import type { Artwork } from "../api/artwork";
 import type { CardOrJoker, ProjectedCard } from "../api/views";
+import { useArtwork } from "../play/useArtwork";
+import { drawnAt } from "./artwork";
 import { classes } from "./classes";
 import { clicking } from "./clicks";
 
@@ -47,34 +50,75 @@ interface CardFaceProps {
  *
  * A card that has just been laid where it lies comes in from the hand it was played out of, which is what a
  * player watching the table sees happen.
+ *
+ * A table opened with a pack of artwork draws every card as the picture that pack holds for it, and the same
+ * element carries it: what a card is called, how it lies and what a press does with it are the drawing of a
+ * card whichever way its face is arrived at.
  */
 export function CardFace({ card, selected, dimmed, arriving, onPick }: CardFaceProps): ReactElement {
-  const marks = classes("card", ...drawing(card), selected && "selected", dimmed && "dimmed", arriving && "arriving");
+  const artwork = useArtwork();
+  const marks = classes(
+    "card",
+    ...facing(card),
+    ...drawnFrom(artwork),
+    selected && "selected",
+    dimmed && "dimmed",
+    arriving && "arriving",
+  );
   const label = card === null ? UNREAD : named(faceOf(card.card));
-  const pips = card === null ? null : shown(faceOf(card.card));
+  const drawn = artwork === null ? glyphs(card) : picture(artwork, card);
 
   if (onPick === null) {
     return (
       <div className={marks} aria-label={label}>
-        {pips}
+        {drawn}
       </div>
     );
   }
 
   return (
     <button type="button" className={marks} aria-label={label} aria-pressed={selected} onClick={clicking(onPick)}>
-      {pips}
+      {drawn}
     </button>
   );
 }
 
-/** How a place in a zone is drawn: the back of a card, or a face in the colour its suit reads in. */
-function drawing(card: ProjectedCard): string[] {
+/** How a place in a zone reads: the back of a card, or a face in the colour its suit draws in. */
+function facing(card: ProjectedCard): string[] {
   if (card === null) {
     return ["back"];
   }
 
   return ["face", RED_SUITS.has(faceOf(card.card).suit) ? "red" : "black", card.face_down ? "concealed" : ""];
+}
+
+/**
+ * What the pack in service asks of the drawing of a card, which a page drawing its own glyphs asks none of.
+ *
+ * A pack states how its pictures take to being drawn at another size and whether they carry their own corners,
+ * so the sheet is told both and every card of the table is drawn as the pack was written.
+ */
+function drawnFrom(artwork: Artwork | null): (string | false)[] {
+  if (artwork === null) {
+    return [];
+  }
+
+  return ["drawn", artwork.pixelated && "pixelated", artwork.cornered && "cornered"];
+}
+
+/**
+ * One place of a zone as the pack in service draws it, which is the picture that pack holds for the card.
+ *
+ * The card is named by the label the element already carries, so the picture stands as the drawing of it and
+ * a reader reaching the page by its words is told the card once.
+ */
+function picture(artwork: Artwork, card: ProjectedCard): ReactElement {
+  return <img className="art" src={drawnAt(artwork, card)} alt="" />;
+}
+
+/** The marks a page draws a card by on its own, where a card nobody reads draws as the back the sheet paints. */
+function glyphs(card: ProjectedCard): ReactElement | null {
+  return card === null ? null : shown(faceOf(card.card));
 }
 
 /** The rank and suit one card draws as, which a joker takes the colour it was dealt in. */
