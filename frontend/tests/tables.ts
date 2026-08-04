@@ -1,4 +1,4 @@
-import type { Gesture, Layout, Plaque, Slot } from "../src/api/layout";
+import type { Gesture, Interludes, Layout, Plaque, Slot } from "../src/api/layout";
 import type { Move } from "../src/api/moves";
 import type { Cursor, EventView, PositionView, ProjectedCard, ZoneChange, ZoneId } from "../src/api/views";
 import type { Arrivals } from "../src/play/arrivals";
@@ -58,6 +58,16 @@ export const SEATED: Cursor = {
   round_number: 2,
   winner: null,
 };
+
+/** The two phases a match played in rounds pauses at, as `presets.match_interludes` states them. */
+export const BETWEEN_ROUNDS = "between_rounds";
+export const MATCH_OVER = "match_over";
+export const INTERLUDES: Interludes = { [BETWEEN_ROUNDS]: "round", [MATCH_OVER]: "match" };
+
+/** A cursor standing at one of those two, which is a round closed or a match played out. */
+export function atRest(phase: string, points: number[], round_points: number[]): Cursor {
+  return { phase, to_act: [], points, round_number: 2, winner: null, round_points };
+}
 
 /** The two gestures `passing` states for a seat, as its own layout module states them. */
 export const TAKING: Gesture = {
@@ -127,6 +137,8 @@ export function aLayout(layout: Partial<Layout>): Layout {
     plaques: [],
     readouts: [],
     phases: {},
+    interludes: INTERLUDES,
+    award: "highest",
     ...layout,
   };
 }

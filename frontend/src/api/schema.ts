@@ -125,6 +125,17 @@ export interface components {
          */
         ActionKind: "play" | "take" | "give" | "reject" | "discard" | "declare";
         AnyAction: components["schemas"]["Play"] | components["schemas"]["Take"] | components["schemas"]["Give"] | components["schemas"]["Reject"] | components["schemas"]["Discard"] | components["schemas"]["Declare"];
+        /**
+         * Award
+         * @description Which end of the standing a match is won at.
+         *
+         *     A match is decided on `points`, and whether the seat holding the most of them or the fewest holds the match is
+         *     a rule of the game: one scoring what a seat takes reads `HIGHEST`, and one scoring what it is caught with
+         *     reads `LOWEST`. So an interface names the seat a match belongs to by reading the standing at the end the
+         *     layout points it to, and the direction stays with the game that knows it.
+         * @enum {string}
+         */
+        Award: "highest" | "lowest";
         CardIndex: number;
         /**
          * Commit
@@ -211,6 +222,20 @@ export interface components {
         };
         Indices: components["schemas"]["CardIndex"][];
         /**
+         * Interlude
+         * @description A pause in play, held open for the players to read what the table has just come to.
+         *
+         *     A boundary settles in a burst — the round scored into the standing, the cards gathered, the next hand dealt —
+         *     so a player watching the screen alone reads a round giving way to a fresh one with nothing said about what it
+         *     came to. A phase named as an interlude is one the interface stops at and reads out: `ROUND` is a round closed
+         *     with the next still to open, and `MATCH` is a match played out.
+         *
+         *     Which phases those are is a game's to state, since a game names the phases of its own rounds, and a match
+         *     played through `cardwork.rounds` states the pair `presets.match_interludes` holds.
+         * @enum {string}
+         */
+        Interlude: "round" | "match";
+        /**
          * Layout
          * @description Everything an interface needs to lay a game out for one seat, and nothing about how it looks.
          *
@@ -221,12 +246,17 @@ export interface components {
          *
          *     Every claim a layout makes about itself is checked as it is built, which leaves an interface free to trust
          *     it: one slot per zone, a slot belonging to a seat of the table or to the table itself, one slot per place
-         *     among the slots of one owner, one plaque per seat, one gesture per move, and every zone a gesture picks from
-         *     or commits onto laid out as a slot the player can reach.
+         *     among the slots of one owner, one plaque per seat, one gesture per move, every zone a gesture picks from
+         *     or commits onto laid out as a slot the player can reach, and a phase play pauses at captioned like any other.
          */
         Layout: {
+            award: components["schemas"]["Award"];
             /** Gestures */
             gestures: components["schemas"]["Gesture"][];
+            /** Interludes */
+            interludes: {
+                [key: string]: components["schemas"]["Interlude"];
+            };
             /** Observer */
             observer: number | null;
             /** Phases */

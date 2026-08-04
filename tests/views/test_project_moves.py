@@ -5,7 +5,7 @@ import pytest
 
 from cardwork.moves.actions import Give, Play
 from cardwork.moves.move import Move, Moves
-from cardwork.views.project import project_moves
+from cardwork.views.projection import project_moves
 
 from ..cases import Case, descriptions
 

@@ -4,11 +4,13 @@ import type { Layout } from "../api/layout";
 import type { Seat } from "../api/seat";
 import type { PositionView } from "../api/views";
 import type { Arrivals } from "../play/arrivals";
+import type { Report } from "../play/interludes";
 import { useArtwork } from "../play/useArtwork";
 import { usePlay } from "../play/usePlay";
 import type { Connection } from "../play/useTable";
 import { classes } from "./classes";
 import { answering } from "./clicks";
+import { Curtain } from "./Curtain";
 import { Header } from "./Header";
 import { clears } from "./keys";
 import { own, ringOf, shared, SIDES } from "./placing";
@@ -24,7 +26,9 @@ interface PlayfieldProps {
   connection: Connection;
   trouble: string | null;
   arrivals: Arrivals;
+  report: Report | null;
   refresh: () => void;
+  dismiss: () => void;
 }
 
 /**
@@ -43,6 +47,9 @@ interface PlayfieldProps {
  * Three presses put the cards in hand back down, which between them cover every way a table is played: a click
  * on the page away from the cards, a press of the other button wherever it lands, and `Escape`. The first is the
  * one a touch screen has, and the other two are what a hand already resting on a mouse or a keyboard reaches for.
+ *
+ * A round closed or a match decided stands over the whole of it as a report to be read, so a boundary the player
+ * was looking at is a boundary they get to keep looking at.
  */
 export function Playfield({
   seat,
@@ -51,7 +58,9 @@ export function Playfield({
   connection,
   trouble,
   arrivals,
+  report,
   refresh,
+  dismiss,
 }: PlayfieldProps): ReactElement {
   const playing = usePlay(seat, layout, view, refresh);
   const { clear } = playing;
@@ -99,6 +108,7 @@ export function Playfield({
         <p className="guidance">{playing.hint}</p>
         <StatusLine layout={layout} view={view} connection={connection} trouble={trouble} />
       </footer>
+      {report !== null && <Curtain layout={layout} report={report} dismiss={dismiss} />}
     </div>
   );
 }

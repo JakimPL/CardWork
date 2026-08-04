@@ -5,8 +5,10 @@ from cardgames.backend.shedding.state import SheddingPhase, SheddingState
 from cardgames.backend.shedding.zones import DISCARD, HAND, STOCK, hand_of
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation import presets
+from cardwork.presentation.award import Award
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
+from cardwork.presentation.interlude import Interlude
 from cardwork.presentation.readout import Readout
 from cardwork.presentation.scene import Scene
 from cardwork.presentation.scope import Scope
@@ -27,6 +29,7 @@ SHARED: Final[tuple[Slot, ...]] = (
 
 READOUTS: Final[tuple[Readout, ...]] = (
     Readout.of(SheddingState, "points", "Points", scope=Scope.SEAT),
+    Readout.of(SheddingState, "round_points", "This round", scope=Scope.SEAT),
     Readout.of(SheddingState, "round_number", "Round", scope=Scope.TABLE),
     Readout.of(SheddingState, "rounds", "Rounds", scope=Scope.TABLE),
     Readout.of(SheddingState, "winner", "Out first", scope=Scope.TABLE),
@@ -38,6 +41,10 @@ PHASES: Final[Mapping[str, str]] = {
     MatchPhase.BETWEEN_ROUNDS: "Between rounds",
     MatchPhase.MATCH_OVER: "Match over",
 }
+
+INTERLUDES: Final[Mapping[str, Interlude]] = presets.match_interludes()
+
+AWARD: Final[Award] = Award.HIGHEST
 
 
 def slots_of(seat: int) -> tuple[Slot, ...]:
@@ -101,4 +108,6 @@ SHEDDING_SCENE: Final[Scene] = Scene(
     counts=counts_of,
     readouts=READOUTS,
     phases=PHASES,
+    interludes=INTERLUDES,
+    award=AWARD,
 )

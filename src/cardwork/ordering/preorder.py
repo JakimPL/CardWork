@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from collections.abc import Hashable, Iterable, Sequence
+from collections.abc import Iterable, Sequence
 
 type Key = tuple[int, ...]
 type Positions = tuple[int, ...]
@@ -88,35 +88,3 @@ class Preorder[T](ABC):
 
         reached = max(keys) if highest else min(keys)
         return tuple(place for place, key in enumerate(keys) if key == reached)
-
-
-class Tiers[T: Hashable](Preorder[T]):
-    """An order over a listed run of values, each taking the place its position in the list names."""
-
-    def __init__(self, sequence: Sequence[T]) -> None:
-        self._places: dict[T, int] = {value: place for place, value in enumerate(sequence)}
-        if len(self._places) != len(sequence):
-            raise ValueError(f"Every value takes one place, and {len(sequence)} of them fill {len(self._places)}")
-
-    def key(self, value: T) -> Key:
-        if value not in self._places:
-            raise KeyError(f"{value!r} takes no place among the {len(self._places)} values this order lists")
-
-        return (self._places[value],)
-
-
-class Composite[T](Preorder[T]):
-    """One order refined by the next: their keys concatenated, and so read in the order given.
-
-    Rank before suit turns a preorder into a total order; the same composition compares two straights by
-    their top card and then by whatever a game wants to settle the rest.
-    """
-
-    def __init__(self, *orders: Preorder[T]) -> None:
-        if not orders:
-            raise ValueError("A composite order refines at least one order")
-
-        self._orders = orders
-
-    def key(self, value: T) -> Key:
-        return tuple(place for order in self._orders for place in order.key(value))

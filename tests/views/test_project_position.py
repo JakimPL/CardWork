@@ -8,7 +8,7 @@ from cardwork.cards.game import GameCard
 from cardwork.positions.position import Position
 from cardwork.states.state import GameState
 from cardwork.views.position import PositionView
-from cardwork.views.project import project_position
+from cardwork.views.projection import project_position
 from cardwork.zones.zone import ZoneId
 
 from .conftest import (

@@ -9,7 +9,7 @@ from cardwork.positions.position import Position
 from cardwork.states.state import GameState
 from cardwork.transactions.transaction import Transaction
 from cardwork.views.event import EventView
-from cardwork.views.project import project_transaction
+from cardwork.views.projection import project_transaction
 
 from .conftest import ALSO_HELD_BY_ONE, HELD_BY_ONE
 

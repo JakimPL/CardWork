@@ -44,4 +44,6 @@ def test_a_layout_the_document_states_holds_every_field_an_interface_draws_it_by
         "plaques",
         "readouts",
         "phases",
+        "interludes",
+        "award",
     }

@@ -4,7 +4,9 @@ from typing import Final
 from cardwork.cards.card import Card
 from cardwork.cards.rank import Rank, Ranks
 from cardwork.cards.suit import Suit, Suits
-from cardwork.ordering.preorder import Composite, Key, Preorder, Tiers
+from cardwork.ordering.composite import Composite
+from cardwork.ordering.preorder import Key, Preorder
+from cardwork.ordering.tiers import Tiers
 
 RANK_SEQUENCE: Final[Ranks] = tuple(Rank)
 ACE_LOW_RANKS: Final[Ranks] = (Rank.ACE, *RANK_SEQUENCE[:-1])

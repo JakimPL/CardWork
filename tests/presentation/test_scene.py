@@ -8,6 +8,8 @@ from cardwork.presentation.scene import SEAT_NAME, Scene
 
 from .demo import (
     AROUND,
+    AWARD,
+    INTERLUDES,
     OTHER,
     OWNER,
     SCENE,
@@ -98,6 +100,15 @@ def test_a_scene_carries_the_title_the_readouts_and_the_captions_to_every_observ
     assert (seated.title, seated.readouts, seated.phases) == (watching.title, watching.readouts, watching.phases)
 
 
+def test_a_scene_carries_what_a_match_comes_to_to_every_observer() -> None:
+    """Where play pauses and which end of the standing wins are one table's, so every seat reads them alike."""
+    seated = SCENE.layout(SEATS, OWNER)
+    watching = SCENE.layout(SEATS, None)
+
+    assert (seated.interludes, seated.award) == (INTERLUDES, AWARD)
+    assert (watching.interludes, watching.award) == (INTERLUDES, AWARD)
+
+
 def test_a_scene_refuses_a_layout_for_a_seat_the_table_does_not_hold() -> None:
     with pytest.raises(ValidationError, match=f"Seat {UNSEATED} stands outside the {SEATS} seats"):
         SCENE.layout(SEATS, UNSEATED)
@@ -121,4 +132,6 @@ def test_a_scene_sharing_a_zone_that_belongs_to_a_seat_is_refused() -> None:
             counts=counts_of,
             readouts=SCENE.readouts,
             phases=SCENE.phases,
+            interludes=SCENE.interludes,
+            award=SCENE.award,
         )

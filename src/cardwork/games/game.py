@@ -14,7 +14,7 @@ from cardwork.transactions.journal import Journal
 from cardwork.transactions.transaction import Transaction, Transactions
 from cardwork.views.event import EventView
 from cardwork.views.position import PositionView
-from cardwork.views.project import project_position, project_transaction
+from cardwork.views.projection import project_position, project_transaction
 from cardwork.zones.zone import Zones
 
 SETTLE_LIMIT: Final[int] = 64

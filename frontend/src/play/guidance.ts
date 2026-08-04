@@ -1,5 +1,6 @@
-import type { Layout } from "../api/layout";
+import type { Interlude, Layout } from "../api/layout";
 import type { PositionView } from "../api/views";
+import { interludeIn, leading } from "./interludes";
 import { nameOf } from "./seats";
 import type { Prospect } from "./selection";
 
@@ -11,6 +12,16 @@ const SPENT = "No move sends these cards";
 /** What it says while the table owes this seat nothing: whom the turn stands with, or the table itself. */
 const WAITING_ON = "Waiting for";
 const WAITING = "Waiting for the table";
+
+/** What it says once the match is played out, which is the seat or seats it belongs to. */
+const TOOK_THE_MATCH = "took the match";
+const SHARED_THE_MATCH = "shared the match";
+
+/** The pause a match played out stands at, which is the one that outlasts a dismissal. */
+const MATCH: Interlude = "match";
+
+/** How many seats hold a match one seat won outright. */
+const ALONE = 1;
 
 /** How two things a selection could send read beside each other. */
 const BESIDES = " · ";
@@ -26,7 +37,8 @@ const ALSO = ", ";
  * where a longer move is still open, and the standing invitation to pick one up.
  *
  * A seat with no move to make is told whom the table stands on, so a turn belonging to somebody else reads as
- * that rather than as a table gone quiet.
+ * that rather than as a table gone quiet. A match played out reads as the seat it belongs to, which is what the
+ * line goes on saying once the report naming that seat has been read and put away.
  */
 export function guidance(layout: Layout, view: PositionView, standing: Prospect, notice: string | null): string {
   if (notice !== null) {
@@ -41,6 +53,10 @@ export function guidance(layout: Layout, view: PositionView, standing: Prospect,
     return standing.open.size === 0 ? SPENT : EXTENDING;
   }
 
+  if (interludeIn(layout.interludes, view.state) === MATCH) {
+    return decided(layout, view);
+  }
+
   return standing.offers.length === 0 ? waitingOn(layout, view) : CHOOSING;
 }
 
@@ -49,9 +65,16 @@ export function guidance(layout: Layout, view: PositionView, standing: Prospect,
  *
  * The observer's own seat stands among those that owe an action for as long as the rules still owe a settlement
  * of its turn, which is the table's business rather than a player's, so what reads out is the seats beside it.
- * A boundary between rounds and a match played out leave every seat at rest, and read as the table itself.
+ * A boundary between rounds leaves every seat at rest, and reads as the table itself.
  */
 function waitingOn(layout: Layout, view: PositionView): string {
   const named = view.state.to_act.filter((seat) => seat !== layout.observer).map((seat) => nameOf(layout, seat));
   return named.length === 0 ? WAITING : `${WAITING_ON} ${named.join(ALSO)}`;
+}
+
+/** The seats a played-out match belongs to, read off the end of the standing the layout points to. */
+function decided(layout: Layout, view: PositionView): string {
+  const seats = leading(layout, view.state);
+  const named = seats.map((seat) => nameOf(layout, seat)).join(ALSO);
+  return `${named} ${seats.length === ALONE ? TOOK_THE_MATCH : SHARED_THE_MATCH}`;
 }

@@ -14,6 +14,10 @@ class Action(BaseFrozen):
     """
 
 
+class Pass(Action):
+    kind: Literal[ActionKind.PASS] = ActionKind.PASS
+
+
 class Play(Action):
     kind: Literal[ActionKind.PLAY] = ActionKind.PLAY
     group: str

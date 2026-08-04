@@ -4,8 +4,10 @@ import pytest
 from pydantic import ValidationError
 
 from cardwork.moves.kind import ActionKind
+from cardwork.presentation.award import Award
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
+from cardwork.presentation.interlude import Interlude
 from cardwork.presentation.layout import Layout, distinct, repeated
 from cardwork.presentation.readout import Readout
 from cardwork.presentation.scope import Scope
@@ -23,6 +25,7 @@ from .demo import (
     PILE,
     PLAQUES,
     READOUTS,
+    SCORED,
     SEATS,
     SHARED,
     SLOTS,
@@ -168,7 +171,24 @@ def test_a_layout_reads_the_fields_it_was_given_in_the_order_they_were_stated() 
 
 
 def test_a_layout_captions_the_phases_it_names() -> None:
-    assert a_layout().phases == {"playing": "Your turn"}
+    assert a_layout().phases == {"playing": "Your turn", "scored": "Round scored"}
+
+
+def test_a_layout_names_the_phases_play_pauses_at_and_the_end_a_match_is_won_at() -> None:
+    layout = a_layout()
+
+    assert layout.interludes == {SCORED: Interlude.ROUND}
+    assert layout.award is Award.LOWEST
+
+
+def test_a_layout_pausing_at_a_phase_it_captions_nowhere_is_refused() -> None:
+    with pytest.raises(ValidationError, match="A phase play pauses at is captioned like any other"):
+        a_layout(interludes={"vanished": Interlude.MATCH})
+
+
+def test_a_layout_pausing_at_no_phase_at_all_is_accepted() -> None:
+    """A game running its rounds together pauses nowhere, which the vocabulary states as pausing at nothing."""
+    assert a_layout(interludes={}).interludes == {}
 
 
 def test_a_layout_tallies_a_zone_it_lays_out_nowhere() -> None:

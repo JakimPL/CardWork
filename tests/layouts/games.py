@@ -14,6 +14,7 @@ from cardgames.frontend.shedding.layout import SHEDDING_SCENE
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
 from cardwork.decks.standard import standard_deck, standard_decks
 from cardwork.games.game import Game
+from cardwork.presentation.award import Award
 from cardwork.presentation.scene import Scene
 from cardwork.rounds.state import MatchPhase
 from cardwork.states.state import GameState
@@ -35,7 +36,7 @@ class LayoutCase(Case):
     The counts stand for what a layout holds rather than for what it looks like: how many zones an observer
     has of its own, how many of another seat's the table draws, how many the table shares, how many gestures a
     turn is made of, how many zones a plaque counts. `phases` is every phase the game's cursor may read, which
-    the captions are held against.
+    the captions are held against, and `award` is the end of the standing the game's match belongs to.
     """
 
     scene: Scene
@@ -46,6 +47,7 @@ class LayoutCase(Case):
     gestures: int
     counts: int
     phases: tuple[str, ...]
+    award: Award
 
 
 def a_passing_table() -> PassingGame:
@@ -88,6 +90,7 @@ CASES: Final[tuple[LayoutCase, ...]] = (
         gestures=2,
         counts=1,
         phases=tuple(PassingPhase) + tuple(MatchPhase),
+        award=Award.HIGHEST,
     ),
     LayoutCase(
         description="showdown lays out two holdings and a tray against the stock and the revealed cards",
@@ -99,6 +102,7 @@ CASES: Final[tuple[LayoutCase, ...]] = (
         gestures=2,
         counts=3,
         phases=tuple(ShowdownPhase) + tuple(MatchPhase),
+        award=Award.HIGHEST,
     ),
     LayoutCase(
         description="shedding lays out a hand against the stock it draws from and the cards it sheds",
@@ -110,5 +114,6 @@ CASES: Final[tuple[LayoutCase, ...]] = (
         gestures=2,
         counts=1,
         phases=tuple(SheddingPhase) + tuple(MatchPhase),
+        award=Award.HIGHEST,
     ),
 )

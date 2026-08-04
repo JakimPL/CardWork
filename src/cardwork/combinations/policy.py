@@ -9,7 +9,8 @@ from cardwork.cards.order import RANK_SEQUENCE, SUIT_SEQUENCE, ByRank, BySuit
 from cardwork.cards.rank import Rank, Ranks
 from cardwork.cards.suit import Suit, Suits
 from cardwork.models.base import BaseFrozen
-from cardwork.ordering.preorder import Composite, Preorder
+from cardwork.ordering.composite import Composite
+from cardwork.ordering.preorder import Preorder
 
 
 class Duplicates(StrEnum):

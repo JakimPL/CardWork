@@ -176,6 +176,12 @@ interface narrows them as the selection grows (`architecture.md` §10):
 The nine never lights, since no move names it. So a player reads what is playable without being told the rule,
 and a selection of one card commits nothing — the discard is the place that sends it.
 
+**A round is read out at the two phases the match itself stands in**, which `presets.match_interludes` states in
+one line: the hands as they finished, what the shortest of them took, and the standing it was added into stay on
+the table under a panel until the player has read them. A round that turns on one card is the round most worth
+stopping at, so the seat that went out is named rather than replaced by a fresh deal. The match belongs to the
+seat holding the most round wins, which the scene states as `Award.HIGHEST`.
+
 ---
 
 ## 6. What it asked the framework for

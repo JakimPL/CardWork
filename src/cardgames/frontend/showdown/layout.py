@@ -5,8 +5,10 @@ from cardgames.backend.showdown.state import ShowdownPhase, ShowdownState
 from cardgames.backend.showdown.zones import DISCARD, HOLDINGS, STOCK, blind_of, hand_of, tray_of, zone_of
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation import presets
+from cardwork.presentation.award import Award
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
+from cardwork.presentation.interlude import Interlude
 from cardwork.presentation.readout import Readout
 from cardwork.presentation.scene import Scene
 from cardwork.presentation.scope import Scope
@@ -41,6 +43,10 @@ PHASES: Final[Mapping[str, str]] = {
     MatchPhase.BETWEEN_ROUNDS: "Between rounds",
     MatchPhase.MATCH_OVER: "Match over",
 }
+
+INTERLUDES: Final[Mapping[str, Interlude]] = presets.match_interludes()
+
+AWARD: Final[Award] = Award.HIGHEST
 
 
 def slots_of(seat: int) -> tuple[Slot, ...]:
@@ -136,4 +142,6 @@ SHOWDOWN_SCENE: Final[Scene] = Scene(
     counts=counts_of,
     readouts=READOUTS,
     phases=PHASES,
+    interludes=INTERLUDES,
+    award=AWARD,
 )

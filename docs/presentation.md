@@ -6,18 +6,22 @@ data. A game states one, an interface reads it, and the two meet over a vocabula
 particular game nor a particular screen.
 
 The layer sits at the head of the framework, and the framework itself is a stranger to it: the engine plays a
-game whether or not anybody is watching. It names three layers below — `zones` for a zone to lay out, `moves`
-for a kind of move to make, `states` for a field of the cursor to show — and stops there.
+game whether or not anybody is watching. It names four layers below — `zones` for a zone to lay out, `moves`
+for a kind of move to make, `states` for a field of the cursor to show, `rounds` for the two phases a match of
+them pauses at — and stops there.
 
 ```python
 Scene(
     title="Passing",
     shared=(...),       # the zones every observer reads alike
     held=slots_of,      # seat -> the zones it holds of its own
+    seen=seen_of,       # seat -> the same zones as the rest of the table reads them
     gestures=...,       # seat -> the moves it makes, and how
     counts=...,         # seat -> the zones of its own the table counts
     readouts=(...),     # the fields of the cursor worth showing
     phases={...},       # what each phase is called in words
+    interludes={...},   # which of those phases play pauses at
+    award=Award.HIGHEST,  # which end of the standing the match is won at
 ).layout(players=3, observer=1)
 ```
 
@@ -64,13 +68,27 @@ from that and belongs to the interface: the seat reading the layout holds the pa
 others a station round the table, and the shared zones the middle of it. So a game states whose cards are whose
 and the page states what that looks like, which is the same division the spreads draw.
 
-Three closed vocabularies carry the choices:
+Five closed vocabularies carry the choices:
 
 | vocabulary | members | decides |
 |---|---|---|
 | `Spread` | `SLOT`, `STACK`, `FAN`, `ROW` | how the cards of a zone lie: one place, a heap, overlapped, side by side |
 | `Commit` | `ZONE`, `SEAT` | whether a move is sent by clicking a zone or a player |
 | `Scope` | `TABLE`, `SEAT` | whether a field of the cursor holds one value or one per seat |
+| `Interlude` | `ROUND`, `MATCH` | what a phase play pauses at has come to |
+| `Award` | `HIGHEST`, `LOWEST` | which end of the standing a match is won at |
+
+**A boundary is a phase, and a game says which of its phases are ones to stop at.** A round scored, the cards
+gathered and the next hand dealt settle in a single burst, so a player watching the table alone reads one round
+becoming another with nothing said about what the first was worth. `Layout.interludes` keys those phases against
+the `Interlude` each has come to, which is the whole of what an interface needs to hold the table open and read it
+out; the figures it reads out are the layout's own readouts, and the words are the interface's. A phase keyed
+there is captioned like any other, since it is a phase a player reads in the ordinary way as well.
+
+**A standing has an end a match is won at, and the rules keep no winner.** `points` is a tally and nothing more:
+whether the seat holding the most of it or the fewest holds the match is a rule of the game, so `Layout.award`
+states which end and an interface names the seat by reading the standing there. So a page saying who won holds no
+rule of its own about what winning is.
 
 **A readout is how a number reaches the screen, and the only how.** The standing is
 `Readout.of(PassingState, "points", "Points", scope=Scope.SEAT)`; the round in play is the same call over
@@ -104,9 +122,9 @@ layout falls in step with the projection (`architecture.md` §7), which is also 
 moves a view carries, which are that seat's own.
 
 A game states one `Scene` all the same, because a table has one arrangement and its observers differ only in
-where they sit. A scene holds the zones every observer reads alike, and four functions of a seat — the zones it
-holds as it reads them, the same zones as the rest of the table reads them, the gestures it makes, the counts the
-table reads of it:
+where they sit. A scene holds the zones every observer reads alike, what a match comes to, and four functions of
+a seat — the zones it holds as it reads them, the same zones as the rest of the table reads them, the gestures it
+makes, the counts the table reads of it:
 
 ```python
 PASSING_SCENE.layout(players=3, observer=1)     # -> Layout(observer=1, ...)
@@ -118,6 +136,11 @@ as the table reads them and the shared ones besides, and is offered the gestures
 reads every seat as the table reads it and makes no move; every seat of the table takes a plaque, named by where
 it sits until a host holds a name for it. That is the same entitlement the projection gives an observer over the
 cards, and it now lives in one place rather than in every game that would have to remember it.
+
+The title, the readouts, the captions, the interludes and the award travel to every observer unchanged: what a
+match comes to and where play pauses on the way are one table's business, so every seat and every spectator reads
+them alike. `presets.match_interludes` is the pair a match played through `cardwork.rounds` wants, which is why
+each of the three games states one line for it.
 
 A scene answers for the ownership it states as it lays a table out: a zone the table shares belongs to no seat,
 and the zones a scene is asked for at one seat all belong to that seat. So a game that reads `hand_of(seat)`
@@ -147,6 +170,7 @@ Every claim a layout makes is checked as it is built, which leaves an interface 
 | a gesture over every group of a kind stands alone | that resolution is unambiguous |
 | every zone a gesture picks from or commits onto takes a slot | a player can reach the cards and the target |
 | one readout per field | a figure shows once |
+| every phase play pauses at is captioned | a report has a phase to name and words to name it by |
 
 ---
 
@@ -175,7 +199,7 @@ game's to state.
 
 ## 6. What arrives the day it is wanted
 
-Three places where the vocabulary stops at what the games ask for, each following the line `Visibility` takes
+Five places where the vocabulary stops at what the games ask for, each following the line `Visibility` takes
 (`architecture.md` §3.3):
 
 - **`Commit` names places on the table.** A move is sent by pointing at where it goes, which is what keeps a
@@ -192,6 +216,17 @@ Three places where the vocabulary stops at what the games ask for, each followin
   the shared middle — are one reading of `Slot.seat` against `Layout.observer`, and a page that wanted a fourth
   would derive that too. A field naming the page's own geography arrives the day a game needs a zone drawn
   somewhere the owner of it cannot say.
+- **An interlude names what a pause has come to and not what to say about it.** `ROUND` and `MATCH` are the two
+  things a game played in rounds ever stops at, and a game stopping somewhere of its own — a trick taken, a hand
+  revealed — keys that phase against one of the two rather than asking for a third: what the panel then reads out
+  is the readouts already stated, so the pause needs no vocabulary of its own. A member arrives the day a pause
+  wants reading out in a shape the two of these are not, and the words each one is titled by stay the interface's.
+- **An award names an end of the standing and no rule about reaching it.** The two members are the whole of what a
+  direction can be, and both are needed for either to say anything: a field with one value states nothing, and an
+  interface reading `points` has no way to guess which way a particular game counts. So this is one place the
+  vocabulary is complete on the day it arrives, and what does wait for a game to want it is a match won on
+  something other than the standing — a target reached, a lead held — which is the rules layer's to state before
+  it is anything for a layout to point at.
 
 ---
 

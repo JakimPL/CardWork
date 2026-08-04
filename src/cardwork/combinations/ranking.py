@@ -9,7 +9,9 @@ from cardwork.combinations.detect import find
 from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.policy import Evaluation
 from cardwork.models.base import BaseFrozen
-from cardwork.ordering.preorder import Composite, Key, Preorder, Tiers
+from cardwork.ordering.composite import Composite
+from cardwork.ordering.preorder import Key, Preorder
+from cardwork.ordering.tiers import Tiers
 
 
 class ByPattern(Preorder[Combination]):

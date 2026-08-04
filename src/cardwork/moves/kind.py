@@ -10,6 +10,7 @@ class ActionKind(StrEnum):
     string that happens to match.
     """
 
+    PASS = "pass"
     PLAY = "play"
     TAKE = "take"
     GIVE = "give"

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Generic
 
 from pydantic import Field
@@ -18,8 +20,8 @@ class Position(BaseFrozen, Generic[StateT]):
     state: StateT
     players: int = Field(ge=1)
 
-    def with_board(self, board: Board) -> "Position[StateT]":
+    def with_board(self, board: Board) -> Position[StateT]:
         return Position(board=board, state=self.state, players=self.players)
 
-    def with_state(self, state: StateT) -> "Position[StateT]":
+    def with_state(self, state: StateT) -> Position[StateT]:
         return Position(board=self.board, state=state, players=self.players)

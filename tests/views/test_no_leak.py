@@ -6,7 +6,7 @@ from hypothesis import strategies as st
 from cardwork.moves.move import Moves
 from cardwork.positions.position import Position
 from cardwork.states.state import GameState
-from cardwork.views.project import project_position, project_transaction
+from cardwork.views.projection import project_position, project_transaction
 from cardwork.zones.resolution import visible_to
 
 from .strategies import (

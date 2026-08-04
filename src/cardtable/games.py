@@ -9,6 +9,7 @@ class GameName(StrEnum):
     table is opened.
     """
 
+    CLIMBING = "climbing"
     PASSING = "passing"
     SHOWDOWN = "showdown"
     SHEDDING = "shedding"

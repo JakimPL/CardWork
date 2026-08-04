@@ -17,3 +17,8 @@ export type Tally = components["schemas"]["Tally"];
 export type Spread = components["schemas"]["Spread"];
 export type Commit = components["schemas"]["Commit"];
 export type Scope = components["schemas"]["Scope"];
+export type Interlude = components["schemas"]["Interlude"];
+export type Award = components["schemas"]["Award"];
+
+/** The phases play pauses at, each under the pause it brings the table to. */
+export type Interludes = Layout["interludes"];

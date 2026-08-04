@@ -587,6 +587,92 @@ button.card {
   color: var(--red);
 }
 
+/*
+ * The report a boundary is read at, held over the table until the player says they have read it.
+ *
+ * It lies over the whole page, so the cards underneath stay in view and out of reach: what closed the round is
+ * still lying where it closed it, and the panel names what that came to. The panel sits above the middle of the
+ * page rather than at the centre of it, which leaves the player's own cards showing beneath.
+ */
+
+.curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgb(0 0 0 / 55%);
+}
+
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  align-items: center;
+  max-width: min(90vw, 40rem);
+  max-height: 80vh;
+  padding: calc(var(--gap) * 3);
+  border: 1px solid var(--edge);
+  border-radius: calc(var(--radius) * 2);
+  background: var(--felt-dark);
+  box-shadow: 0 calc(var(--gap) * 2) calc(var(--gap) * 4) rgb(0 0 0 / 45%);
+  overflow-y: auto;
+  text-align: center;
+}
+
+.outcome {
+  margin: 0;
+  font-size: calc(var(--caption) * 1.8);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.winner {
+  margin: 0;
+  color: var(--acting);
+  font-size: calc(var(--caption) * 1.3);
+  font-weight: 600;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap) / 2);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result {
+  display: flex;
+  gap: var(--gap);
+  justify-content: space-between;
+  align-items: baseline;
+  padding: calc(var(--gap) / 2) var(--gap);
+  border-radius: var(--radius);
+  background: rgb(255 255 255 / 6%);
+}
+
+.figures.table {
+  justify-content: center;
+  flex-wrap: wrap;
+  font-size: var(--caption);
+}
+
+.onward {
+  padding: calc(var(--gap) / 2) calc(var(--gap) * 3);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--chalk);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* The page before a table is in hand: taking a seat, joining one, or being turned away from one. */
 
 .notice {

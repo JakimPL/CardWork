@@ -2,8 +2,10 @@ from collections.abc import Mapping
 from typing import Final
 
 from cardwork.moves.kind import ActionKind
+from cardwork.presentation.award import Award
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
+from cardwork.presentation.interlude import Interlude
 from cardwork.presentation.layout import Layout
 from cardwork.presentation.plaque import Plaque
 from cardwork.presentation.readout import Readout
@@ -21,8 +23,11 @@ OTHER: Final[int] = 2
 PILE: Final[ZoneId] = "pile"
 STACK: Final[ZoneId] = "stack"
 PLAYING: Final[str] = "playing"
+SCORED: Final[str] = "scored"
 TITLE: Final[str] = "Demonstration"
-PHASES: Final[Mapping[str, str]] = {PLAYING: "Your turn"}
+PHASES: Final[Mapping[str, str]] = {PLAYING: "Your turn", SCORED: "Round scored"}
+INTERLUDES: Final[Mapping[str, Interlude]] = {SCORED: Interlude.ROUND}
+AWARD: Final[Award] = Award.LOWEST
 
 
 def hand_of(seat: int) -> ZoneId:
@@ -145,6 +150,8 @@ SCENE: Final[Scene] = Scene(
     counts=counts_of,
     readouts=READOUTS,
     phases=PHASES,
+    interludes=INTERLUDES,
+    award=AWARD,
 )
 
 
@@ -155,6 +162,7 @@ def a_layout(
     readouts: tuple[Readout, ...] = READOUTS,
     observer: int | None = OWNER,
     players: int = SEATS,
+    interludes: Mapping[str, Interlude] = INTERLUDES,
 ) -> Layout:
     """The demonstration table laid out for one seat, with any part of it standing in for its own.
 
@@ -172,4 +180,6 @@ def a_layout(
         plaques=plaques,
         readouts=readouts,
         phases=PHASES,
+        interludes=interludes,
+        award=AWARD,
     )

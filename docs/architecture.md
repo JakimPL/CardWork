@@ -1322,8 +1322,8 @@ the host mounts. It holds three layers of its own, and each names only what is b
 | layer | states |
 |---|---|
 | `api` | what a table answers and what a client sends: the layout vocabulary, the projections, the seat, the refusals, and the calls that read them |
-| `play` | what a client makes of those answers: the seat an address names, the view a commit leaves, the figures a readout reads |
-| `table` | what appears on screen: the standing, the three groups of zones, a station, a slot, a card, the line saying where play stands |
+| `play` | what a client makes of those answers: the seat an address names, the view a commit leaves, the figures a readout reads, the boundary a commit pauses at |
+| `table` | what appears on screen: the standing, the three groups of zones, a station, a slot, a card, the line saying where play stands, the report a boundary is read at |
 
 **The types come from the document where a document exists, and by hand where one cannot.** `/layout` is the
 one answer that stands apart from a game's own state, so it publishes a schema and `openapi-typescript`
@@ -1443,6 +1443,21 @@ a moment later closes back to the card on top and the count of those beneath. So
 one card per seat over as the group it is and passing's exchange shows the card given up before the stack takes
 it, out of one rule and no game's name. The newest commit is the one that shows, since that is the arrival a
 player is watching, and a reader who asks for stillness is given the same table arrived at in one step.
+
+**A round closes where the players can read it, and the reading is taken off the stream rather than off the
+table.** A boundary is two transactions and a settlement commits both in one burst (§6), so the round scored and
+the round dealt reach a client together and a render may only ever draw the last of them. `play/interludes.ts`
+therefore reads each commit as it arrives: a commit whose phase the layout keyed as an `Interlude` is applied and
+raises a report holding that cursor, and every commit behind it waits until the report is dismissed — at which
+point they land in order, stopping again at the next boundary among them. So the last round of a match is read as
+a round closed and then as a match decided, one press apiece, and the cards a round was won on are still lying
+where it was won while its report stands over them. `table/Curtain.tsx` is that report: the standing seat by seat,
+the figures the game keeps of the table beneath, the seat a decided match belongs to read off the end of the
+standing `Layout.award` points to, and one press onward — dismissed by the button, by `Escape` or by a click away
+from it, which are the three presses that put a selection down. Readiness is each player's own and no message to
+the table: a turn waits at the seat it belongs to whether that player has read the round or not, so nobody can
+hold the table up by looking away. What the line under the cards says once a match is played out is the same
+reading, which leaves a decided table naming its winner rather than waiting for a move that will never come.
 
 ---
 

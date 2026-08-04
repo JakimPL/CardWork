@@ -10,11 +10,13 @@ import {
   aGive,
   aLayout,
   aTake,
+  atRest,
   aView,
   card,
   DISCARDING,
   GIVING,
   HAND,
+  MATCH_OVER,
   offering,
   SEATED,
   TAKING,
@@ -37,6 +39,10 @@ const A_SET = offering(DEALT, [aDiscard([0, 1])]);
 const ELSEWHERE = aView({ [HAND]: DEALT.zones[HAND]?.cards ?? [] }, 1, { ...SEATED, to_act: [2] });
 const SEVERAL = aView({ [HAND]: DEALT.zones[HAND]?.cards ?? [] }, 1, { ...SEATED, to_act: [0, 2] });
 const AT_REST = aView({ [HAND]: DEALT.zones[HAND]?.cards ?? [] }, 1, { ...SEATED, to_act: [] });
+
+/** The same table with the match played out, which the standing of the cursor decides. */
+const OVER = aView({ [HAND]: [] }, 1, atRest(MATCH_OVER, [3, 5, 8], [0, 0, 1]));
+const TIED = aView({ [HAND]: [] }, 1, atRest(MATCH_OVER, [8, 5, 8], [0, 0, 1]));
 
 /** What the line under the cards says about one position and one selection. */
 function said(layout: Layout, view: PositionView, selection: Selection | null, notice: string | null): string {
@@ -99,6 +105,16 @@ const CASES: Case[] = [
     description: "a refusal the table answered with, which stands over anything else",
     said: said(TURN, A_TURN, { zone: HAND, indices: [0] }, "Seat 1 names one card at a time, and named 3"),
     expected: "Seat 1 names one card at a time, and named 3",
+  },
+  {
+    description: "a match played out, which reads as the seat the standing leaves it with",
+    said: said(TURN, OVER, null, null),
+    expected: "South took the match",
+  },
+  {
+    description: "a match two seats end level on, which names both of them",
+    said: said(TURN, TIED, null, null),
+    expected: "North, South shared the match",
   },
 ];
 

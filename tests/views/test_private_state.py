@@ -6,7 +6,7 @@ from cardwork.boards.board import Board
 from cardwork.positions.position import Position
 from cardwork.states.state import GameState
 from cardwork.transactions.transaction import Transaction
-from cardwork.views.project import project_position, project_transaction
+from cardwork.views.projection import project_position, project_transaction
 
 from .conftest import PLAYERS, SEQ
 

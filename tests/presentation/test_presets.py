@@ -1,7 +1,9 @@
 from typing import Final
 
 from cardwork.presentation import presets
+from cardwork.presentation.interlude import Interlude
 from cardwork.presentation.spread import Spread
+from cardwork.rounds.state import MatchPhase
 
 from .demo import PILE, hand_of
 
@@ -62,3 +64,10 @@ def test_a_heap_carries_the_zone_the_word_and_the_place_it_was_given() -> None:
     slot = presets.heap(PILE, "Pile", place=PLACE)
 
     assert (slot.zone, slot.label, slot.place) == (PILE, "Pile", PLACE)
+
+
+def test_a_match_of_rounds_pauses_where_its_two_reserved_phases_leave_the_table_at_rest() -> None:
+    assert presets.match_interludes() == {
+        MatchPhase.BETWEEN_ROUNDS: Interlude.ROUND,
+        MatchPhase.MATCH_OVER: Interlude.MATCH,
+    }

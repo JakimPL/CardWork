@@ -156,8 +156,15 @@ Both pick in the hand, because the positions either intent names address the car
 own positions are named by no move at all. So a card is chosen in one place and sent by pointing at where it
 goes — the pile to trade it, the next seat's plaque to pass it — and a selection alone commits nothing.
 
-The standing, the round in play and the seat a round was won by are readouts over `PassingState`. The four
-phases of §4 are captioned there as well, which is what a player reads in place of `"between_rounds"`.
+The standing, what the round in play has scored, the round in play and the seat a round was won by are readouts
+over `PassingState`. The four phases of §4 are captioned there as well, which is what a player reads in place of
+`"between_rounds"`.
+
+The two phases the match itself stands in are the two the table pauses at: `MatchPhase.BETWEEN_ROUNDS` reads out
+the round that just closed and `MatchPhase.MATCH_OVER` the match, which `presets.match_interludes` states in one
+line. So the win a hand read is on the table under a panel naming the seat it went to, rather than gone behind the
+deal of the next round. The match belongs to the seat holding the most points, which the scene states as
+`Award.HIGHEST`.
 
 ---
 

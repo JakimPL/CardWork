@@ -6,13 +6,18 @@ from cardwork.moves.actions import Give
 from cardwork.moves.move import Move
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
+from cardwork.presentation.interlude import Interlude
 from cardwork.presentation.layout import Layout
+from cardwork.presentation.scope import Scope
+from cardwork.rounds.state import MatchPhase
 
 from ..cases import descriptions
 from .games import CASES, OBSERVERS, PLAYERS, SEATS, LayoutCase
 
 ONE_GESTURE: Final[int] = 1
 IDS: Final[list[str]] = descriptions(CASES)
+STANDING: Final[str] = "points"
+ROUND_AWARD: Final[str] = "round_points"
 
 
 def made_by(layout: Layout, move: Move) -> tuple[Gesture, ...]:
@@ -87,6 +92,26 @@ def test_the_phase_the_table_stands_in_is_captioned(observer: int | None, case: 
     layout = case.scene.layout(PLAYERS, observer)
 
     assert view.state.phase in layout.phases
+
+
+@pytest.mark.parametrize("case", CASES, ids=IDS)
+def test_a_match_of_rounds_pauses_at_the_close_of_a_round_and_at_the_close_of_the_match(case: LayoutCase) -> None:
+    layout = case.scene.layout(PLAYERS, None)
+
+    assert layout.interludes == {
+        MatchPhase.BETWEEN_ROUNDS: Interlude.ROUND,
+        MatchPhase.MATCH_OVER: Interlude.MATCH,
+    }
+    assert layout.award is case.award
+
+
+@pytest.mark.parametrize("case", CASES, ids=IDS)
+def test_the_round_a_seat_took_reads_beside_the_standing_it_was_added_into(case: LayoutCase) -> None:
+    """A round read out as it closes says what each seat took of it, so every game scopes that tally to a seat."""
+    layout = case.scene.layout(PLAYERS, None)
+
+    seated = {readout.field for readout in layout.readouts if readout.scope is Scope.SEAT}
+    assert {STANDING, ROUND_AWARD} <= seated
 
 
 @pytest.mark.parametrize("case", CASES, ids=IDS)

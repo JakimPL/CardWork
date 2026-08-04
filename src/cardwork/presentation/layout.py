@@ -6,7 +6,9 @@ from pydantic import Field, model_validator
 
 from cardwork.models.base import BaseFrozen
 from cardwork.moves.kind import ActionKind
+from cardwork.presentation.award import Award
 from cardwork.presentation.gesture import Gesture
+from cardwork.presentation.interlude import Interlude
 from cardwork.presentation.plaque import Plaque
 from cardwork.presentation.readout import Readout
 from cardwork.presentation.slot import Slot
@@ -38,8 +40,8 @@ class Layout(BaseFrozen):
 
     Every claim a layout makes about itself is checked as it is built, which leaves an interface free to trust
     it: one slot per zone, a slot belonging to a seat of the table or to the table itself, one slot per place
-    among the slots of one owner, one plaque per seat, one gesture per move, and every zone a gesture picks from
-    or commits onto laid out as a slot the player can reach.
+    among the slots of one owner, one plaque per seat, one gesture per move, every zone a gesture picks from
+    or commits onto laid out as a slot the player can reach, and a phase play pauses at captioned like any other.
     """
 
     title: str
@@ -50,6 +52,8 @@ class Layout(BaseFrozen):
     plaques: tuple[Plaque, ...]
     readouts: tuple[Readout, ...]
     phases: Mapping[str, str]
+    interludes: Mapping[str, Interlude]
+    award: Award
 
     @model_validator(mode="after")
     def _the_observer_takes_a_seat(self) -> Self:
@@ -163,6 +167,19 @@ class Layout(BaseFrozen):
         twice = repeated(tuple(readout.field for readout in self.readouts))
         if twice:
             raise ValueError(f"A field of the cursor reads once, and these take two readouts apiece: {twice}")
+
+        return self
+
+    @model_validator(mode="after")
+    def _every_interlude_names_a_captioned_phase(self) -> Self:
+        """Confirm a phase play pauses at is one the layout states words for.
+
+        Raises:
+            ValueError: when an interlude names a phase the captions leave out.
+        """
+        uncaptioned = distinct(tuple(phase for phase in self.interludes if phase not in self.phases))
+        if uncaptioned:
+            raise ValueError(f"A phase play pauses at is captioned like any other, and these are not: {uncaptioned}")
 
         return self
 

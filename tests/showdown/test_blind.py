@@ -11,7 +11,7 @@ from cardwork.cards.card import Card
 from cardwork.cards.cards import STANDARD_CARDS
 from cardwork.cards.game import GameCard
 from cardwork.positions.position import Position
-from cardwork.views.project import project_position
+from cardwork.views.projection import project_position
 
 from .driving import ROUNDS, SEATS, SEED, a_match
 

@@ -2,7 +2,9 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Final
 
+from cardwork.presentation.award import Award
 from cardwork.presentation.gesture import Gesture
+from cardwork.presentation.interlude import Interlude
 from cardwork.presentation.layout import Layout
 from cardwork.presentation.plaque import Plaque
 from cardwork.presentation.readout import Readout
@@ -19,7 +21,8 @@ class Scene:
     A game states one of these and each observer's `Layout` follows from it. `shared` holds the zones every
     observer reads the same way, and `held`, `seen`, `gestures` and `counts` each answer for one seat, so the
     layout of an observer is its own zones, the rest of the table read at every seat beside it, and the shared
-    zones besides. `title`, `readouts` and `phases` stand the same for everybody.
+    zones besides. `title`, `readouts`, `phases`, `interludes` and `award` stand the same for everybody: what a
+    match comes to is one thing every seat reads alike.
 
     `held` states a seat's zones as that seat reads them, and `seen` the same zones as everybody else does: the
     cards a hand shows itself are backs to the table, and a holding it counts by looking carries its size across
@@ -40,6 +43,8 @@ class Scene:
     counts: Callable[[int], tuple[Tally, ...]]
     readouts: tuple[Readout, ...]
     phases: Mapping[str, str]
+    interludes: Mapping[str, Interlude]
+    award: Award
 
     def __post_init__(self) -> None:
         """Confirm the zones the table shares belong to no seat, since every observer reads them alike.
@@ -72,6 +77,8 @@ class Scene:
             plaques=self._plaques(players),
             readouts=self.readouts,
             phases=self.phases,
+            interludes=self.interludes,
+            award=self.award,
         )
 
     def _held_by(self, observer: int | None) -> tuple[Slot, ...]:

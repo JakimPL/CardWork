@@ -171,6 +171,11 @@ states the pairing rather than a rule deriving it (`presentation.md` §1).
 placeholder standing at its true index (`architecture.md` §7), so a player picks the third of five backs and
 the commitment lands on the card lying there.
 
+**A round is read out at the two phases the match itself stands in**, which `presets.match_interludes` states in
+one line: the ten turns of a round add up to a figure worth stopping over, so what each seat took of the round and
+the standing it was added into stand over the table until the player has read them. The match belongs to the seat
+holding the most points, which the scene states as `Award.HIGHEST`.
+
 ---
 
 ## 6. What it asked the framework for
