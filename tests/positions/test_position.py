@@ -19,7 +19,15 @@ def position_fixture() -> Position[GameState]:
 
 
 def test_with_board_carries_the_state_and_the_seat_count(position: Position[GameState]) -> None:
-    extended = position.with_board(position.board.with_zones(Zone(id="draw", visibility=PILE)))
+    extended = position.with_board(
+        position.board.with_zones(
+            Zone(
+                id="draw",
+                visibility=PILE,
+                ordered=True,
+            )
+        )
+    )
 
     assert extended.state == position.state
     assert extended.players == PLAYERS

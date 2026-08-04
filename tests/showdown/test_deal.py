@@ -13,7 +13,7 @@ from cardgames.backend.showdown.rules import (
     ONE_CARD,
 )
 from cardgames.backend.showdown.state import ShowdownPhase, ShowdownState
-from cardgames.backend.showdown.zones import DISCARD, STOCK, blind_of, hand_of, tray_of
+from cardgames.backend.showdown.zones import STOCK, blind_of, hand_of, tray_of
 from cardwork.decks.decks import jokers
 from cardwork.decks.standard import standard_deck
 from cardwork.effects.effects import Effects
@@ -21,6 +21,7 @@ from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import ONE_ROUND, Conclusion
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
+from cardwork.zones.zones import DISCARD
 from tests.cases import Case, descriptions
 
 from .driving import DECK, FULL_TABLE, ROUNDS, SEATS, SEED, TWO_SEATS, a_match

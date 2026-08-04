@@ -51,7 +51,7 @@ class DiscardGame(Game[GameState]):
     def zones(self, players: int, deck: Deck) -> Zones:
         return {
             **hands(players),
-            "draw": Zone(id="draw", visibility=PILE, cards=to_game_cards(deck, face_down=True)),
+            "draw": Zone(id="draw", visibility=PILE, ordered=True, cards=to_game_cards(deck, face_down=True)),
             **discard(),
         }
 
@@ -140,7 +140,15 @@ class SealedRoundGame(DiscardGame):
     """
 
     def zones(self, players: int, deck: Deck) -> Zones:
-        trays = {tray_of(seat): Zone(id=tray_of(seat), owner=seat, visibility=HAND) for seat in range(players)}
+        trays = {
+            tray_of(seat): Zone(
+                id=tray_of(seat),
+                owner=seat,
+                visibility=HAND,
+                ordered=True,
+            )
+            for seat in range(players)
+        }
         return {**super().zones(players, deck), **trays}
 
     def authorize(self, position: Position[GameState], move: Move) -> None:
@@ -235,7 +243,7 @@ class BareGame(Game[GameState]):
     """The least a game may declare: the hooks the engine requires, leaving the optional ones as they come."""
 
     def zones(self, players: int, deck: Deck) -> Zones:
-        return {"draw": Zone(id="draw", visibility=PILE, cards=to_game_cards(deck, face_down=True))}
+        return {"draw": Zone(id="draw", visibility=PILE, ordered=True, cards=to_game_cards(deck, face_down=True))}
 
     def _validate_players(self, players: int) -> None:
         """Any seating this engine accepts suits this game."""

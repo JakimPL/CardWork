@@ -7,13 +7,15 @@ import pytest
 from cardgames.backend.shedding.game import SheddingGame
 from cardgames.backend.shedding.rules import HAND_SIZE, NOTHING, SHED_LEAST
 from cardgames.backend.shedding.state import SheddingPhase, SheddingState
-from cardgames.backend.shedding.zones import DISCARD, STOCK, hand_of
+from cardgames.backend.shedding.zones import STOCK
 from cardwork.decks.standard import standard_deck, standard_decks
 from cardwork.effects.effects import Effects
 from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
+from cardwork.zones.zone import hand_of
+from cardwork.zones.zones import DISCARD
 from tests.cases import Case, descriptions
 
 from .driving import (

@@ -11,10 +11,11 @@ from cardgames.backend.showdown.rules import (
     ONE_CARD,
     TURNS,
 )
-from cardgames.backend.showdown.zones import DISCARD, Holding, blind_of, tray_of
+from cardgames.backend.showdown.zones import Holding, blind_of, tray_of
 from cardwork.exceptions import IllegalMove, NotYourTurn
 from cardwork.moves.actions import Play, Take
 from cardwork.moves.move import Move
+from cardwork.zones.zones import DISCARD
 
 from .driving import (
     FIRST_CARD,

@@ -226,15 +226,46 @@ separates them by suit states that rule itself.
 A `Ranking` lists the patterns a game recognises, weakest first, beside the reading it finds them by:
 
 ```python
-POKER.strongest(hand)  # the best combination the hand forms
-POKER.order  # a Preorder[Combination]: pattern first, strength within it
-POKER.order.compare(mine, yours)
-POKER.order.argmaxima(hands)  # every seat that shares the top
+POKER = Ranking(
+    patterns=(
+        HIGH_CARD,
+        PAIR,
+        TWO_PAIR,
+        TRIPLET,
+        STRAIGHT,
+        FLUSH,
+        FULL_HOUSE,
+        QUADRUPLET,
+        STRAIGHT_FLUSH,
+    ),
+    evaluation=REGULAR_EVALUATION,
+)
 ```
 
-`order()` is a `Preorder` from `cardwork.ordering.preorder`, so comparing two hands and picking the winners
-out of a table are calls it already carries. A combination whose pattern the ranking leaves out raises
-`KeyError`, which keeps a ranking's answer to the patterns it names.
+**`strongest` takes cards and `order` takes combinations.** A hand is a run of cards, and `strongest`
+reads one and answers with the `Combination` it forms — the pattern it answers, the cards that make it, and
+its strength within that pattern. That combination is what the order compares, since a run of cards alone
+says nothing about which of the patterns it is being counted as:
+
+```python
+mine = POKER.strongest((SEVEN_OF_SPADES, SEVEN_OF_HEARTS, TWO_OF_CLUBS))  # 2 of a rank: 7♠ 7♥
+yours = POKER.strongest((KING_OF_SPADES, QUEEN_OF_HEARTS))  # any card: K♠
+
+POKER.order.compare(mine, yours)  # 1 — a pair over a high card
+POKER.order  # a Preorder[Combination]: pattern first, strength within it
+```
+
+A hand forming none of the patterns a ranking names answers `None`, so a table is read into combinations
+before it is ordered:
+
+```python
+best = [POKER.strongest(seat) for seat in table]
+POKER.order.argmaxima(best)  # every seat that shares the top
+```
+
+`order` is a `Preorder` from `cardwork.ordering.preorder`, so comparing two combinations and picking the
+winners out of a table are calls it already carries. A combination whose pattern the ranking leaves out
+raises `KeyError`, which keeps a ranking's answer to the patterns it names.
 
 ---
 

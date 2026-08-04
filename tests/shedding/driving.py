@@ -5,7 +5,7 @@ from typing import Final
 from cardgames.backend.shedding.game import SheddingGame
 from cardgames.backend.shedding.rules import drawn_from, sets_in
 from cardgames.backend.shedding.state import SheddingState
-from cardgames.backend.shedding.zones import DISCARD, HAND, STOCK, hand_of
+from cardgames.backend.shedding.zones import HAND, STOCK
 from cardwork.cards.game import CardsOrJokers
 from cardwork.decks.deck import Deck, Indices
 from cardwork.decks.decks import to_game_cards
@@ -15,7 +15,8 @@ from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.transactions.transaction import Transaction
-from cardwork.zones.zone import ZoneId, cards_of
+from cardwork.zones.zone import ZoneId, cards_of, hand_of
+from cardwork.zones.zones import DISCARD
 
 SEATS: Final[int] = 3
 TWO_SEATS: Final[int] = 2

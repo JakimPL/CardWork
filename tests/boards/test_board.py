@@ -25,13 +25,24 @@ def test_with_zones_leaves_the_board_it_was_called_on_intact(board: Board, hand:
 
 
 def test_with_zones_files_a_zone_the_board_had_yet_to_hold(board: Board) -> None:
-    extended = board.with_zones(Zone(id="discard", visibility=PILE))
+    extended = board.with_zones(
+        Zone(
+            id="discard",
+            visibility=PILE,
+            ordered=True,
+        )
+    )
 
     assert extended.zone("discard").cards == ()
 
 
 def test_board_requires_each_zone_to_be_filed_under_its_own_id() -> None:
-    zone = Zone(id="hand:0", owner=0, visibility=PILE)
+    zone = Zone(
+        id="hand:0",
+        owner=0,
+        visibility=PILE,
+        ordered=False,
+    )
 
     with pytest.raises(ValidationError, match="filed under a key other than their own id"):
         Board(starting_deck=(), zones={"draw": zone})

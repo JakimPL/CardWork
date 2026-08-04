@@ -4,7 +4,7 @@ from typing import Final
 
 from cardgames.backend.passing.game import PassingGame
 from cardgames.backend.passing.state import PassingState
-from cardgames.backend.passing.zones import PILE, STACK, hand_of
+from cardgames.backend.passing.zones import PILE
 from cardwork.cards.game import CardsOrJokers
 from cardwork.decks.deck import Deck
 from cardwork.decks.standard import standard_decks
@@ -14,7 +14,8 @@ from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.seating import next_seat
 from cardwork.transactions.transaction import Transaction
-from cardwork.zones.zone import cards_of
+from cardwork.zones.zone import cards_of, hand_of
+from cardwork.zones.zones import STACK
 
 WINNING_LEAD: Final[int] = 2
 SEATS: Final[int] = 3

@@ -4,7 +4,7 @@ from typing import Final
 
 from cardgames.backend.showdown.game import ShowdownGame
 from cardgames.backend.showdown.state import ShowdownState
-from cardgames.backend.showdown.zones import DISCARD, Holding, hand_of, tray_of, zone_of
+from cardgames.backend.showdown.zones import Holding, hand_of, tray_of, zone_of
 from cardwork.cards.game import CardsOrJokers
 from cardwork.decks.deck import Deck
 from cardwork.decks.standard import standard_deck
@@ -13,6 +13,7 @@ from cardwork.moves.move import Move, Moves
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.transactions.transaction import Transaction, Transactions
 from cardwork.zones.zone import ZoneId, cards_of
+from cardwork.zones.zones import DISCARD
 
 SEATS: Final[int] = 3
 TWO_SEATS: Final[int] = 2

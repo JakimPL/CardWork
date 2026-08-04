@@ -4,9 +4,9 @@ from typing import Final, Generic
 
 from cardwork.boards.board import Board
 from cardwork.decks.deck import Deck
-from cardwork.effects.effects import Effects
+from cardwork.effects.effects import Effects, Reorder
 from cardwork.effects.fold import fold
-from cardwork.exceptions import NotYourTurn, StalePosition, UndoUnavailable
+from cardwork.exceptions import ArrangementRefused, NotYourTurn, StalePosition, UndoUnavailable
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.states.state import StateT
@@ -15,7 +15,8 @@ from cardwork.transactions.transaction import Transaction, Transactions
 from cardwork.views.event import EventView
 from cardwork.views.position import PositionView
 from cardwork.views.projection import project_position, project_transaction
-from cardwork.zones.zone import Zones
+from cardwork.zones.resolution import arrangeable_by
+from cardwork.zones.zone import ZoneId, Zones
 
 SETTLE_LIMIT: Final[int] = 64
 
@@ -196,6 +197,41 @@ class Game(ABC, Generic[StateT]):
         self._commit(transaction)
         return transaction
 
+    def arrange(
+        self,
+        zone: ZoneId,
+        order: tuple[int, ...],
+        seat: int,
+        base_seq: int,
+    ) -> Transaction[StateT]:
+        """Lay one of a seat's own zones out in the order it asks for, and hand back the record.
+
+        A seat arranges a zone whose run no rule reads, so the table stands as it stood: the same cards at
+        the same faces under the same cursor, and every other seat reads the zone exactly as before. That is
+        what admits an arrangement at any moment of a round whoever holds the turn, and what keeps it out of
+        the moves the rules offer — a card a seat may sort is not thereby a card it may play. It reaches the
+        journal all the same, since the record is what a position is rebuilt from.
+
+        Args:
+            zone: the zone to lay out, which is one this seat arranges.
+            order: the positions the zone holds, in the order they come to lie.
+            seat: the seat asking, which an adapter reads off the credential rather than off the request.
+            base_seq: the sequence the seat read the zone at, which pins the order to the run it was read in.
+
+        Raises:
+            StalePosition: when further commits have landed since `base_seq`.
+            ArrangementRefused: when the seat arranges no such zone, or when the order is any sequence
+                other than a permutation of the positions that zone holds.
+        """
+        if base_seq != self.head:
+            raise StalePosition(base_seq, self.head)
+
+        self._confirm_arrangement(zone, order, seat)
+        arranged: Effects[StateT] = (Reorder(zone=zone, order=order),)
+        transaction = Transaction(seq=self.head, move=None, effects=arranged)
+        self._commit(transaction)
+        return transaction
+
     def settle(self) -> Transactions[StateT]:
         """Commit whatever the rules still owe, until the table comes to rest.
 
@@ -306,6 +342,25 @@ class Game(ABC, Generic[StateT]):
         self.validate(position, move)
         effects = self.expand(position, move, rng)
         return effects + self.advance(fold(effects, position), move, rng)
+
+    def _confirm_arrangement(self, zone: ZoneId, order: tuple[int, ...], seat: int) -> None:
+        """Confirm a seat holds a zone it may lay out, and that the order names each of its positions once.
+
+        Naming the seat's own standing rather than the board's contents is what keeps a refusal from
+        reporting which zones the table holds to a client that guessed at one.
+
+        Raises:
+            ArrangementRefused: when the seat arranges no zone of that name, or when the order is any
+                sequence other than a permutation of the positions the zone holds.
+        """
+        held = self.board.zones.get(zone)
+        if held is None or not arrangeable_by(held, seat):
+            raise ArrangementRefused(f"Seat {seat} holds no zone {zone!r} of this table to arrange")
+
+        if sorted(order) != list(range(len(held.cards))):
+            raise ArrangementRefused(
+                f"Order {order} is not a permutation of the {len(held.cards)} cards seat {seat} holds in {zone!r}"
+            )
 
     def _basic_initial_validation(self, players: int, deck: Deck) -> None:
         if players < 1:

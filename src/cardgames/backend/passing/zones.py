@@ -22,6 +22,7 @@ def passing_zones(players: int, deck: Deck) -> Zones:
         PILE: Zone(
             id=PILE,
             visibility=presets.PILE,
+            ordered=True,
             cards=to_game_cards(
                 deck,
                 face_down=True,

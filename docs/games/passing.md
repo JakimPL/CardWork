@@ -78,6 +78,10 @@ A hand lies face down under the `HAND` policy, so its owner reads it and every o
 pile and the stack share the `PILE` policy and differ in the face their cards lie at, which is the whole
 difference between what a seat may take and what it has given up.
 
+A hand is the seat's to arrange and the two piles are the table's (`architecture.md` §3.4). Which three of a hand
+read as one is a question of the cards alone, so a player sorts its hand as it pleases; the pile is drawn from by
+position and the stack records the order the seats gave cards up in, so both keep the run they lie in.
+
 ---
 
 ## 3. The intents

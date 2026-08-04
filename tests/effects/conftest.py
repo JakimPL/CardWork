@@ -25,9 +25,13 @@ PLAYERS: Final[int] = 2
 @pytest.fixture(name="board")
 def board_fixture() -> Board:
     zones = (
-        Zone(id="hand:0", owner=0, visibility=PILE, cards=to_game_cards(HAND_CARDS, face_down=True)),
-        Zone(id="table", visibility=PILE, cards=to_game_cards(TABLE_CARDS, face_down=False)),
-        Zone(id="discard", visibility=PILE),
+        Zone(id="hand:0", owner=0, visibility=PILE, ordered=False, cards=to_game_cards(HAND_CARDS, face_down=True)),
+        Zone(id="table", visibility=PILE, ordered=True, cards=to_game_cards(TABLE_CARDS, face_down=False)),
+        Zone(
+            id="discard",
+            visibility=PILE,
+            ordered=True,
+        ),
     )
     return Board(starting_deck=DECK, zones={zone.id: zone for zone in zones})
 

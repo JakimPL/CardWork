@@ -61,6 +61,11 @@ A hand lies under the `HAND` policy, which reads a face-down card to its owner. 
 the `PILE` policy and differ in the face their cards lie at, which is the whole difference between what is still
 to come and what has been laid down.
 
+A hand is the seat's to arrange and the two piles are the table's (`architecture.md` §3.4). What a set is made of
+is a question of the cards it holds rather than of where they sat, so a player sorts its hand to find what goes
+with what; the discard reads by the card on top of it and the stock by the end a turn draws from, so both keep
+the run they lie in.
+
 **The stock is dealt from one end of its run and drawn from the other**, which a shuffled pile of backs is
 indifferent to: every card in it reads to nobody, so neither end is the readable one. `rules.drawn_from` names
 the end a turn takes, and it is the end a player points at — an interface reads a heap by the last card of the

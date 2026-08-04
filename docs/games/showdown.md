@@ -67,6 +67,10 @@ is still to come and what the turn has shown.
 A tray reading to nobody is what makes the commitment sealed: while a seat has acted and the rest have yet
 to, the table reads that it acted and reads its card as the turn turns over.
 
+A hand is the one holding its seat arranges (`architecture.md` §3.4). The five a seat reads it may sort as it
+pleases, since a showdown weighs the cards a hand holds; the blind keeps the run the deal laid it in, which the
+turns read a card out of by position, and a tray keeps the order the commitments were made in.
+
 ---
 
 ## 3. The intent

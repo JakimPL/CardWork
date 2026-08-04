@@ -37,7 +37,7 @@ CARDS: Final[Cards] = (
 def a_table(contents: Mapping[ZoneId, Cards]) -> Position[GameState]:
     """A table laid out as the contents state, every card of it face up and every zone read by all."""
     zones = {
-        zone_id: Zone(id=zone_id, visibility=PILE, cards=to_game_cards(cards, face_down=False))
+        zone_id: Zone(id=zone_id, visibility=PILE, ordered=True, cards=to_game_cards(cards, face_down=False))
         for zone_id, cards in contents.items()
     }
     deck = tuple(card for cards in contents.values() for card in cards)

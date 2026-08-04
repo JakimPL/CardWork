@@ -5,12 +5,13 @@ import pytest
 
 from cardgames.backend.passing.game import PassingGame
 from cardgames.backend.passing.rules import HAND_ON_TURN, HAND_SIZE
-from cardgames.backend.passing.zones import PILE, STACK, TOP_OF_THE_PILE, hand_of
+from cardgames.backend.passing.zones import PILE, TOP_OF_THE_PILE
 from cardwork.exceptions import IllegalMove, NotYourTurn
 from cardwork.moves.actions import Give, Play, Take
 from cardwork.moves.move import Move
 from cardwork.rounds.seating import next_seat
-from cardwork.zones.zone import cards_of
+from cardwork.zones.zone import cards_of, hand_of
+from cardwork.zones.zones import STACK
 
 from .driving import (
     FIRST_CARD,

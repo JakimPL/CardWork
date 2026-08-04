@@ -16,10 +16,11 @@ from cardgames.backend.showdown.rules import (
     TURNS,
 )
 from cardgames.backend.showdown.state import ShowdownPhase
-from cardgames.backend.showdown.zones import DISCARD, STOCK, blind_of, hand_of
+from cardgames.backend.showdown.zones import STOCK, blind_of, hand_of
 from cardwork.rounds.conclusion import ONE_ROUND
 from cardwork.rounds.seating import next_seat
 from cardwork.rounds.state import MatchPhase
+from cardwork.zones.zones import DISCARD
 from tests.cases import Case, descriptions
 
 from .driving import (

@@ -119,6 +119,46 @@ def test_project_position_carries_the_id_and_owner_of_each_zone(position: Positi
     assert view.zones["discard"].owner is None
 
 
+@dataclass(frozen=True)
+class StandingCase:
+    name: str
+    observer: int | None
+    expected: dict[ZoneId, bool]
+
+
+STANDING_CASES: Final[tuple[StandingCase, ...]] = (
+    StandingCase(
+        name="a seat lays out its own hand and reads every other zone as it lies",
+        observer=0,
+        expected={"hand:0": True, "hand:1": False, "blind:0": False, "discard": False, "draw": False, "vault": False},
+    ),
+    StandingCase(
+        name="the seat holding the other hand lays out that one instead",
+        observer=1,
+        expected={"hand:0": False, "hand:1": True, "blind:0": False, "discard": False, "draw": False, "vault": False},
+    ),
+    StandingCase(
+        name="a seat holding no cards lays out nothing on the table",
+        observer=2,
+        expected={"hand:0": False, "hand:1": False, "blind:0": False, "discard": False, "draw": False, "vault": False},
+    ),
+    StandingCase(
+        name="a spectator lays out nothing either",
+        observer=None,
+        expected={"hand:0": False, "hand:1": False, "blind:0": False, "discard": False, "draw": False, "vault": False},
+    ),
+)
+
+
+@pytest.mark.parametrize("case", STANDING_CASES, ids=lambda case: case.name)
+def test_project_position_carries_each_observer_s_standing_to_arrange_a_zone(
+    case: StandingCase, position: Position[GameState]
+) -> None:
+    view = project_position(position, SEQ, case.observer, legal=())
+
+    assert {zone_id: zone.arrangeable for zone_id, zone in view.zones.items()} == case.expected
+
+
 def test_project_position_stamps_the_sequence_it_was_given(position: Position[GameState]) -> None:
     assert project_position(position, SEQ, 0, legal=()).seq == SEQ
 

@@ -51,14 +51,18 @@ def showdown_zones(players: int, deck: Deck) -> Zones:
     included, and a commitment stays sealed until it turns. The stock and the discard share the pile policy,
     which reads a card the moment it lies face up: what is still to be dealt stays unknown, and every card
     revealed is read by the whole table.
+
+    A hand is the one holding its seat arranges. The run of a blind is the order the deal laid it in, which the
+    turns read a card out of by position, and the run of a tray is the order the commitments were made in, so
+    the table keeps both.
     """
     seated = {
         zone.id: zone
         for seat in range(players)
         for zone in (
-            Zone(id=hand_of(seat), owner=seat, visibility=presets.HAND),
-            Zone(id=blind_of(seat), owner=seat, visibility=presets.HIDDEN),
-            Zone(id=tray_of(seat), owner=seat, visibility=presets.HIDDEN),
+            Zone(id=hand_of(seat), owner=seat, visibility=presets.HAND, ordered=False),
+            Zone(id=blind_of(seat), owner=seat, visibility=presets.HIDDEN, ordered=True),
+            Zone(id=tray_of(seat), owner=seat, visibility=presets.HIDDEN, ordered=True),
         )
     }
     return {
@@ -66,6 +70,7 @@ def showdown_zones(players: int, deck: Deck) -> Zones:
         STOCK: Zone(
             id=STOCK,
             visibility=presets.PILE,
+            ordered=True,
             cards=to_game_cards(deck, face_down=True),
         ),
         **discard(),

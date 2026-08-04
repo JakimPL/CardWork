@@ -8,7 +8,7 @@ from cardwork.transactions.transaction import Transaction
 from cardwork.views.event import EventView, MoveView, ZoneChange
 from cardwork.views.position import PositionView
 from cardwork.views.zone import ZoneView
-from cardwork.zones.resolution import visible_to
+from cardwork.zones.resolution import arrangeable_by, visible_to
 from cardwork.zones.zone import Zone, ZoneId
 
 ProjectedZones = Mapping[ZoneId, ZoneView]
@@ -96,11 +96,14 @@ def project_zone(zone: Zone, players: int, observer: int | None) -> ZoneView:
     """One zone with a placeholder standing in for each card outside the observer's audience.
 
     Placeholders hold the index of the card they conceal, so position 3 of a hand names the same card
-    to the client and to the server, and an action addressing it lands where the player aimed.
+    to the client and to the server, and an action addressing it lands where the player aimed. The zone
+    carries this observer's standing to arrange it beside its cards, which is the one thing a client is
+    told of a zone's policy: the cards it may read, and the run it may lay them out in.
     """
     return ZoneView(
         id=zone.id,
         owner=zone.owner,
+        arrangeable=arrangeable_by(zone, observer),
         cards=tuple(
             (
                 card

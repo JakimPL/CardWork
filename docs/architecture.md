@@ -234,6 +234,7 @@ class Zone(BaseFrozen):
     id: ZoneId
     owner: int | None = None
     visibility: Visibility
+    ordered: bool
     cards: GameCards = ()
 
     def with_cards(self, cards: GameCards) -> "Zone": ...
@@ -249,9 +250,9 @@ class Board(BaseFrozen):
 ```
 
 A hand, the draw pile, the discard stack, a played meld and a row of sealed commitments are the same
-thing: a named, owned, ordered collection with a visibility policy. That single concept is what lets a
-seat hold private, per-seat, multi-zone storage — a commitment tray beside a hand — which is the minimum
-a sealed simultaneous round needs.
+thing: a named, owned run of cards under a visibility policy, holding its arrangement either for the table
+or for the seat. That single concept is what lets a seat hold private, per-seat, multi-zone storage — a
+commitment tray beside a hand — which is the minimum a sealed simultaneous round needs.
 
 `Board.zone` earns its place by what it raises. Effects address zones by name, so a game that emits a
 move out of `hand:3` at a three-seat table has a typo; `zone()` names the ids the board does hold and
@@ -336,7 +337,34 @@ the moment the server sends them its identity, so that moment exists in the mode
 One cost, stated plainly: known and unknown cards of one holder live in two zones, so a single ordering
 spans them only if a game gives the zone a per-index policy instead.
 
-### 3.4 Conservation
+### 3.4 Arrangement is zone policy too, resolved per seat
+
+`ordered` is the zone's word on whether the run its cards lie in is part of what it holds.
+
+| Zone | `ordered` | Why |
+|---|---|---|
+| Draw pile, stock | `True` | the card that comes off next is named by position |
+| Discard, a stack given up onto | `True` | the top card is what the rules read, and the run below it is the record of the round |
+| A tray of sealed commitments | `True` | the run is the order the commitments were made in |
+| A blind holding its owner cannot read | `True` | the run is the order the deal laid it in, and the turns read a card out of it by position |
+| A player's hand | `False` | the rules read the cards a seat has, and the seat keeps them in whatever order it likes |
+
+The word binds the players alone: the rules reorder whatever they need to, and a shuffle of the stock is a
+`Reorder` over a zone marked `True`. What `ordered` settles is which zones a **seat** may lay out for its own
+sake, and that permission is derived rather than declared — `arrangeable_by(zone, observer)` is
+`not zone.ordered and zone.owner == observer`, which sits in `zones/resolution.py` beside `visible_to` and is
+answered the same way: per observer, off the policy, never stored.
+
+**One fact stated, two consequences.** A flag reading "the player may drag here" would let a game declare
+something incoherent — a draggable stock — with nothing in the framework able to tell it was wrong. Stating what
+the *rules* read instead makes the permission a theorem: if no rule reads the run, then permuting it is
+unobservable to the rules and to every other seat, so the seat holding the zone may do as it pleases with it.
+
+That the projection carries the answer rather than the question follows from P4. `ZoneView.arrangeable` is this
+observer's own standing, resolved server-side out of the owner and the arrangement, so a client learns exactly
+one thing about a zone's policy — the cards it may read, and the run it may lay them out in.
+
+### 3.5 Conservation
 
 `Board.validate_board` folds over every zone and compares the result against `starting_deck`, so a zone
 layout that loses or duplicates a card fails at construction rather than at the point where the
@@ -707,6 +735,47 @@ boundary shuffle where no seat has acted (§9, and `docs/rounds.md` §3).
 **Who calls it, and when, is the adapter's decision** — and the answer is "after the grace window", which
 is what makes a take-back possible (§4.4). The engine stays synchronous and knows nothing of the wait.
 
+### Arrangement — the commit a seat asks for outside the turn
+
+A player sorting the hand it holds is the third thing that reaches the journal, and `arrange(zone, order, seat,
+base_seq)` is the entry point for it. It runs a pipeline of its own, three steps to `submit`'s six:
+
+```
+Arrangement(table, zone, order, base_seq)
+   │
+   ├─ 1. identity      adapter maps credential -> seat                 401 Unauthenticated
+   ├─ 2. standing      a seat, rather than a spectator, is asking      403 WrongSeat
+   ├─ 3. lock          the same single writer per table
+   │      ── engine below this line ──
+   ├─ 4. concurrency   base_seq == journal.head                        409 StalePosition
+   ├─ 5. entitlement   arrangeable_by(zone, seat) (§3.4)               422 ArrangementRefused
+   ├─ 6. permutation   the order names each position of the zone once  422 ArrangementRefused
+   ├─ 7. commit        journal.append(Transaction(head, None, (Reorder(zone, order),)))
+   └─ 8. publish       mark published; wake every stream watching
+```
+
+**No `authorize`, no `validate`, no `advance`.** The steps `submit` runs are the ones that ask what the rules make
+of an intent, and a seat sorting a zone whose run no rule reads states no intent to ask about. So the table stands
+as it stood across the commit: the same cards at the same faces under the same cursor, and every other seat reads
+the zone exactly as before — a run of placeholders reads the same however it is permuted, so `zone_changes` (§7)
+carries nothing at all for them. That is what admits an arrangement at any moment of a round whoever holds the
+turn, and step 13 is absent for the same reason: sorting a hand restarts no grace window, since nothing was
+committed for a seat to take back.
+
+**It is a commit rather than a client-side display order** for two reasons, both about the one thing indices
+mean here. Positions name cards against one version of the position (§5.3, and *Why `base_seq` matters* above),
+so a client keeping an order of its own would hold a second coordinate system that every index crossing the wire
+would have to be read through; and an order kept locally has no stable key — an index dies when a card leaves the
+zone, and a card's identity is no key at all where a deck is doubled or where a seat owns a zone it cannot read.
+Held on the server there is one coordinate system, nothing to rebase, and the order survives a reload. Step 4
+earns its place here as much as in `submit`: sorting a hand moves the card each position names, so a move
+already in flight against the old run is turned away rather than landing on the wrong card.
+
+**It is not a move**, either, and that is a separate claim. A move is something the rules offer and answer for; a
+reorder among `legal_moves` would name every card of a hand and so read, to an interface drawing what is in play
+off the moves it was served (§10), as though every card in the hand were playable. A card a seat may sort is not
+thereby a card it may play.
+
 ---
 
 ## 7. Knowledge and projection
@@ -717,6 +786,7 @@ This is the section to reread when in doubt. Everything a client learns, it lear
 class ZoneView(BaseFrozen):
     id: ZoneId
     owner: int | None
+    arrangeable: bool                    # whether this observer may lay the run out itself (§3.4)
     cards: tuple[GameCard | None, ...]   # None = present, unidentifiable by this observer
 
 

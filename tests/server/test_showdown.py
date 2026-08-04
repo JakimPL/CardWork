@@ -13,13 +13,7 @@ from cardgames.backend.showdown.rules import (
     TURNS,
 )
 from cardgames.backend.showdown.state import ShowdownState
-from cardgames.backend.showdown.zones import (
-    DISCARD,
-    Holding,
-    blind_of,
-    hand_of,
-    tray_of,
-)
+from cardgames.backend.showdown.zones import Holding, blind_of, hand_of, tray_of
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
 from cardserver.sessions import TableSession
 from cardwork.decks.deck import Deck
@@ -28,6 +22,7 @@ from cardwork.moves.actions import Play
 from cardwork.moves.move import Move
 from cardwork.rounds.conclusion import ONE_ROUND, Conclusion
 from cardwork.rounds.state import MatchPhase
+from cardwork.zones.zones import DISCARD
 
 from .conftest import DEAL, MOVES, VIEW, command, credentials, served
 

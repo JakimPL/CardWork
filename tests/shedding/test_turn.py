@@ -6,7 +6,7 @@ import pytest
 from cardgames.backend.shedding.game import SheddingGame
 from cardgames.backend.shedding.rules import NOTHING, ROUND_POINT, SHED_LEAST
 from cardgames.backend.shedding.state import SheddingPhase
-from cardgames.backend.shedding.zones import DISCARD, HAND, STOCK, hand_of
+from cardgames.backend.shedding.zones import HAND, STOCK
 from cardwork.cards.cards import (
     EIGHT_OF_CLUBS,
     FIVE_OF_DIAMONDS,
@@ -26,7 +26,8 @@ from cardwork.exceptions import IllegalMove, NotYourTurn
 from cardwork.moves.actions import Discard, Play, Take
 from cardwork.moves.move import Move
 from cardwork.rounds.seating import next_seat
-from cardwork.zones.zone import cards_of
+from cardwork.zones.zone import cards_of, hand_of
+from cardwork.zones.zones import DISCARD
 
 from .driving import (
     SEATS,

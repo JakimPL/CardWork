@@ -23,7 +23,7 @@ from cardwork.states.state import Points
 from cardwork.transactions.transaction import Transaction
 from cardwork.zones.presets import PILE
 from cardwork.zones.zone import Zone, ZoneId, Zones, hand_of
-from cardwork.zones.zones import discard, hands
+from cardwork.zones.zones import DISCARD, discard, hands
 
 SEATS: Final[int] = 3
 HAND_SIZE: Final[int] = 2
@@ -77,6 +77,7 @@ class TossGame(RoundGame[MatchState]):
             STOCK: Zone(
                 id=STOCK,
                 visibility=PILE,
+                ordered=True,
                 cards=to_game_cards(deck, face_down=True),
             ),
             **discard(),

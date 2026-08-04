@@ -12,7 +12,6 @@ from cardgames.backend.passing.rules import (
     three_read_alike,
 )
 from cardgames.backend.passing.state import PassingPhase
-from cardgames.backend.passing.zones import hand_of
 from cardwork.cards.cards import (
     BLACK_JOKER,
     FIVE_OF_HEARTS,
@@ -31,6 +30,7 @@ from cardwork.cards.cards import (
 )
 from cardwork.cards.game import CardsOrJokers
 from cardwork.rounds.state import BEFORE_THE_FIRST_ROUND
+from cardwork.zones.zone import hand_of
 from tests.cases import Case, descriptions
 
 from .driving import (

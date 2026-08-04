@@ -22,6 +22,14 @@ class NotYourTurn(CardworkError):
         self.to_act = to_act
 
 
+class ArrangementRefused(CardworkError):
+    """Raised when a seat asks to lay out a zone the table arranges, or asks for an order it holds no cards for."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
 class StalePosition(CardworkError):
     """Raised when a move is built on a position that later commits have superseded."""
 

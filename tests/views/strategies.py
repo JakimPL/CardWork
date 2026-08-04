@@ -30,12 +30,40 @@ Commit = tuple[Transaction[GameState], Position[GameState], Position[GameState]]
 
 def empty_zones(players: int) -> Zones:
     """A table laid out to exercise every row of the visibility table at the given seat count."""
-    seated: Zones = {f"hand:{seat}": Zone(id=f"hand:{seat}", owner=seat, visibility=HAND) for seat in range(players)}
-    blinds: Zones = {f"blind:{seat}": Zone(id=f"blind:{seat}", owner=seat, visibility=PILE) for seat in range(players)}
+    seated: Zones = {
+        f"hand:{seat}": Zone(
+            id=f"hand:{seat}",
+            owner=seat,
+            visibility=HAND,
+            ordered=False,
+        )
+        for seat in range(players)
+    }
+    blinds: Zones = {
+        f"blind:{seat}": Zone(
+            id=f"blind:{seat}",
+            owner=seat,
+            visibility=PILE,
+            ordered=True,
+        )
+        for seat in range(players)
+    }
     shared: Zones = {
-        "draw": Zone(id="draw", visibility=PILE),
-        "discard": Zone(id="discard", visibility=PILE),
-        "vault": Zone(id="vault", visibility=HIDDEN),
+        "draw": Zone(
+            id="draw",
+            visibility=PILE,
+            ordered=True,
+        ),
+        "discard": Zone(
+            id="discard",
+            visibility=PILE,
+            ordered=True,
+        ),
+        "vault": Zone(
+            id="vault",
+            visibility=HIDDEN,
+            ordered=True,
+        ),
     }
     return {**seated, **blinds, **shared}
 

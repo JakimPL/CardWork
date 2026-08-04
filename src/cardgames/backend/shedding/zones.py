@@ -25,6 +25,7 @@ def shedding_zones(players: int, deck: Deck) -> Zones:
         STOCK: Zone(
             id=STOCK,
             visibility=presets.PILE,
+            ordered=True,
             cards=to_game_cards(deck, face_down=True),
         ),
         **discard(),

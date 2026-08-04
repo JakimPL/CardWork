@@ -9,7 +9,7 @@ from hypothesis import strategies as st
 from cardgames.backend.shedding.game import SheddingGame
 from cardgames.backend.shedding.rules import NOTHING, ROUND_POINT
 from cardgames.backend.shedding.state import SheddingPhase
-from cardgames.backend.shedding.zones import DISCARD, STOCK, hand_of
+from cardgames.backend.shedding.zones import STOCK
 from cardwork.cards.cards import (
     FIVE_OF_HEARTS,
     FIVE_OF_SPADES,
@@ -20,6 +20,8 @@ from cardwork.cards.game import CardsOrJokers
 from cardwork.effects.fold import fold
 from cardwork.rounds.conclusion import ONE_ROUND
 from cardwork.rounds.state import MatchPhase
+from cardwork.zones.zone import hand_of
+from cardwork.zones.zones import DISCARD
 from tests.cases import Case, descriptions
 
 from .driving import (

@@ -6,13 +6,15 @@ import pytest
 
 from cardgames.backend.passing.rules import HAND_ON_TURN, HAND_SIZE, NOTHING
 from cardgames.backend.passing.state import PassingPhase, PassingState
-from cardgames.backend.passing.zones import PILE, STACK, hand_of
+from cardgames.backend.passing.zones import PILE
 from cardwork.decks.standard import standard_decks
 from cardwork.effects.effects import Effects
 from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
+from cardwork.zones.zone import hand_of
+from cardwork.zones.zones import STACK
 from tests.cases import Case, descriptions
 
 from .driving import (

@@ -5,7 +5,7 @@ from typing import Final
 from cardgames.backend.passing.game import PassingGame
 from cardgames.backend.passing.rules import HAND_ON_TURN, HAND_SIZE, NOTHING
 from cardgames.backend.passing.state import PassingPhase, PassingState
-from cardgames.backend.passing.zones import PILE, STACK, hand_of
+from cardgames.backend.passing.zones import PILE
 from cardgames.frontend.passing.layout import PASSING_SCENE
 from cardserver.sessions import TableSession
 from cardwork.decks.deck import Deck
@@ -14,6 +14,8 @@ from cardwork.moves.actions import Give, Take
 from cardwork.moves.move import Move
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.seating import next_seat
+from cardwork.zones.zone import hand_of
+from cardwork.zones.zones import STACK
 
 from .conftest import DEAL, MOVES, VIEW, command, credentials, served
 

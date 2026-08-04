@@ -11,7 +11,7 @@ from cardgames.backend.showdown.rules import (
     taken_by,
     turn_points,
 )
-from cardgames.backend.showdown.zones import DISCARD, Holding, tray_of
+from cardgames.backend.showdown.zones import Holding, tray_of
 from cardwork.cards.card import Cards
 from cardwork.cards.cards import (
     ACE_OF_CLUBS,
@@ -34,6 +34,7 @@ from cardwork.cards.cards import (
 )
 from cardwork.cards.joker import Joker
 from cardwork.rounds.seating import rotation
+from cardwork.zones.zones import DISCARD
 from tests.cases import Case, descriptions
 
 from .driving import FIRST_CARD, SEATS, commit_the_turn, held_by, revealed

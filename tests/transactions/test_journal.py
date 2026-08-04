@@ -32,8 +32,12 @@ def origin_fixture() -> Position[GameState]:
         board=Board(
             starting_deck=(HELD.card, ALSO_HELD.card),
             zones={
-                "hand:0": Zone(id="hand:0", owner=0, visibility=HAND, cards=(HELD, ALSO_HELD)),
-                "discard": Zone(id="discard", visibility=PILE),
+                "hand:0": Zone(id="hand:0", owner=0, visibility=HAND, ordered=False, cards=(HELD, ALSO_HELD)),
+                "discard": Zone(
+                    id="discard",
+                    visibility=PILE,
+                    ordered=True,
+                ),
             },
         ),
         state=GameState(phase="play", to_act=frozenset({0})),
