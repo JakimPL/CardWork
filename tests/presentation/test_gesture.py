@@ -4,7 +4,7 @@ from typing import Final
 import pytest
 from pydantic import ValidationError
 
-from cardwork.moves.actions import AnyAction, Give, Take
+from cardwork.moves.actions import AnyAction, Give, Pass, Take
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
@@ -37,6 +37,12 @@ REFUSALS: Final[tuple[RefusalCase, ...]] = (
         commit=Commit.SEAT,
         target=PILE,
         refusal="committing onto a seat takes it from the move",
+    ),
+    RefusalCase(
+        description="a commit said by its word naming a zone",
+        commit=Commit.WORD,
+        target=PILE,
+        refusal="said by its word lands on no zone",
     ),
 )
 
@@ -78,6 +84,20 @@ def test_a_gesture_committing_onto_a_seat_leaves_the_seat_to_the_move() -> None:
     )
 
     assert gesture.target is None
+
+
+def test_a_gesture_for_a_move_naming_no_card_is_made_in_no_zone_and_lands_on_none() -> None:
+    """A turn given up names no card and no place, so the gesture making it names neither."""
+    gesture = Gesture(
+        kind=ActionKind.PASS,
+        group=None,
+        picked=None,
+        commit=Commit.WORD,
+        target=None,
+        caption="Pass",
+    )
+
+    assert (gesture.picked, gesture.target) == (None, None)
 
 
 def a_gesture(kind: ActionKind, group: str | None) -> Gesture:
@@ -142,6 +162,13 @@ MATCHES: Final[tuple[MatchCase, ...]] = (
         group=PILE,
         action=Give(target_player=NEXT_SEAT, indices=GIVEN_UP),
         matched=False,
+    ),
+    MatchCase(
+        description="a move naming no card at all",
+        kind=ActionKind.PASS,
+        group=None,
+        action=Pass(),
+        matched=True,
     ),
 )
 

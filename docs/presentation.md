@@ -55,7 +55,7 @@ same question asked of zones and seats rather than of moves.
 | piece | states |
 |---|---|
 | `Slot` | one zone laid out: the seat it belongs to, the place it takes among that owner's zones, how its cards lie, what it is called, whether its size shows |
-| `Gesture` | one kind of move as a player makes it: the zone its cards are picked in, and the place clicked to send it |
+| `Gesture` | one kind of move as a player makes it: the zone its cards are picked in, and how it is sent |
 | `Plaque` | one player: the seat, the name it plays under, and the zones of theirs the table counts |
 | `Tally` | one of those counts, under the word the game calls that zone by |
 | `Readout` | one field of the cursor shown, under a word, speaking about the table or about each seat |
@@ -73,7 +73,7 @@ Five closed vocabularies carry the choices:
 | vocabulary | members | decides |
 |---|---|---|
 | `Spread` | `SLOT`, `STACK`, `FAN`, `ROW` | how the cards of a zone lie: one place, a heap, overlapped, side by side |
-| `Commit` | `ZONE`, `SEAT` | whether a move is sent by clicking a zone or a player |
+| `Commit` | `ZONE`, `SEAT`, `WORD` | whether a move is sent by clicking a zone, clicking a player, or saying it |
 | `Scope` | `TABLE`, `SEAT` | whether a field of the cursor holds one value or one per seat |
 | `Interlude` | `ROUND`, `MATCH` | what a phase play pauses at has come to |
 | `Award` | `HIGHEST`, `LOWEST` | which end of the standing a match is won at — `cardwork.states`, read here |
@@ -171,7 +171,7 @@ Every claim a layout makes is checked as it is built, which leaves an interface 
 | one plaque per seat | the standing reads across the table in one row |
 | one gesture per kind and group | a move resolves to a single gesture |
 | a gesture over every group of a kind stands alone | that resolution is unambiguous |
-| every zone a gesture picks from or commits onto takes a slot | a player can reach the cards and the target |
+| every zone a gesture names takes a slot | a player can reach the cards and the target |
 | one readout per field | a figure shows once |
 | every phase play pauses at is captioned | a report has a phase to name and words to name it by |
 
@@ -191,8 +191,16 @@ A layout admits no second answer, so an interface calling it reads one gesture o
 the layout.
 
 The gesture then says the rest: `picked` is the zone whose cards the player selects, the move's own `indices`
-are which of them, and `commit` with `target` is where the click that sends it lands — a zone the gesture
-names, or the seat the move names in `Give.target_player`. `caption` states in words what the gesture does.
+are which of them, and `commit` with `target` is how the move leaves — onto a zone the gesture names, onto the
+seat the move names in `Give.target_player`, or said by its word alone. `caption` states in words what the
+gesture does.
+
+**An intent naming no card is made in no zone and lands on none.** A pass names its turn and nothing else, so
+`picked` reads None and there is no zone to hold cards open in; `commit` reads `WORD`, so there is no place to
+point at either. What an interface draws for one is a place to press, captioned by the gesture, and what arms
+it is the same rule that arms every other move: the cards in hand are exactly the cards the move names, which
+for this one is none of them. So a pass stands ready the moment a turn arrives and stands down as soon as a
+card is picked up, and the two states need no rule of their own.
 
 That is the whole of the contract. Which cards light up as a selection grows, when a heap collapses to its top
 card, how a highlight looks and how large a card is drawn: all of it is the interface's, and none of it is a
@@ -202,15 +210,15 @@ game's to state.
 
 ## 6. What arrives the day it is wanted
 
-Five places where the vocabulary stops at what the games ask for, each following the line `Visibility` takes
-(`architecture.md` §3.3):
+Four places where the vocabulary stops at what the games ask for, each following the line `Visibility` takes
+(`architecture.md` §3.3), and one that grew the day a game wanted it:
 
-- **`Commit` names places on the table.** A move is sent by pointing at where it goes, which is what keeps a
-  button standing apart from the game out of the interface. A game whose move carries a decision no place on
-  the table stands for — a bid, a trump chosen, a contract announced — gains a member here the day it is
-  written, and `Declare` is the intent waiting for it (`architecture.md` §5.3). `Pass` waits on the same
-  member from the other side: it names no card either, so a seat gives its turn up by some gesture other than
-  picking cards and pointing at where they go, and a game states one the day the page grows it.
+- **`Commit` says how a move is sent, and two of its three answers are places.** A move naming cards is sent by
+  pointing at where those cards go, which is what keeps a button standing apart from the game out of the
+  interface. `WORD` is the third answer and the newest: `Pass` names no card and no destination, so pointing
+  states nothing about it and a seat says it instead. That is the one member this vocabulary has grown, and it
+  arrived the way the others will — with the intent that had no way to be made. `Declare` reaches the page by
+  the same answer the day a game states one, since a bid is said rather than pointed at as well.
 - **`Spread.STACK` reads by the last card**, since that is the end a game lays on. A heap dealt from its other
   end holds cards nobody reads, and a heap of backs reads alike from either end, so the field naming which end
   faces up arrives with the first game that deals readable cards from position zero. A game whose players draw

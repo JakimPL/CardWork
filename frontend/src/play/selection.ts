@@ -24,7 +24,7 @@ export interface Selection {
  */
 export interface Offered {
   move: Move;
-  picked: ZoneId;
+  picked: ZoneId | null;
   indices: number[];
   target: Target;
   caption: string;
@@ -189,10 +189,19 @@ function follows(offer: Offered, selection: Selection | null): boolean {
   return offer.picked === selection.zone && selection.indices.every((index) => offer.indices.includes(index));
 }
 
-/** Per zone, the positions a click would add to what is already in hand. */
+/**
+ * Per zone, the positions a click would add to what is already in hand.
+ *
+ * A move made in no zone holds nothing open, since it is about no card: what a player does with one is stated
+ * elsewhere than among the cards.
+ */
 function openIn(candidates: Offered[], selection: Selection | null): Map<ZoneId, Set<number>> {
   const open = new Map<ZoneId, Set<number>>();
   for (const candidate of candidates) {
+    if (candidate.picked === null) {
+      continue;
+    }
+
     const held = selection !== null && selection.zone === candidate.picked ? selection.indices : [];
     const further = candidate.indices.filter((index) => !held.includes(index));
     if (further.length > 0) {

@@ -18,6 +18,7 @@ from cardwork.zones.zone import ZoneId
 from .demo import (
     DEALT_FROM,
     GESTURES,
+    GIVEN_UP,
     HELD,
     LAID_ON,
     OTHER,
@@ -153,6 +154,13 @@ def test_a_layout_committing_onto_a_zone_it_lays_out_nowhere_is_refused() -> Non
 
     with pytest.raises(ValidationError, match="A zone committed onto takes a slot of its own"):
         a_layout(gestures=GESTURES + (unreachable,))
+
+
+def test_a_layout_holding_a_gesture_made_in_no_zone_lays_out_nothing_for_it() -> None:
+    """A pass names no card and no place, so it reaches a player by its caption rather than by a zone."""
+    layout = a_layout(gestures=GESTURES + (GIVEN_UP,))
+
+    assert (layout.gestures[-1].picked, layout.gestures[-1].target) == (None, None)
 
 
 def test_a_layout_committing_onto_a_seat_names_no_zone_to_lay_out() -> None:

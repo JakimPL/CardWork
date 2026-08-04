@@ -139,17 +139,22 @@ export interface components {
         CardIndex: number;
         /**
          * Commit
-         * @description The place a player points at to send the move a selection has armed.
+         * @description How a player sends the move a selection has armed.
          *
          *     `ZONE` sends it onto a zone of the table — the pile a card is exchanged with, the tray it is sealed in —
-         *     which the gesture names. `SEAT` sends it onto another player, whom the move itself names.
+         *     which the gesture names. `SEAT` sends it onto another player, whom the move itself names. Both are places
+         *     on the table, so a move naming cards is committed by pointing at where those cards go, and a selection
+         *     alone commits nothing.
          *
-         *     Both are places on the table, so a move is committed by pointing at where it goes and a selection alone
-         *     commits nothing. A game whose move carries a decision that no place on the table stands for — a bid, a
-         *     trump chosen, a contract announced — gains a member here the day it is written.
+         *     `WORD` is the third answer, for a move a place on the table stands for none of: a turn given up names no
+         *     card and no destination, so a seat says it rather than points at it. A gesture committing this way names
+         *     no target, and an interface draws it as somewhere to press rather than as a place cards travel to.
+         *
+         *     A game whose move carries a decision of its own — a bid, a trump chosen, a contract announced — is said
+         *     the same way, which is what `Declare` is waiting on (`architecture.md` §5.3).
          * @enum {string}
          */
-        Commit: "zone" | "seat";
+        Commit: "zone" | "seat" | "word";
         /**
          * Declare
          * @description A claim a seat makes about cards it holds, for the rules to confirm or refuse.
@@ -181,7 +186,7 @@ export interface components {
         };
         /**
          * Gesture
-         * @description One kind of move as a player makes it: the zone the cards come out of, and the place clicked to send it.
+         * @description One kind of move as a player makes it: the zone the cards come out of, and how the move is sent.
          *
          *     A move is matched to its gesture by `kind` and `group`, which together are the whole of what an intent
          *     says beside the positions it names. `group` names the group this gesture is for, and reads None where the
@@ -189,8 +194,12 @@ export interface components {
          *
          *     `picked` is the zone the move's indices address, which is the zone a player selects cards in. It is a
          *     concrete zone because a layout is built for one observer, so the hand a move names is that observer's own.
-         *     `target` is the zone clicked to commit, and reads None where the commit lands on a seat, since the move
-         *     names the seat itself. `caption` states in words what the gesture does, for a player weighing it.
+         *     It reads None for a move naming no card at all, which leaves a player nothing to select and an interface
+         *     no zone to hold open: a pass is made in no zone, so it picks in none.
+         *
+         *     `commit` is how the move leaves, and `target` the zone it lands on, which reads None for the two commits
+         *     naming no zone — a seat commit takes its seat from the move, and a word is said rather than pointed at.
+         *     `caption` states in words what the gesture does, for a player weighing it.
          */
         Gesture: {
             /** Caption */
@@ -200,7 +209,7 @@ export interface components {
             group: string | null;
             kind: components["schemas"]["ActionKind"];
             /** Picked */
-            picked: string;
+            picked: string | null;
             /** Target */
             target: string | null;
         };
@@ -246,8 +255,8 @@ export interface components {
          *
          *     Every claim a layout makes about itself is checked as it is built, which leaves an interface free to trust
          *     it: one slot per zone, a slot belonging to a seat of the table or to the table itself, one slot per place
-         *     among the slots of one owner, one plaque per seat, one gesture per move, every zone a gesture picks from
-         *     or commits onto laid out as a slot the player can reach, and a phase play pauses at captioned like any other.
+         *     among the slots of one owner, one plaque per seat, one gesture per move, every zone a gesture names laid
+         *     out as a slot the player can reach, and a phase play pauses at captioned like any other.
          */
         Layout: {
             award: components["schemas"]["Award"];

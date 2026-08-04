@@ -40,8 +40,8 @@ class Layout(BaseFrozen):
 
     Every claim a layout makes about itself is checked as it is built, which leaves an interface free to trust
     it: one slot per zone, a slot belonging to a seat of the table or to the table itself, one slot per place
-    among the slots of one owner, one plaque per seat, one gesture per move, every zone a gesture picks from
-    or commits onto laid out as a slot the player can reach, and a phase play pauses at captioned like any other.
+    among the slots of one owner, one plaque per seat, one gesture per move, every zone a gesture names laid
+    out as a slot the player can reach, and a phase play pauses at captioned like any other.
     """
 
     title: str
@@ -145,11 +145,18 @@ class Layout(BaseFrozen):
     def _every_gesture_reaches_its_zones(self) -> Self:
         """Confirm a player can point at the cards a gesture picks and the zone it commits onto.
 
+        A gesture answers for the zones it names, so one made in no zone and one landing on none are held to
+        nothing here: a pass reaches a player by its own caption rather than by a zone drawn for it.
+
         Raises:
             ValueError: when a gesture picks from or commits onto a zone no slot lays out.
         """
         laid = {slot.zone for slot in self.slots}
-        self._laid_out(tuple(gesture.picked for gesture in self.gestures), laid, "picked from")
+        self._laid_out(
+            tuple(gesture.picked for gesture in self.gestures if gesture.picked is not None),
+            laid,
+            "picked from",
+        )
         self._laid_out(
             tuple(gesture.target for gesture in self.gestures if gesture.target is not None),
             laid,

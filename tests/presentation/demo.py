@@ -78,6 +78,15 @@ def a_pass(seat: int) -> Gesture:
     )
 
 
+GIVEN_UP: Final[Gesture] = Gesture(
+    kind=ActionKind.PASS,
+    group=None,
+    picked=None,
+    commit=Commit.WORD,
+    target=None,
+    caption="Pass",
+)
+
 HELD: Final[Slot] = a_hand(OWNER)
 DEALT_FROM: Final[Slot] = Slot(
     zone=PILE,

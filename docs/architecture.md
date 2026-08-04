@@ -607,7 +607,8 @@ withholding it — so `cardgames.backend.passing` awards it instead of asking fo
 turn up and the word is the whole of the move. So `group_of` reads None for it and `indices_of` an empty run,
 which is what lets a layer reading the cards behind any move at all — an interface lighting up what a served
 move would take — read one that is about none of them. A move naming no card is also the one a place on the
-table stands for nowhere, which is what `docs/presentation.md` §6 leaves the interface waiting on.
+table stands for nowhere, so it reaches a player by the third commit a gesture states rather than by a zone to
+point at (`docs/presentation.md` §5).
 
 **A game states which of the seven it is played with, and the framework holds every move to that.** `Intents`
 is that statement: a game names the actions its rules answer to and the engine reads a move against them at

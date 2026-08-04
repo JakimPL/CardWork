@@ -10,6 +10,8 @@ from cardwork.presentation.interlude import Interlude
 from cardwork.presentation.layout import Layout
 from cardwork.presentation.scope import Scope
 from cardwork.rounds.state import MatchPhase
+from cardwork.states.state import GameState
+from cardwork.views.position import PositionView
 from tests.cases import descriptions
 
 from .games import CASES, OBSERVERS, PLAYERS, SEATS, LayoutCase
@@ -34,6 +36,17 @@ def gesture_for(layout: Layout, move: Move) -> Gesture:
     found = made_by(layout, move)
     assert len(found) == ONE_GESTURE, f"{move.action} is made by {found}"
     return found[0]
+
+
+def beyond_its_zone(view: PositionView[GameState], layout: Layout, move: Move) -> bool:
+    """Whether the move names a position the zone its gesture picks in holds no card at.
+
+    A gesture naming no zone holds for a move naming no position, since a move made in no zone is a move about
+    no card: an intent naming cards where its gesture names no zone to pick them in reads here as beyond it.
+    """
+    picked = gesture_for(layout, move).picked
+    held = 0 if picked is None else len(view.zones[picked].cards)
+    return any(position >= held for position in indices_of(move.action))
 
 
 @pytest.mark.parametrize("case", CASES, ids=IDS)
@@ -136,13 +149,7 @@ def test_a_gesture_picks_in_a_zone_holding_the_positions_its_move_names(observer
     view = case.table().view(observer)
     layout = case.scene.layout(PLAYERS, observer)
 
-    beyond = tuple(
-        move
-        for move in view.legal
-        if any(
-            position >= len(view.zones[gesture_for(layout, move).picked].cards) for position in indices_of(move.action)
-        )
-    )
+    beyond = tuple(move for move in view.legal if beyond_its_zone(view, layout, move))
     assert beyond == ()
 
 
