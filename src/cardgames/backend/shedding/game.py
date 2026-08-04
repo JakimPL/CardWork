@@ -1,11 +1,11 @@
 from random import Random
-from typing import Final
 
 from cardgames.backend.shedding.rules import (
     AWARD,
     HAND_SIZE,
     NO_CARDS,
-    NOTHING,
+    SEATS_LEAST,
+    SEATS_MOST,
     SHED_LEAST,
     drawn_from,
     gone_out,
@@ -28,15 +28,12 @@ from cardwork.exceptions import IllegalMove
 from cardwork.moves.actions import Discard, Take
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
-from cardwork.rounds.game import RoundGame
+from cardwork.rounds.game import NOTHING, RoundGame
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import next_seat, rotation
 from cardwork.rounds.state import MatchPhase
 from cardwork.zones.zone import Zones, cards_of, hand_of
 from cardwork.zones.zones import DISCARD
-
-SEATS_LEAST: Final[int] = 2
-SEATS_MOST: Final[int] = 6
 
 type SheddingIntent = Discard | Take
 

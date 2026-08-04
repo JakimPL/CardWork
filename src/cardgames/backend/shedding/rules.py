@@ -10,6 +10,7 @@ from cardwork.combinations.detect import matches
 from cardwork.combinations.patterns.same_rank import SameRank
 from cardwork.combinations.policy import Duplicates, Evaluation
 from cardwork.decks.deck import Indices
+from cardwork.rounds.game import NOTHING
 from cardwork.states.award import Award
 from cardwork.states.state import Points
 
@@ -18,8 +19,10 @@ HAND_SIZE: Final[int] = 4
 SHED_LEAST: Final[int] = 2
 ONE_CARD: Final[int] = 1
 ROUND_POINT: Final[int] = 1
-NOTHING: Final[int] = 0
 NO_CARDS: Final[int] = 0
+
+SEATS_LEAST: Final[int] = 2
+SEATS_MOST: Final[int] = 6
 
 SHEDDING_EVALUATION: Final[Evaluation] = Evaluation(
     ranks=RANK_SEQUENCE,

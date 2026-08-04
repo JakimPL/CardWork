@@ -2,10 +2,11 @@ from collections.abc import Sequence
 from typing import Final
 
 from cardwork.cards.card import Card
-from cardwork.cards.game import CardOrJoker
+from cardwork.cards.game import CardOrJoker, suited
 from cardwork.cards.orders import REGULAR_ORDER
 from cardwork.cards.points import REGULAR_POINTS, PointTable
 from cardwork.ordering.preorder import Preorder
+from cardwork.rounds.game import NOTHING
 from cardwork.states.award import Award
 from cardwork.states.state import Points
 
@@ -15,24 +16,14 @@ TURNS: Final[int] = HAND_SIZE + BLIND_SIZE
 FIRST_TURN: Final[int] = 1
 ONE_TURN: Final[int] = 1
 ONE_CARD: Final[int] = 1
-NOTHING: Final[int] = 0
 STRONGEST: Final[int] = 0
+
+SEATS_LEAST: Final[int] = 2
+SEATS_MOST: Final[int] = 5
 
 STRENGTH: Final[Preorder[Card]] = REGULAR_ORDER
 POINTS: Final[PointTable] = REGULAR_POINTS
 AWARD: Final[Award] = Award.HIGHEST
-
-
-def suited(card: CardOrJoker) -> Card:
-    """The card read as a suited one, which every card of the deck this game is played with is.
-
-    Raises:
-        ValueError: when the card is a joker, which the one standard deck of this game holds none of.
-    """
-    if isinstance(card, Card):
-        return card
-
-    raise ValueError(f"This game is played with suited cards alone, and read {card}")
 
 
 def taken_by(revealed: Sequence[CardOrJoker]) -> int:

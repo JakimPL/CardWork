@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 from cardwork.cards.card import Card
 from cardwork.cards.joker import Joker
 from cardwork.models.base import BaseFrozen
@@ -34,3 +36,15 @@ def is_joker(game_card: CardOrJoker | GameCard) -> bool:
         return game_card.is_joker
 
     return isinstance(game_card, Joker)
+
+
+def suited(card: CardOrJoker) -> Card:
+    """The card read as a suited one, which every card of the deck this game is played with is.
+
+    Raises:
+        ValueError: when the card is a joker, which the one standard deck of this game holds none of.
+    """
+    if is_joker(card):
+        raise ValueError(f"This game is played with suited cards alone, and read {card}")
+
+    return cast(Card, card)

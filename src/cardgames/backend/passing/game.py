@@ -5,8 +5,9 @@ from cardgames.backend.passing.rules import (
     AWARD,
     HAND_ON_TURN,
     HAND_SIZE,
-    NOTHING,
     ROUND_POINT,
+    SEATS_LEAST,
+    SEATS_MOST,
     declares,
 )
 from cardgames.backend.passing.state import PassingPhase, PassingState
@@ -23,15 +24,13 @@ from cardwork.moves.actions import Give, Take
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import Conclusion
-from cardwork.rounds.game import RoundGame
+from cardwork.rounds.game import NOTHING, RoundGame
 from cardwork.rounds.redeal import Admits, Redeal
 from cardwork.rounds.seating import next_seat, rotation
 from cardwork.rounds.state import MatchPhase
 from cardwork.zones.zone import Zones, cards_of, hand_of
 from cardwork.zones.zones import STACK
 
-SEATS_LEAST: Final[int] = 2
-SEATS_MOST: Final[int] = 8
 ONE_CARD: Final[int] = 1
 
 type PassingIntent = Take | Give

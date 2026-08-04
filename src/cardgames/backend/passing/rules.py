@@ -15,7 +15,9 @@ HAND_ON_TURN: Final[int] = HAND_SIZE + 1
 THREE_ALIKE: Final[int] = 3
 AWARD: Final[Award] = Award.HIGHEST
 ROUND_POINT: Final[int] = 1
-NOTHING: Final[int] = 0
+
+SEATS_LEAST: Final[int] = 2
+SEATS_MOST: Final[int] = 8
 
 PASSING_EVALUATION: Final[Evaluation] = Evaluation(
     ranks=RANK_SEQUENCE,

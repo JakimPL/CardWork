@@ -1,14 +1,14 @@
 from random import Random
-from typing import Final
 
 from cardgames.backend.showdown.rules import (
     AWARD,
     BLIND_SIZE,
     FIRST_TURN,
     HAND_SIZE,
-    NOTHING,
     ONE_CARD,
     ONE_TURN,
+    SEATS_LEAST,
+    SEATS_MOST,
     awarded,
     taken_by,
     turn_points,
@@ -32,15 +32,12 @@ from cardwork.exceptions import IllegalMove
 from cardwork.moves.actions import Play
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
-from cardwork.rounds.game import RoundGame
+from cardwork.rounds.game import NOTHING, RoundGame
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
 from cardwork.rounds.state import MatchPhase
 from cardwork.zones.zone import Zones, cards_of
 from cardwork.zones.zones import DISCARD
-
-SEATS_LEAST: Final[int] = 2
-SEATS_MOST: Final[int] = 5
 
 
 def committed(move: Move) -> Play:
