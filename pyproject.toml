@@ -28,6 +28,7 @@ dev = [
     "import-linter==2.13",
     "isort==8.0.1",
     "mypy==2.1.0",
+    "pillow==12.3.0",
     "pre-commit==4.6.0",
     "pylint==4.0.6",
     "pylint-pydantic==0.4.1",
@@ -107,7 +108,7 @@ layers = [
     "cardtable.catalogue",
     "cardtable.hosting",
     "cardtable.config",
-    "cardtable.settings : cardtable.service : cardtable.interface : cardtable.seats",
+    "cardtable.settings : cardtable.service : cardtable.interface : cardtable.artwork : cardtable.seats",
     "cardtable.games : cardtable.paths",
 ]
 

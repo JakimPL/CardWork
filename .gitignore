@@ -13,7 +13,7 @@ __pycache__/
 *.coverage
 *.coverage.*
 
-assets/
+/assets/
 node_modules/
 frontend/dist/
 frontend/openapi.json

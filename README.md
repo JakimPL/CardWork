@@ -273,6 +273,12 @@ Card artwork is fetched rather than kept here:
 make assets      # into a gitignored assets/
 ```
 
-Two packs land side by side — Susan Kare's Solitaire faces as one 13×4 sprite sheet at 71×96 a card, and a
-public-domain drawing per card that covers the jokers the sheet has no face for. Neither is needed: `Suit`
-values are `♠♥♦♣` and `Rank` values are `2` through `A`, so a readable card draws from the JSON alone.
+Two whole packs land side by side, a file per card and a `manifest.json` stating what each holds. `kare` is
+Susan Kare's Solitaire artwork cut out of the `cards.dll` it shipped in: fifty-two faces, twelve of the card
+backs Windows dealt face down, and two jokers drawn on the card the faces share out of the suit marks the
+deuces carry, since Solitaire wanted no joker and the library holds none. Every picture is written four times
+the size it was drawn, a pixel to a square, so it reads at any size as the edges a hand placed in 1990. `svg`
+is a public-domain drawing per card and a public-domain back besides.
+
+Neither is needed: `Suit` values are `♠♥♦♣` and `Rank` values are `2` through `A`, so a readable card draws
+from the JSON alone.

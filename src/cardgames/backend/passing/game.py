@@ -25,7 +25,7 @@ from cardwork.moves.actions import Give, Take
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.rounds.game import RoundGame
-from cardwork.rounds.redeal import Redeal
+from cardwork.rounds.redeal import Admits, Redeal
 from cardwork.rounds.seating import next_seat, rotation
 from cardwork.rounds.state import MatchPhase
 from cardwork.zones.zone import Zones, cards_of
@@ -56,8 +56,9 @@ class PassingGame(RoundGame[PassingState]):
     """A match of rounds in which a fourth card circulates and a win falls to the seat whose three read alike.
 
     A round deals three cards to every seat and a fourth to the seat leading it, so exactly one seat holds four
-    at a time and the turn travels with that card. A turn admits one exchange with the top of the pile, the card
-    given up going face up on the stack, and closes with a card passed to the next seat.
+    at a time and the turn travels with that card. The deal is drawn again for as long as it hands the leader a
+    win, so a round opens with the win still to be reached. A turn admits one exchange with the top of the pile,
+    the card given up going face up on the stack, and closes with a card passed to the next seat.
 
     A hand of four wins where some three of it read as one rank or as one suit while the four do not, a joker
     standing in for whatever the three asks of it. `rules.declares` holds that rule whole. A win needs no claim:
@@ -75,11 +76,10 @@ class PassingGame(RoundGame[PassingState]):
         *,
         rng: Random | None = None,
     ) -> None:
-        """A table dealt its first round, settled to the point a seat has a turn to take.
+        """A table dealt its first round, standing where the seat leading it has a turn to take.
 
-        A deal that already reads a win decides its round before any seat acts, so the table settles here until
-        it stands on a round with someone to act, which is what every driver and adapter beyond this expects of
-        a table it has just opened.
+        A table opens between rounds, so the settlement here is what deals the first one, which is what every
+        driver and adapter beyond this expects of a table it has just opened.
         """
         super().__init__(players, deck, rng=rng)
         self.settle()
@@ -121,10 +121,23 @@ class PassingGame(RoundGame[PassingState]):
     ) -> Effects[PassingState]:
         """Every card gathered and shuffled, then three dealt to each seat from the leader round the table.
 
-        The leader takes its fourth card with the rest of its hand, which is the card the round circulates.
+        The leader takes its fourth card with the rest of its hand, which is the card the round circulates. A
+        deal handing that seat a win is drawn again, so a round arrives to be played for: the shuffle settles
+        who holds what, and the win is left for a seat to reach.
         """
         counts = {hand_of(seat): self._dealt(seat, leader) for seat in rotation(leader, position.players)}
-        return Redeal(position, pile=PILE, face_down=True).effects(counts, rng)
+        return Redeal(position, pile=PILE, face_down=True).admitted(counts, rng, self._still_to_be_won(leader))
+
+    def _still_to_be_won(self, leader: int) -> Admits[PassingState]:
+        """The question every draw of a deal is put to: does it leave the leader a hand that has yet to win.
+
+        A hand of three cards reads no win, so the seat leading the round holds the one hand this reads.
+        """
+
+        def admits(dealt: Position[PassingState]) -> bool:
+            return not declares(cards_of(dealt.board.zone(hand_of(leader))))
+
+        return admits
 
     def opening_state(self, position: Position[PassingState], leader: int) -> PassingState:
         return position.state.with_changes(

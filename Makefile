@@ -33,7 +33,7 @@ check: lint typecheck imports coverage
 	npm --prefix frontend run test
 
 assets:
-	uv run python scripts/assets.py
+	uv run python -m scripts.assets
 
 interface:
 	npm --prefix frontend install
@@ -41,7 +41,7 @@ interface:
 	npm --prefix frontend run build
 
 types:
-	uv run python scripts/openapi.py
+	uv run python -m scripts.openapi
 	npm --prefix frontend run types
 
 TABLE_ARGUMENTS = \
