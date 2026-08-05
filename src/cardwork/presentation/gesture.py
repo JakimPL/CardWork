@@ -9,6 +9,42 @@ from cardwork.presentation.commit import Commit
 from cardwork.zones.zone import ZoneId
 
 
+def misnamed(
+    kind: ActionKind,
+    commit: Commit,
+    target: str | None,
+) -> str | None:
+    """What the place a move names gets wrong, and None where the commit and the target agree.
+
+    Each commit is answered for in turn, so a member added to the vocabulary states here what it lands on. A
+    `Gesture` and the `Making` it is bound from are held to this one rule, so a move refused at a table is
+    refused as the game states it.
+
+    Args:
+        kind: the kind of move, which the refusal names.
+        commit: how the move is sent.
+        target: the word for the place it lands on, and None where it names none.
+    """
+    match commit:
+        case Commit.ZONE:
+            if target is None:
+                return f"A {kind} gesture committing onto a zone names that zone, and names none"
+
+            return None
+
+        case Commit.SEAT:
+            if target is not None:
+                return f"A {kind} gesture committing onto a seat takes it from the move, and names zone {target!r}"
+
+            return None
+
+        case Commit.WORD:
+            if target is not None:
+                return f"A {kind} gesture said by its word lands on no zone, and names zone {target!r}"
+
+            return None
+
+
 class Gesture(BaseFrozen):
     """One kind of move as a player makes it: the zone the cards come out of, and how the move is sent.
 
@@ -50,35 +86,8 @@ class Gesture(BaseFrozen):
         Raises:
             ValueError: when a zone commit names no target, or a commit landing on no zone of its own names one.
         """
-        misnamed = self._misnamed()
-        if misnamed is not None:
-            raise ValueError(misnamed)
+        refusal = misnamed(self.kind, self.commit, self.target)
+        if refusal is not None:
+            raise ValueError(refusal)
 
         return self
-
-    def _misnamed(self) -> str | None:
-        """What the place this gesture names gets wrong, and None where the commit and the target agree.
-
-        Each commit is answered for in turn, so a member added to the vocabulary states here what it lands on.
-        """
-        match self.commit:
-            case Commit.ZONE:
-                if self.target is None:
-                    return f"A {self.kind} gesture committing onto a zone names that zone, and names none"
-
-                return None
-
-            case Commit.SEAT:
-                if self.target is not None:
-                    return (
-                        f"A {self.kind} gesture committing onto a seat takes it from the move, "
-                        f"and names zone {self.target!r}"
-                    )
-
-                return None
-
-            case Commit.WORD:
-                if self.target is not None:
-                    return f"A {self.kind} gesture said by its word lands on no zone, and names zone {self.target!r}"
-
-                return None
