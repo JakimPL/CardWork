@@ -1472,7 +1472,7 @@ the host mounts. It holds three layers of its own, and each names only what is b
 |---|---|
 | `api` | what a table answers and what a client sends: the layout vocabulary, the projections, the seat, the refusals, and the calls that read them |
 | `play` | what a client makes of those answers: the seat an address names, the view a commit leaves, one card read against another, the figures a readout reads, the boundary a commit pauses at |
-| `table` | what appears on screen: the standing, the three groups of zones, a station, a slot, a card, a card carried by hand, the line saying where play stands, the report a boundary is read at |
+| `table` | what appears on screen: the standing, the three groups of zones, a station, a slot, a card, a card carried by hand, the places a carry may land on, the line saying where play stands, the report a boundary is read at |
 
 **The types come from the document where a document exists, and by hand where one cannot.** `/layout` is the
 one answer that stands apart from a game's own state, so it publishes a schema and `openapi-typescript`
@@ -1528,9 +1528,10 @@ reads of that is the cards left out of it — a card no move could name is drawn
 its light, so the cards in play are the ones lying plainly there and nothing is ever lit for being playable. A
 quiet card is as solid as any other, since a card is paper and a card lying over another covers it, so a fan
 reads as a fan whichever of its cards have gone quiet. A move whose positions are exactly those in hand is
-*armed*, and the places the armed moves land on are the ones that light up. Clicking such a place is the whole of
-committing, so no click on a card can send anything by accident; clicking a card in hand puts it back down,
-clicking a card no move names puts the selection down, and clicking the page clears it. The renderer holds no
+*armed*, and the places the armed moves land on are the ones that light up. Clicking such a place commits, and
+carrying the cards onto it says the same move by the same reading (below), so a click on a card is a card picked up
+and nothing else; clicking a card in hand puts it back down, clicking a card no move names puts the selection
+down, and clicking the page clears it. The renderer holds no
 count and no rank in any of it: multi-card selection is the general case and a one-card move is where it
 happens to stop.
 
@@ -1566,13 +1567,48 @@ it.
 (§3.4), and where it says so every card of the run is taken hold of where it lies and carried to another place in
 it. What the player reads while carrying is the run as it is about to lie — the cards it passes over close up
 behind it and open at the place it is being let go over — and letting go sends exactly that reading, since
-`table/dragging.ts` answers with one run that serves both the drawing and the order. A card is dragged rather than
-clicked, so ordering a hand stands beside playing out of it: the same card picks up on a click, and neither
-gesture is ever mistaken for the other. The run drawn is what may be ordered, so a spread reading a zone by the
-card on top of it says its depth in a figure and leaves the ordering to the zones a player can see whole. The
-table settles it like any other command: the cards lie as the table holds them until the commit carrying the new
-order arrives, which is also what tells every other seat nothing — a permuted run of placeholders reads the same
-as it read (§6).
+`table/dragging.ts` answers with one run that serves both the drawing and the order. The run drawn whole is what
+may be ordered, so a spread reading a zone by the card on top of it says its depth in a figure and leaves the
+ordering to the zones a player sees whole. The table settles it like any other command: the cards lie as the table
+holds them until the commit carrying the new order arrives, which is also what tells every other seat nothing — a
+permuted run of placeholders reads the same as it read (§6).
+
+**A move is sent by carrying its cards onto the place it goes to, which is one gesture with the ordering of a
+run.** Where the cards are taken is what says which of the two a hand is doing, and the whole of it is seven rules:
+
+1. A press takes hold of cards: the ones already in hand where the pressed card is one of them, and that card
+   alone otherwise. So a pair a player picked up travels as a pair.
+2. The cards stay where the run draws them until the hand has travelled a few pixels from where it pressed. Below
+   that the press is the click it has always been, which picks a card up.
+3. Past that it is a carry, until the press ends.
+4. **Within the run the cards came out of**, a carry sets the order: the block of them lies at the place the
+   pressed card's own middle stands nearest, the rest of the run closes up around it, and letting go lays down the
+   order the player is reading.
+5. **Out over the table**, a carry sends them: the run stands as the table holds it, the cards travel from where
+   they lie, and the carry picks them up as a click would — so the places the armed moves land on light up, and
+   the one under the hand is marked more brightly still. Letting go there sends that move.
+6. Letting go anywhere else puts the cards back down, which `Escape` and the browser taking the pointer away do as
+   well.
+7. A card let go under the hand that laid it is drawn already raised, and arrives there in one step.
+
+**The reading follows the card rather than the pointer.** A card lies over its run while its own middle lies over
+it, so a card pressed anywhere along its face reads as a card at the place it is drawn at — which is what a fan asks
+for, since the near edge of a card is the part of it lying over the card before it, and a hand takes hold of a card
+by whatever part of it shows. A lift of half a card's height is what carries cards out over the table, so a hand
+chooses between the two readings by where it takes the cards and the table offers both at every moment. Every card a
+move picks in is offered a grip, whether or not the order of that zone is this seat's own: a card is drawn off a
+heap by carrying it onto the hand exactly as a card is played by carrying it onto a pile, and a run whose order the
+table keeps is carried out of rather than through.
+
+**Where a carry may land is the page's to answer, since the pointer belongs to the card that was pressed.** A
+press holds every later event to that card, so what lies under a hand halfway across the table is a question the
+card has no way to answer: `table/landings.tsx` holds the places for the whole page instead. Each of them states
+its own drawing as it is drawn and takes it back as it goes, and the room one takes is read at the moment of the
+asking, so a table redrawn under the hand is answered as it stands. The places lie one inside another — a seat's
+corner of the table holds the zones drawn at it — so the smallest of the ones a point stands over is the one a hand
+there means. Letting go comes to one of four things, which is the whole of what the gesture says: the place the
+cards are sent to, the order the run has come to lie in, the cards put back down, or the press that carried them
+nowhere.
 
 **The page is held to the same standard as the Python.** Prettier formats it, ESLint reads it with the types
 in hand — the strict type-checked rules, the React and hook rules, and three house rules carried over from the
@@ -1598,6 +1634,16 @@ of it the card lying over it leaves showing, and a fan closes up as it fills: a 
 every face and a holding of a dozen and more tightens to the room its zone has, so a hand of four and a hand of
 seventeen are the same drawing at two overlaps.
 
+**The felt divides its own height between the middle of the table and the seats round it.** How much room the felt
+has is a fact about the page as it stands, so the felt is what states it: `container-type: size` makes it the
+container its own contents are measured against, the zones at the centre take up to half of what it holds, and the
+seats round the edge take the rest and divide that again by however many of them stand one above another at a side
+and by however many lines each of them stands in. The width goes the same way — a quarter of it to each side that
+holds seats, and what is left down the middle to the seats facing the near edge and to the cards they share. So the
+two shares add to the felt's own room at every seating: the table stays inside it, the panel below keeps the room it
+was given, and a card at another seat is drawn at the height of the card on the pile or at the height that seat's
+own share affords, whichever is the lesser.
+
 **Every player sits somewhere, and the page works out where.** `table/placing.ts` reads a layout's slots by the
 seat each one belongs to and yields the groups the page draws: the shared zones in the middle, the observer's own
 in the panel below, and a station for every other seat whose cards the table draws. The stations are gathered
@@ -1610,10 +1656,21 @@ it, so the room one seat takes is room its neighbours give way by: no seat is dr
 covered, whatever the cards at either of them come to. A seat the layout draws no cards for takes no
 station: its holding is a figure on its plaque, which is how a game keeps a zone off the table altogether.
 
+**A group of zones lies in lines, and a seat across the table lies in two of them.** The room round the edge of a
+table is deeper than it is wide, so `linesOf` reads a station off the spreads the layout already states: the
+holdings the table reads of that seat lie side by side under its name, and the single places it seals a card in lie
+beneath them. The panel a player plays from and the shared middle each have the width of the page to lie along, so
+they lie in one line. The sheet is handed the widest line and how many there are, which is what shares the group's
+height out among them, one line of lettering to a line of cards. So a station is drawn half as wide, reads in two
+glances, and draws its cards to the room its corner of the table has rather than to the width one line of them
+would want. The three placements carry three names of their own — the shared middle, the seat's own panel, another
+seat's station — and the box a seat is drawn in carries a fourth, so a rule of the sheet reaches one of the two and
+a station is sized as a station rather than as a group of zones.
+
 **A move onto a player lands on that player's cards.** A `Commit.SEAT` gesture arms the station of the seat the
-move names, so a pass reads as picking a card up and clicking the cards of the player it goes to. The plaque
-keeps the same landing for a seat the table draws nowhere, which leaves the move reachable in the one place left
-to point at.
+move names, so a pass reads as picking a card up and laying it on the cards of the player it goes to — by clicking
+there, or by carrying the card there. The plaque keeps the same landing for a seat the table draws nowhere, which
+leaves the move reachable in the one place left to point at.
 
 **A heap reads by its top card, and opens for as long as an arrival takes to read.** `play/arrivals.ts` counts
 what one commit laid in each zone — the cards lying at the positions it grew by, which leaves a zone that gave

@@ -78,6 +78,14 @@ Five closed vocabularies carry the choices:
 | `Interlude` | `ROUND`, `MATCH` | what a phase play pauses at has come to |
 | `Award` | `HIGHEST`, `LOWEST` | which end of the standing a match is won at — `cardwork.states`, read here |
 
+**A spread says how the cards of a zone lie, and a page reads where they lie off the same word.** `SLOT` is one
+place holding a card or standing empty, which is what a game states for a card sealed or a card turned. A single
+place is also the narrowest thing a zone can be, and the room round the edge of a table is deeper than it is wide, so
+a seat drawn across the table takes that word a second way: the holdings the table reads of it lie side by side under
+its name, and its single places lie beneath them, which is the two lines a station stands in (`architecture.md`
+§10). So the word a game says about how cards lie against each other carries what a page needs in order to work out
+where they go, and the geography stays the interface's own.
+
 **A boundary is a phase, and a game says which of its phases are ones to stop at.** A round scored, the cards
 gathered and the next hand dealt settle in a single burst, so a player watching the table alone reads one round
 becoming another with nothing said about what the first was worth. `Layout.interludes` keys those phases against
@@ -229,7 +237,8 @@ Four places where the vocabulary stops at what the games ask for, each following
 - **A slot names an owner and no place**, because a game states which zones a player owns and the interface
   states where the page puts them: the three placements it derives — the panel below, a station round the table,
   the shared middle — are one reading of `Slot.seat` against `Layout.observer`, and a page that wanted a fourth
-  would derive that too. A field naming the page's own geography arrives the day a game needs a zone drawn
+  would derive that too. The lines a station stands its cards in are derived the same way, off the `Spread` each
+  slot already carries. A field naming the page's own geography arrives the day a game needs a zone drawn
   somewhere the owner of it cannot say.
 - **An interlude names what a pause has come to and not what to say about it.** `ROUND` and `MATCH` are the two
   things a game played in rounds ever stops at, and a game stopping somewhere of its own — a trick taken, a hand
