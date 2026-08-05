@@ -1,5 +1,10 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
+from typing import Annotated, ClassVar, Final
+
+from pydantic import BeforeValidator, SerializeAsAny
 
 from cardwork.cards.card import Cards
 from cardwork.combinations.policy import Evaluation
@@ -8,6 +13,8 @@ from cardwork.models.base import BaseFrozen
 from cardwork.ordering.preorder import Key
 
 type Reading = Cards
+
+KIND: Final[str] = "kind"
 
 
 class Pattern(BaseFrozen, ABC):
@@ -22,7 +29,51 @@ class Pattern(BaseFrozen, ABC):
     A game states a rule of its own by writing a pattern: `size` is how many cards the rule takes, `shapes`
     lists the readings it admits over a given reading of the deck, and `strength` places one instance among
     the others of the same rule.
+
+    `kind` is the word the rule travels under, which each pattern states as the default of the field, and
+    writing the class is what puts that word in play. `AnyPattern` reads a word back to the rule it names, so a
+    pattern arrives off the wire as the class that wrote it: a game may carry a combination in its cursor, and a
+    ranking chosen at the table — a bid contract, a rank named wild mid-hand — travels and replays as itself.
     """
+
+    _rules: ClassVar[dict[str, type[Pattern]]] = {}
+
+    kind: str
+
+    @classmethod
+    def __pydantic_init_subclass__(cls, **kwargs: object) -> None:
+        """Put the word a concrete pattern states in play, so that the wire form reads it back to this class.
+
+        Raises:
+            TypeError: when a pattern ready to be instantiated states no word of its own, or states one another
+                pattern already travels under.
+        """
+        if cls.__abstractmethods__:
+            return
+
+        word = cls.model_fields[KIND].default
+        if not isinstance(word, str):
+            raise TypeError(f"{cls.__name__} is read back by the word naming its rule, and it states none")
+
+        stated = Pattern._rules.get(word)
+        if stated is not None and stated is not cls:
+            raise TypeError(f"{word!r} already names {stated.__name__}, and {cls.__name__} states it as well")
+
+        Pattern._rules[word] = cls
+
+    @classmethod
+    def named(cls, kind: str) -> type[Pattern]:
+        """The rule one word names, out of the patterns in play.
+
+        Raises:
+            ValueError: when no pattern in play states that word.
+        """
+        stated = Pattern._rules.get(kind)
+        if stated is None:
+            words = ", ".join(sorted(Pattern._rules))
+            raise ValueError(f"No rule travels under {kind!r}; the rules in play are {words}")
+
+        return stated
 
     @property
     @abstractmethod
@@ -54,3 +105,26 @@ class Pattern(BaseFrozen, ABC):
                 reverse=True,
             )
         )
+
+
+def _as_pattern(value: object) -> object:
+    """The rule a wire form names, read back as the pattern class that word belongs to.
+
+    A pattern travels as a mapping stating its `kind`, and the word settles which rule the fields beside it are
+    read as, which is what lets a game's own pattern travel alongside the ones this package states. A pattern
+    given as itself passes through, and so does anything else, for the field to validate and refuse.
+
+    Raises:
+        ValueError: when a mapping names its rule by no word, or by a word no pattern in play states.
+    """
+    if not isinstance(value, Mapping):
+        return value
+
+    kind = value.get(KIND)
+    if not isinstance(kind, str):
+        raise TypeError(f"A pattern names the rule it is by a word, and this one carries {kind!r}")
+
+    return Pattern.named(kind).model_validate(value)
+
+
+type AnyPattern = Annotated[SerializeAsAny[Pattern], BeforeValidator(_as_pattern)]

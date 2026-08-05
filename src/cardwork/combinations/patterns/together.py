@@ -1,5 +1,5 @@
 from collections.abc import Iterator
-from typing import Final, Self
+from typing import Final, Literal, Self
 
 from pydantic import model_validator
 
@@ -19,6 +19,8 @@ class Together(Compound):
     for one card: the rank the run reaches there, in the suit the flush holds. Every part reads the same number
     of places, and an instance is settled by the parts in the order they are named.
     """
+
+    kind: Literal["together"] = "together"
 
     @model_validator(mode="after")
     def _every_part_reads_the_same_places(self) -> Self:

@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from typing import Literal
 
 from cardwork.combinations.demand import Demand
 from cardwork.combinations.pattern import Reading
@@ -15,6 +16,7 @@ class SameSuit(Simple):
     ace stands above one topped by a king and a tie on the ace is settled by the card below it.
     """
 
+    kind: Literal["same_suit"] = "same_suit"
     places: AlikePlaces
 
     def shapes(self, evaluation: Evaluation) -> Iterator[Shape]:

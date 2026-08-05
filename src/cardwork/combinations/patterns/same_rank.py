@@ -1,5 +1,5 @@
 from collections.abc import Iterator
-from typing import Final
+from typing import Final, Literal
 
 from cardwork.combinations.demand import Demand
 from cardwork.combinations.pattern import Reading
@@ -18,6 +18,7 @@ class SameRank(Simple):
     decks in play let the rule reach further, so five of a rank stands where two decks are dealt.
     """
 
+    kind: Literal["same_rank"] = "same_rank"
     places: AlikePlaces
 
     def shapes(self, evaluation: Evaluation) -> Iterator[Shape]:

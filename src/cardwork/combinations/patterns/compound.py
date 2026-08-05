@@ -3,15 +3,15 @@ from collections.abc import Iterator, Sequence
 from itertools import product
 from typing import Annotated, Final
 
-from pydantic import Field, SerializeAsAny
+from pydantic import Field
 
-from cardwork.combinations.pattern import Pattern
+from cardwork.combinations.pattern import AnyPattern, Pattern
 from cardwork.combinations.policy import Evaluation
 from cardwork.combinations.shape import Shape
 
 PARTS: Final[int] = 2
 
-Parts = Annotated[tuple[SerializeAsAny[Pattern], ...], Field(min_length=PARTS)]
+Parts = Annotated[tuple[AnyPattern, ...], Field(min_length=PARTS)]
 
 
 class Compound(Pattern, ABC):

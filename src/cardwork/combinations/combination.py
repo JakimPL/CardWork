@@ -1,9 +1,9 @@
 from typing import Final, Self
 
-from pydantic import SerializeAsAny, model_validator
+from pydantic import model_validator
 
 from cardwork.cards.game import CardsOrJokers
-from cardwork.combinations.pattern import Pattern, Reading
+from cardwork.combinations.pattern import AnyPattern, Reading
 from cardwork.combinations.policy import Evaluation
 from cardwork.models.base import BaseFrozen
 from cardwork.ordering.preorder import Key, Preorder
@@ -25,7 +25,7 @@ class Combination(BaseFrozen):
     is what a scoring table consults to count that ace as one.
     """
 
-    pattern: SerializeAsAny[Pattern]
+    pattern: AnyPattern
     cards: CardsOrJokers
     reading: Reading
     strength: Key

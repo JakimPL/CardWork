@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from typing import Literal
 
 from cardwork.combinations.demand import ANY_CARD
 from cardwork.combinations.pattern import Reading
@@ -14,6 +15,8 @@ class AnyCards(Simple):
     An instance is settled by its ranks from the highest down, so that a hand keeping an ace stands above one
     keeping a king.
     """
+
+    kind: Literal["any_cards"] = "any_cards"
 
     def shapes(self, evaluation: Evaluation) -> Iterator[Shape]:
         yield Shape(demands=(ANY_CARD,) * self.places, low_ace=False)

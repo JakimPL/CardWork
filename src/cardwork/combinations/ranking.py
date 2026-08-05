@@ -1,17 +1,19 @@
 from collections.abc import Iterable, Sequence
-from typing import Annotated, Self
+from typing import Annotated, Final, Self
 
-from pydantic import Field, SerializeAsAny, model_validator
+from pydantic import Field, model_validator
 
 from cardwork.cards.game import CardOrJoker
 from cardwork.combinations.combination import BY_STRENGTH, ByReading, Combination
 from cardwork.combinations.detect import find
-from cardwork.combinations.pattern import Pattern
+from cardwork.combinations.pattern import AnyPattern, Pattern
 from cardwork.combinations.policy import Evaluation
 from cardwork.models.base import BaseFrozen
 from cardwork.ordering.composite import Composite
 from cardwork.ordering.preorder import Key, Preorder
 from cardwork.ordering.tiers import Tiers
+
+ONE_PATTERN: Final[int] = 1
 
 
 class ByPattern(Preorder[Combination]):
@@ -36,7 +38,7 @@ class Ranking(BaseFrozen):
     affair: a game that separates two equal pairs by the cards around them states that rule itself.
     """
 
-    patterns: Annotated[tuple[SerializeAsAny[Pattern], ...], Field(min_length=1)]
+    patterns: Annotated[tuple[AnyPattern, ...], Field(min_length=ONE_PATTERN)]
     evaluation: Evaluation
 
     @model_validator(mode="after")

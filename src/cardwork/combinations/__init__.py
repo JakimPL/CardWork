@@ -1,7 +1,12 @@
-from cardwork.combinations.combination import BY_STRENGTH, ByReading, ByStrength, Combination
+from cardwork.combinations.combination import (
+    BY_STRENGTH,
+    ByReading,
+    ByStrength,
+    Combination,
+)
 from cardwork.combinations.demand import ANY_CARD, Demand
 from cardwork.combinations.matching import Matching
-from cardwork.combinations.pattern import Pattern
+from cardwork.combinations.pattern import AnyPattern, Pattern
 from cardwork.combinations.points import REGULAR_SCORING, Scoring
 from cardwork.combinations.poker import (
     FLUSH,
@@ -39,6 +44,7 @@ __all__ = [
     "TRIPLET",
     "TWO_PAIR",
     "WHEEL",
+    "AnyPattern",
     "ByPattern",
     "ByReading",
     "ByStrength",

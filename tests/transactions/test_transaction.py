@@ -3,6 +3,9 @@ from dataclasses import dataclass
 import pytest
 from pydantic import ValidationError
 
+from cardwork.combinations.poker import FLUSH, PAIR
+from cardwork.combinations.policy import REGULAR_EVALUATION
+from cardwork.combinations.ranking import Ranking
 from cardwork.effects.effect import Effect
 from cardwork.effects.effects import MoveCards, Reorder, SetFace, SetState
 from cardwork.moves.actions import Declare, Play
@@ -14,6 +17,12 @@ from cardwork.transactions.transaction import Transaction
 class BiddingState(GameState):
     trump: str
     highest_bid: int | None = None
+
+
+class ContractState(GameState):
+    """A cursor carrying the combinations the table settled on, which is what a bid contract comes to."""
+
+    recognised: Ranking
 
 
 @dataclass(frozen=True)
@@ -85,6 +94,23 @@ def test_a_transaction_round_trips_a_game_s_own_state() -> None:
     assert restored == transaction
     assert isinstance(restored_effect, SetState)
     assert restored_effect.state.highest_bid == 5
+
+
+def test_a_transaction_round_trips_the_rules_a_table_settled_on() -> None:
+    contract = ContractState(phase="play", recognised=Ranking(patterns=(PAIR, FLUSH), evaluation=REGULAR_EVALUATION))
+    transaction = Transaction[ContractState](
+        seq=2,
+        move=None,
+        effects=(SetState[ContractState](state=contract),),
+    )
+
+    restored = Transaction[ContractState].model_validate_json(transaction.model_dump_json())
+
+    restored_effect = restored.effects[0]
+
+    assert restored == transaction
+    assert isinstance(restored_effect, SetState)
+    assert restored_effect.state.recognised.patterns == (PAIR, FLUSH)
 
 
 def test_a_transaction_rejects_an_effect_of_an_unrecorded_kind() -> None:

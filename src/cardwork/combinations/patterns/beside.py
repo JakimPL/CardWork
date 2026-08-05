@@ -1,4 +1,5 @@
 from collections.abc import Iterator, Sequence
+from typing import Literal
 
 from cardwork.combinations.pattern import Pattern, Reading
 from cardwork.combinations.patterns.compound import Compound
@@ -15,6 +16,8 @@ class Beside(Compound):
     An instance is settled by the parts in the order they are named, so a full house leads with its triplet, and
     a pair beside three loose places is settled by the pair and then by the cards standing around it.
     """
+
+    kind: Literal["beside"] = "beside"
 
     @property
     def size(self) -> int:

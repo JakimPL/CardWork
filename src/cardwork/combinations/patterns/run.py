@@ -1,5 +1,5 @@
 from collections.abc import Iterator
-from typing import Annotated, Final
+from typing import Annotated, Final, Literal
 
 from pydantic import Field
 
@@ -26,6 +26,7 @@ class Run(Simple):
     reaches as far as the ranks stretch, which is thirteen places over a standard deck.
     """
 
+    kind: Literal["run"] = "run"
     places: RunPlaces
 
     def shapes(self, evaluation: Evaluation) -> Iterator[Shape]:
