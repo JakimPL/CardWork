@@ -1,5 +1,7 @@
 from cardwork.models.base import BaseFrozen
+from cardwork.presentation.slot import Slot
 from cardwork.presentation.spread import Spread
+from cardwork.zones.zone import ZoneId
 
 
 class Lay(BaseFrozen):
@@ -18,3 +20,20 @@ class Lay(BaseFrozen):
     label: str
     spread: Spread
     counted: bool
+
+    def slot(self, zone: ZoneId, *, seat: int | None, place: int) -> Slot:
+        """This lay given to one zone, which is the slot an observer reads that zone through.
+
+        Args:
+            zone: the zone lying this way, concrete for the seat it is read at.
+            seat: the seat it belongs to, and None for a zone of the table.
+            place: where it stands among the zones of that owner.
+        """
+        return Slot(
+            zone=zone,
+            label=self.label,
+            seat=seat,
+            spread=self.spread,
+            place=place,
+            counted=self.counted,
+        )

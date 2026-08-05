@@ -16,6 +16,7 @@ from cardwork.moves.actions import Play, Take
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.states.state import GameState, Points
+from cardwork.zones.family import Family
 from cardwork.zones.presets import HAND, PILE
 from cardwork.zones.zone import Zone, ZoneId, Zones
 from cardwork.zones.zones import discard, hand_of, hands
@@ -30,8 +31,11 @@ LAYING: Final[Intents[Play]] = Intents(Play)
 LAYING_OR_RETRACTING: Final[Intents[Play | Take]] = Intents(Play, Take)
 
 
+TRAYS: Final[Family] = Family(name="sealed", ordered=True, visibility=HAND)
+
+
 def tray_of(seat: int) -> ZoneId:
-    return f"sealed:{seat}"
+    return TRAYS.of(seat)
 
 
 class DiscardGame(Game[GameState]):
@@ -137,16 +141,7 @@ class SealedRoundGame(DiscardGame):
     intents = LAYING_OR_RETRACTING
 
     def zones(self, players: int, deck: Deck) -> Zones:
-        trays = {
-            tray_of(seat): Zone(
-                id=tray_of(seat),
-                owner=seat,
-                visibility=HAND,
-                ordered=True,
-            )
-            for seat in range(players)
-        }
-        return {**super().zones(players, deck), **trays}
+        return {**super().zones(players, deck), **TRAYS.zones(players)}
 
     def authorize(self, position: Position[GameState], move: Move) -> None:
         if isinstance(move.action, Take):

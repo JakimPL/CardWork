@@ -3,20 +3,23 @@ from typing import Final
 
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation.commit import Commit
+from cardwork.presentation.fixture import Fixture
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
+from cardwork.presentation.lay import Lay
 from cardwork.presentation.layout import Layout
 from cardwork.presentation.plaque import Plaque
 from cardwork.presentation.readout import Readout
 from cardwork.presentation.scene import Scene
 from cardwork.presentation.scope import Scope
+from cardwork.presentation.setting import Setting
 from cardwork.presentation.slot import Slot
 from cardwork.presentation.spread import Spread
 from cardwork.presentation.tally import Tally
 from cardwork.states.award import Award
 from cardwork.states.state import GameState
 from cardwork.zones.zone import ZoneId
-from cardwork.zones.zones import hand_of
+from cardwork.zones.zones import HANDS, hand_of
 
 SEATS: Final[int] = 3
 OWNER: Final[int] = 1
@@ -119,11 +122,6 @@ def slots_of(seat: int) -> tuple[Slot, ...]:
     return (a_hand(seat),)
 
 
-def holdings_of(seat: int) -> tuple[Slot, ...]:
-    """The same hand as the rest of the table reads it, which is what lies at that seat's station."""
-    return (a_holding(seat),)
-
-
 def gestures_of(seat: int) -> tuple[Gesture, ...]:
     """The two moves one seat makes, which between them commit onto a zone and onto a seat."""
     return (an_exchange(seat), a_pass(seat))
@@ -147,13 +145,17 @@ STANDING: Final[Readout] = Readout.of(GameState, "points", "Points", scope=Scope
 STAGE: Final[Readout] = Readout.of(GameState, "phase", "Phase", scope=Scope.TABLE)
 READOUTS: Final[tuple[Readout, ...]] = (STANDING, STAGE)
 
+TABLE: Final[tuple[Fixture, ...]] = (
+    Fixture.heap(PILE, "Pile"),
+    Fixture(zone=STACK, seen=Lay(label="Stack", spread=Spread.STACK, counted=False)),
+)
+SEATED: Final[tuple[Setting, ...]] = (Setting.hand(HANDS, "Hand", mine="Your hand", tally="Held"),)
+
 SCENE: Final[Scene] = Scene(
     title=TITLE,
-    shared=SHARED,
-    held=slots_of,
-    seen=holdings_of,
+    table=TABLE,
+    seated=SEATED,
     gestures=gestures_of,
-    counts=counts_of,
     readouts=READOUTS,
     phases=PHASES,
     interludes=INTERLUDES,

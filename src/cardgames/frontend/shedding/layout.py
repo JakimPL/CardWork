@@ -7,26 +7,24 @@ from cardgames.backend.shedding.zones import STOCK
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation import presets
 from cardwork.presentation.commit import Commit
+from cardwork.presentation.fixture import Fixture
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
 from cardwork.presentation.readout import Readout
 from cardwork.presentation.scene import Scene
 from cardwork.presentation.scope import Scope
-from cardwork.presentation.slot import Slot
-from cardwork.presentation.tally import Tally
+from cardwork.presentation.setting import Setting
 from cardwork.rounds.state import MatchPhase
 from cardwork.zones.zones import DISCARD, HANDS
 
 TITLE: Final[str] = "Shedding"
 
-HELD: Final[int] = 0
-DRAWN_FROM: Final[int] = 0
-SHED_ONTO: Final[int] = 1
-
-SHARED: Final[tuple[Slot, ...]] = (
-    presets.heap(STOCK, "Stock", place=DRAWN_FROM),
-    presets.heap(DISCARD, "Shed", place=SHED_ONTO),
+TABLE: Final[tuple[Fixture, ...]] = (
+    Fixture.heap(STOCK, "Stock"),
+    Fixture.heap(DISCARD, "Shed"),
 )
+
+SEATED: Final[tuple[Setting, ...]] = (Setting.hand(HANDS, "Hand", mine="Your hand", tally="Cards"),)
 
 READOUTS: Final[tuple[Readout, ...]] = (
     Readout.of(SheddingState, "points", "Points", scope=Scope.SEAT),
@@ -44,25 +42,6 @@ PHASES: Final[Mapping[str, str]] = {
 }
 
 INTERLUDES: Final[Mapping[str, Interlude]] = presets.match_interludes()
-
-
-def slots_of(seat: int) -> tuple[Slot, ...]:
-    """The hand a seat sheds from, which is the zone the positions of a set address.
-
-    A hand fans out, since a seat picks its cards by what they are and reads the rank of each one to find the
-    others that go with it. It grows by the cards a turn draws, so this is the one holding in either game that
-    lies at no settled size.
-    """
-    return (presets.hand(HANDS.of(seat), "Your hand", seat=seat, place=HELD),)
-
-
-def seen_of(seat: int) -> tuple[Slot, ...]:
-    """The same hand as the rest of the table reads it, which is how the race to shed out is followed.
-
-    A seat down to two cards is what everybody else is playing against, so the size of a holding is the whole of
-    what a hand tells the table, and it lies there to be counted at a glance.
-    """
-    return (presets.holding(HANDS.of(seat), "Hand", seat=seat, place=HELD),)
 
 
 def gestures_of(seat: int) -> tuple[Gesture, ...]:
@@ -93,18 +72,11 @@ def gestures_of(seat: int) -> tuple[Gesture, ...]:
     )
 
 
-def counts_of(seat: int) -> tuple[Tally, ...]:
-    """What the table reads of a seat's cards, which is how many of them it holds."""
-    return (Tally(zone=HANDS.of(seat), label="Cards"),)
-
-
 SHEDDING_SCENE: Final[Scene] = Scene(
     title=TITLE,
-    shared=SHARED,
-    held=slots_of,
-    seen=seen_of,
+    table=TABLE,
+    seated=SEATED,
     gestures=gestures_of,
-    counts=counts_of,
     readouts=READOUTS,
     phases=PHASES,
     interludes=INTERLUDES,

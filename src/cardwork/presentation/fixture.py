@@ -2,6 +2,7 @@ from typing import Self
 
 from cardwork.models.base import BaseFrozen
 from cardwork.presentation.lay import Lay
+from cardwork.presentation.slot import Slot
 from cardwork.presentation.spread import Spread
 from cardwork.zones.zone import ZoneId
 
@@ -16,6 +17,14 @@ class Fixture(BaseFrozen):
 
     zone: ZoneId
     seen: Lay
+
+    def slot(self, place: int) -> Slot:
+        """This zone as every observer reads it, standing where the scene states it among the table's own.
+
+        Args:
+            place: where it stands among the zones of the table.
+        """
+        return self.seen.slot(self.zone, seat=None, place=place)
 
     @classmethod
     def heap(cls, zone: ZoneId, label: str) -> Self:

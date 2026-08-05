@@ -7,26 +7,24 @@ from cardgames.backend.passing.zones import PILE
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation import presets
 from cardwork.presentation.commit import Commit
+from cardwork.presentation.fixture import Fixture
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
 from cardwork.presentation.readout import Readout
 from cardwork.presentation.scene import Scene
 from cardwork.presentation.scope import Scope
-from cardwork.presentation.slot import Slot
-from cardwork.presentation.tally import Tally
+from cardwork.presentation.setting import Setting
 from cardwork.rounds.state import MatchPhase
-from cardwork.zones.zones import STACK, hand_of
+from cardwork.zones.zones import HANDS, STACK
 
 TITLE: Final[str] = "Passing"
 
-HELD: Final[int] = 0
-DEALT_FROM: Final[int] = 0
-LAID_ON: Final[int] = 1
-
-SHARED: Final[tuple[Slot, ...]] = (
-    presets.heap(PILE, "Pile", place=DEALT_FROM),
-    presets.heap(STACK, "Stack", place=LAID_ON),
+TABLE: Final[tuple[Fixture, ...]] = (
+    Fixture.heap(PILE, "Pile"),
+    Fixture.heap(STACK, "Stack"),
 )
+
+SEATED: Final[tuple[Setting, ...]] = (Setting.hand(HANDS, "Hand", mine="Your hand", tally="Cards"),)
 
 READOUTS: Final[tuple[Readout, ...]] = (
     Readout.of(PassingState, "points", "Points", scope=Scope.SEAT),
@@ -45,20 +43,6 @@ PHASES: Final[Mapping[str, str]] = {
 INTERLUDES: Final[Mapping[str, Interlude]] = presets.match_interludes()
 
 
-def slots_of(seat: int) -> tuple[Slot, ...]:
-    """The hand a seat plays from, which is the zone either move of a turn picks its card in."""
-    return (presets.hand(hand_of(seat), "Your hand", seat=seat, place=HELD),)
-
-
-def seen_of(seat: int) -> tuple[Slot, ...]:
-    """The same hand as the rest of the table reads it, which is the backs of its cards and how many.
-
-    A pass is committed onto the seat it goes to, so the cards of that seat are what a player points at to send
-    one, and the hand lies on the table for exactly that.
-    """
-    return (presets.holding(hand_of(seat), "Hand", seat=seat, place=HELD),)
-
-
 def gestures_of(seat: int) -> tuple[Gesture, ...]:
     """The two moves a turn is made of, as the seat holding it makes them.
 
@@ -70,7 +54,7 @@ def gestures_of(seat: int) -> tuple[Gesture, ...]:
         Gesture(
             kind=ActionKind.TAKE,
             group=PILE,
-            picked=hand_of(seat),
+            picked=HANDS.of(seat),
             commit=Commit.ZONE,
             target=PILE,
             caption="Exchange this card for the top of the pile",
@@ -78,7 +62,7 @@ def gestures_of(seat: int) -> tuple[Gesture, ...]:
         Gesture(
             kind=ActionKind.GIVE,
             group=None,
-            picked=hand_of(seat),
+            picked=HANDS.of(seat),
             commit=Commit.SEAT,
             target=None,
             caption="Pass this card to the next seat",
@@ -86,18 +70,11 @@ def gestures_of(seat: int) -> tuple[Gesture, ...]:
     )
 
 
-def counts_of(seat: int) -> tuple[Tally, ...]:
-    """What the table reads of a seat's cards, which is how many of them it holds."""
-    return (Tally(zone=hand_of(seat), label="Cards"),)
-
-
 PASSING_SCENE: Final[Scene] = Scene(
     title=TITLE,
-    shared=SHARED,
-    held=slots_of,
-    seen=seen_of,
+    table=TABLE,
+    seated=SEATED,
     gestures=gestures_of,
-    counts=counts_of,
     readouts=READOUTS,
     phases=PHASES,
     interludes=INTERLUDES,

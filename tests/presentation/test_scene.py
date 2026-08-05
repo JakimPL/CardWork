@@ -4,7 +4,11 @@ from typing import Final
 import pytest
 from pydantic import ValidationError
 
-from cardwork.presentation.scene import SEAT_NAME, Scene
+from cardwork.presentation.scene import SEAT_NAME
+from cardwork.presentation.setting import Setting
+from cardwork.zones.family import Family
+from cardwork.zones.presets import HIDDEN
+from cardwork.zones.zones import HANDS
 
 from .demo import (
     AROUND,
@@ -25,6 +29,12 @@ from .demo import (
 
 BIGGER_TABLE: Final[int] = 5
 UNSEATED: Final[int] = SEATS
+FIRST: Final[int] = 0
+SECOND: Final[int] = 1
+
+TRAYS: Final[Family] = Family(name="tray", ordered=True, visibility=HIDDEN)
+SEALED_PLACE: Final[Setting] = Setting.sealed(TRAYS, "Sealed")
+COUNTED_ALONE: Final[Setting] = Setting(family=HANDS, held=SCENE.seated[FIRST].held, seen=None, tally="Held")
 
 
 def test_a_scene_laid_out_for_a_seat_is_the_layout_of_that_seat() -> None:
@@ -80,7 +90,7 @@ def test_a_plaque_counts_the_zones_of_the_seat_it_belongs_to() -> None:
 
 
 def test_a_scene_drawing_no_cards_for_the_other_seats_leaves_their_size_to_the_plaques() -> None:
-    concealed = replace(SCENE, seen=lambda seat: ())
+    concealed = replace(SCENE, seated=(COUNTED_ALONE,))
     layout = concealed.layout(SEATS, OWNER)
 
     assert layout.slots == slots_of(OWNER) + SHARED
@@ -114,24 +124,18 @@ def test_a_scene_refuses_a_layout_for_a_seat_the_table_does_not_hold() -> None:
         SCENE.layout(SEATS, UNSEATED)
 
 
-def test_a_scene_laying_out_one_seats_zones_under_another_seat_is_refused() -> None:
-    astray = replace(SCENE, held=lambda seat: (a_holding(OTHER),))
+def test_a_scene_lays_a_seats_zones_out_in_the_run_it_states_the_families_in() -> None:
+    stated = replace(SCENE, seated=(SCENE.seated[0], SEALED_PLACE))
+    layout = stated.layout(SEATS, OWNER)
 
-    with pytest.raises(ValueError, match=f"A zone laid out for seat {OWNER} belongs to it"):
-        astray.layout(SEATS, OWNER)
+    assert [(slot.zone, slot.place) for slot in layout.slots if slot.seat == OWNER] == [
+        (hand_of(OWNER), FIRST),
+        (TRAYS.of(OWNER), SECOND),
+    ]
 
 
-def test_a_scene_sharing_a_zone_that_belongs_to_a_seat_is_refused() -> None:
-    with pytest.raises(ValueError, match="A zone the table shares belongs to no seat"):
-        Scene(
-            title=SCENE.title,
-            shared=(a_holding(OWNER),),
-            held=slots_of,
-            seen=lambda seat: (),
-            gestures=gestures_of,
-            counts=counts_of,
-            readouts=SCENE.readouts,
-            phases=SCENE.phases,
-            interludes=SCENE.interludes,
-            award=SCENE.award,
-        )
+def test_a_family_the_table_draws_nowhere_leaves_the_places_of_the_others_where_they_stand() -> None:
+    concealed = replace(SCENE, seated=(COUNTED_ALONE, SEALED_PLACE))
+    layout = concealed.layout(SEATS, OTHER)
+
+    assert [(slot.zone, slot.place) for slot in layout.slots if slot.seat == OWNER] == [(TRAYS.of(OWNER), SECOND)]

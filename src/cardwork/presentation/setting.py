@@ -4,7 +4,9 @@ from pydantic import model_validator
 
 from cardwork.models.base import BaseFrozen
 from cardwork.presentation.lay import Lay
+from cardwork.presentation.slot import Slot
 from cardwork.presentation.spread import Spread
+from cardwork.presentation.tally import Tally
 from cardwork.zones.family import Family
 
 
@@ -25,6 +27,47 @@ class Setting(BaseFrozen):
     held: Lay | None
     seen: Lay | None
     tally: str | None
+
+    def held_at(self, seat: int, place: int) -> Slot | None:
+        """This family's zone at one seat as that seat reads it.
+
+        Args:
+            seat: the seat holding the zone, which is the observer the layout is built for.
+            place: where it stands among the zones of that seat.
+
+        Returns:
+            The slot its owner reads it through, and None for a family its owner reads no zone of.
+        """
+        if self.held is None:
+            return None
+
+        return self.held.slot(self.family.of(seat), seat=seat, place=place)
+
+    def seen_at(self, seat: int, place: int) -> Slot | None:
+        """This family's zone at one seat as the rest of the table reads it.
+
+        Args:
+            seat: the seat holding the zone, which every other observer reads it at.
+            place: where it stands among the zones of that seat.
+
+        Returns:
+            The slot the table reads it through, and None for a family the table draws nowhere.
+        """
+        if self.seen is None:
+            return None
+
+        return self.seen.slot(self.family.of(seat), seat=seat, place=place)
+
+    def counted_at(self, seat: int) -> Tally | None:
+        """What this family says for its size on the plaque of one seat.
+
+        Returns:
+            The tally the plaque carries, and None for a family whose size the plaque leaves out.
+        """
+        if self.tally is None:
+            return None
+
+        return Tally(zone=self.family.of(seat), label=self.tally)
 
     @model_validator(mode="after")
     def _the_setting_reaches_a_player(self) -> Self:

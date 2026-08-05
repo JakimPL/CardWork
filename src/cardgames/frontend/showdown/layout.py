@@ -12,28 +12,34 @@ from cardgames.backend.showdown.zones import (
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation import presets
 from cardwork.presentation.commit import Commit
+from cardwork.presentation.fixture import Fixture
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
+from cardwork.presentation.lay import Lay
 from cardwork.presentation.readout import Readout
 from cardwork.presentation.scene import Scene
 from cardwork.presentation.scope import Scope
-from cardwork.presentation.slot import Slot
+from cardwork.presentation.setting import Setting
 from cardwork.presentation.spread import Spread
-from cardwork.presentation.tally import Tally
 from cardwork.rounds.state import MatchPhase
 from cardwork.zones.zones import DISCARD, HANDS
 
 TITLE: Final[str] = "Showdown"
 
-HELD: Final[int] = 0
-BLIND: Final[int] = 1
-SEALED: Final[int] = 2
-DEALT_FROM: Final[int] = 0
-REVEALED: Final[int] = 1
+TABLE: Final[tuple[Fixture, ...]] = (
+    Fixture.heap(STOCK, "Stock"),
+    Fixture.heap(DISCARD, "Revealed"),
+)
 
-SHARED: Final[tuple[Slot, ...]] = (
-    presets.heap(STOCK, "Stock", place=DEALT_FROM),
-    presets.heap(DISCARD, "Revealed", place=REVEALED),
+SEATED: Final[tuple[Setting, ...]] = (
+    Setting.hand(HANDS, "Hand", mine="Your hand", tally="Hand"),
+    Setting(
+        family=BLINDS,
+        held=Lay(label="Your blind", spread=Spread.ROW, counted=False),
+        seen=Lay(label="Blind", spread=Spread.STACK, counted=True),
+        tally="Blind",
+    ),
+    Setting.sealed(TRAYS, "Sealed"),
 )
 
 READOUTS: Final[tuple[Readout, ...]] = (
@@ -51,62 +57,6 @@ PHASES: Final[Mapping[str, str]] = {
 }
 
 INTERLUDES: Final[Mapping[str, Interlude]] = presets.match_interludes()
-
-
-def slots_of(seat: int) -> tuple[Slot, ...]:
-    """The two holdings a seat commits from, and the tray a commitment lies sealed in.
-
-    The hand fans out, since a seat reads those five and picks by what they are. The blind lies in a row of
-    whole cards, since a seat reads none of them and picks by where one lies, which the projection serves at
-    its true position for exactly that. The tray holds the one card of the turn.
-    """
-    return (
-        presets.hand(HANDS.of(seat), "Your hand", seat=seat, place=HELD),
-        Slot(
-            zone=BLINDS.of(seat),
-            label="Your blind",
-            seat=seat,
-            spread=Spread.ROW,
-            place=BLIND,
-            counted=False,
-        ),
-        Slot(
-            zone=TRAYS.of(seat),
-            label="Sealed",
-            seat=seat,
-            spread=Spread.SLOT,
-            place=SEALED,
-            counted=False,
-        ),
-    )
-
-
-def seen_of(seat: int) -> tuple[Slot, ...]:
-    """The three zones of a seat as the rest of the table reads them: a holding, a blind, and a tray.
-
-    A blind nobody reads says one thing to the table, which is how many cards are still to come out of it, so it
-    lies across the table as a heap under its size where the seat holding it reads a row of places to pick from.
-    The tray shows the card sealed there once the round opens it, which is what a showdown comes to.
-    """
-    return (
-        presets.holding(HANDS.of(seat), "Hand", seat=seat, place=HELD),
-        Slot(
-            zone=BLINDS.of(seat),
-            label="Blind",
-            seat=seat,
-            spread=Spread.STACK,
-            place=BLIND,
-            counted=True,
-        ),
-        Slot(
-            zone=TRAYS.of(seat),
-            label="Sealed",
-            seat=seat,
-            spread=Spread.SLOT,
-            place=SEALED,
-            counted=False,
-        ),
-    )
 
 
 def gestures_of(seat: int) -> tuple[Gesture, ...]:
@@ -128,22 +78,11 @@ def gestures_of(seat: int) -> tuple[Gesture, ...]:
     )
 
 
-def counts_of(seat: int) -> tuple[Tally, ...]:
-    """What the table reads of a seat: the size of both holdings, and a tray saying whether it has committed."""
-    return (
-        Tally(zone=HANDS.of(seat), label="Hand"),
-        Tally(zone=BLINDS.of(seat), label="Blind"),
-        Tally(zone=TRAYS.of(seat), label="Sealed"),
-    )
-
-
 SHOWDOWN_SCENE: Final[Scene] = Scene(
     title=TITLE,
-    shared=SHARED,
-    held=slots_of,
-    seen=seen_of,
+    table=TABLE,
+    seated=SEATED,
     gestures=gestures_of,
-    counts=counts_of,
     readouts=READOUTS,
     phases=PHASES,
     interludes=INTERLUDES,
