@@ -8,6 +8,7 @@ from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
 from cardwork.presentation.lay import Lay
 from cardwork.presentation.layout import Layout
+from cardwork.presentation.making import Making
 from cardwork.presentation.plaque import Plaque
 from cardwork.presentation.readout import Readout
 from cardwork.presentation.scene import Scene
@@ -116,6 +117,24 @@ EXCHANGE: Final[Gesture] = an_exchange(OWNER)
 PASS_ON: Final[Gesture] = a_pass(OWNER)
 GESTURES: Final[tuple[Gesture, ...]] = (EXCHANGE, PASS_ON)
 
+EXCHANGING: Final[Making] = Making(
+    kind=ActionKind.TAKE,
+    group=PILE,
+    picked=HANDS,
+    commit=Commit.ZONE,
+    target=PILE,
+    caption="Exchange with the pile",
+)
+PASSING: Final[Making] = Making(
+    kind=ActionKind.GIVE,
+    group=None,
+    picked=HANDS,
+    commit=Commit.SEAT,
+    target=None,
+    caption="Pass to the next seat",
+)
+MAKINGS: Final[tuple[Making, ...]] = (EXCHANGING, PASSING)
+
 
 def slots_of(seat: int) -> tuple[Slot, ...]:
     """The one zone a seat holds of its own, which is the hand it plays from."""
@@ -151,16 +170,33 @@ TABLE: Final[tuple[Fixture, ...]] = (
 )
 SEATED: Final[tuple[Setting, ...]] = (Setting.hand(HANDS, "Hand", mine="Your hand", tally="Held"),)
 
-SCENE: Final[Scene] = Scene(
-    title=TITLE,
-    table=TABLE,
-    seated=SEATED,
-    gestures=gestures_of,
-    readouts=READOUTS,
-    phases=PHASES,
-    interludes=INTERLUDES,
-    award=AWARD,
-)
+
+def a_scene(
+    table: tuple[Fixture, ...] = TABLE,
+    seated: tuple[Setting, ...] = SEATED,
+    gestures: tuple[Making, ...] = MAKINGS,
+    readouts: tuple[Readout, ...] = READOUTS,
+    phases: Mapping[str, str] = PHASES,
+    interludes: Mapping[str, Interlude] = INTERLUDES,
+) -> Scene:
+    """The demonstration table stated once for every seat, with any part of it standing in for its own.
+
+    A scene answers for itself as it is built, so a rule it is held to is tested by stating a scene that breaks
+    that one part and leaving the rest of the table as it stands.
+    """
+    return Scene(
+        title=TITLE,
+        table=table,
+        seated=seated,
+        gestures=gestures,
+        readouts=readouts,
+        phases=phases,
+        interludes=interludes,
+        award=AWARD,
+    )
+
+
+SCENE: Final[Scene] = a_scene()
 
 
 def a_layout(

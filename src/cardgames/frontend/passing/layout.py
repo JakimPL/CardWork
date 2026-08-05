@@ -8,8 +8,8 @@ from cardwork.moves.kind import ActionKind
 from cardwork.presentation import presets
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.fixture import Fixture
-from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
+from cardwork.presentation.making import Making
 from cardwork.presentation.readout import Readout
 from cardwork.presentation.scene import Scene
 from cardwork.presentation.scope import Scope
@@ -43,38 +43,30 @@ PHASES: Final[Mapping[str, str]] = {
 INTERLUDES: Final[Mapping[str, Interlude]] = presets.match_interludes()
 
 
-def gestures_of(seat: int) -> tuple[Gesture, ...]:
-    """The two moves a turn is made of, as the seat holding it makes them.
-
-    Both pick a card out of the seat's own hand, which is what the indices of either intent address. The
-    exchange is sent onto the pile it trades with, and the pass onto the seat the move names, so a card is
-    committed by pointing at where it goes.
-    """
-    return (
-        Gesture(
-            kind=ActionKind.TAKE,
-            group=PILE,
-            picked=HANDS.of(seat),
-            commit=Commit.ZONE,
-            target=PILE,
-            caption="Exchange this card for the top of the pile",
-        ),
-        Gesture(
-            kind=ActionKind.GIVE,
-            group=None,
-            picked=HANDS.of(seat),
-            commit=Commit.SEAT,
-            target=None,
-            caption="Pass this card to the next seat",
-        ),
-    )
-
+GESTURES: Final[tuple[Making, ...]] = (
+    Making(
+        kind=ActionKind.TAKE,
+        group=PILE,
+        picked=HANDS,
+        commit=Commit.ZONE,
+        target=PILE,
+        caption="Exchange this card for the top of the pile",
+    ),
+    Making(
+        kind=ActionKind.GIVE,
+        group=None,
+        picked=HANDS,
+        commit=Commit.SEAT,
+        target=None,
+        caption="Pass this card to the next seat",
+    ),
+)
 
 PASSING_SCENE: Final[Scene] = Scene(
     title=TITLE,
     table=TABLE,
     seated=SEATED,
-    gestures=gestures_of,
+    gestures=GESTURES,
     readouts=READOUTS,
     phases=PHASES,
     interludes=INTERLUDES,

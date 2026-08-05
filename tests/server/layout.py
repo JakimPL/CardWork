@@ -4,8 +4,8 @@ from typing import Final
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.fixture import Fixture
-from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
+from cardwork.presentation.making import Making
 from cardwork.presentation.readout import Readout
 from cardwork.presentation.scene import Scene
 from cardwork.presentation.scope import Scope
@@ -13,8 +13,8 @@ from cardwork.presentation.setting import Setting
 from cardwork.states.award import Award
 from cardwork.states.state import GameState
 from cardwork.zones.zone import ZoneId
-from cardwork.zones.zones import HANDS, hand_of
-from tests.games.demo import TRAYS, tray_of
+from cardwork.zones.zones import HANDS
+from tests.games.demo import TRAYS
 
 TITLE: Final[str] = "Sealed round"
 DRAW: Final[ZoneId] = "draw"
@@ -46,33 +46,30 @@ INTERLUDES: Final[Mapping[str, Interlude]] = {"score": Interlude.ROUND}
 AWARD: Final[Award] = Award.HIGHEST
 
 
-def gestures_of(seat: int) -> tuple[Gesture, ...]:
-    """The commitment a seat seals and the take-back lifting it out again, which run in either direction."""
-    return (
-        Gesture(
-            kind=ActionKind.PLAY,
-            group=None,
-            picked=hand_of(seat),
-            commit=Commit.ZONE,
-            target=tray_of(seat),
-            caption="Seal this card",
-        ),
-        Gesture(
-            kind=ActionKind.TAKE,
-            group=None,
-            picked=tray_of(seat),
-            commit=Commit.ZONE,
-            target=hand_of(seat),
-            caption="Take back what you sealed",
-        ),
-    )
-
+GESTURES: Final[tuple[Making, ...]] = (
+    Making(
+        kind=ActionKind.PLAY,
+        group=None,
+        picked=HANDS,
+        commit=Commit.ZONE,
+        target=TRAYS,
+        caption="Seal this card",
+    ),
+    Making(
+        kind=ActionKind.TAKE,
+        group=None,
+        picked=TRAYS,
+        commit=Commit.ZONE,
+        target=HANDS,
+        caption="Take back what you sealed",
+    ),
+)
 
 SEALED_SCENE: Final[Scene] = Scene(
     title=TITLE,
     table=TABLE,
     seated=SEATED,
-    gestures=gestures_of,
+    gestures=GESTURES,
     readouts=READOUTS,
     phases=PHASES,
     interludes=INTERLUDES,

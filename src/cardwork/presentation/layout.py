@@ -1,33 +1,17 @@
-from collections import Counter
-from collections.abc import Hashable, Mapping
+from collections.abc import Mapping
 from typing import Self
 
 from pydantic import Field, model_validator
 
 from cardwork.models.base import BaseFrozen
-from cardwork.moves.kind import ActionKind
-from cardwork.presentation.gesture import Gesture
-from cardwork.presentation.interlude import Interlude
+from cardwork.presentation.gesture import Gesture, mismatched
+from cardwork.presentation.interlude import Interlude, uncaptioned
 from cardwork.presentation.plaque import Plaque
-from cardwork.presentation.readout import Readout
+from cardwork.presentation.readout import Readout, misread
+from cardwork.presentation.repeats import distinct, repeated
 from cardwork.presentation.slot import Slot
 from cardwork.states.award import Award
 from cardwork.zones.zone import ZoneId
-
-
-def distinct[ValueT: Hashable](
-    values: tuple[ValueT, ...],
-) -> tuple[ValueT, ...]:
-    """The values, each named a single time, in the order they first appear."""
-    return tuple(dict.fromkeys(values))
-
-
-def repeated[ValueT: Hashable](
-    values: tuple[ValueT, ...],
-) -> tuple[ValueT, ...]:
-    """The values appearing more than once, each named a single time, in the order they first appear."""
-    counts = Counter(values)
-    return tuple(value for value in distinct(values) if counts[value] > 1)
 
 
 class Layout(BaseFrozen):
@@ -131,13 +115,9 @@ class Layout(BaseFrozen):
             ValueError: when two gestures share a kind and a group, or when a gesture matching every group of
                 one kind stands beside another gesture of that kind.
         """
-        twice = repeated(tuple((gesture.kind, gesture.group) for gesture in self.gestures))
-        if twice:
-            raise ValueError(f"A move matches one gesture, and these kinds and groups are stated twice: {twice}")
-
-        overlapping = tuple(kind for kind in ActionKind if self._groups_overlap(kind))
-        if overlapping:
-            raise ValueError(f"A gesture over every group of a kind stands alone, and these do not: {overlapping}")
+        refusal = mismatched(tuple((gesture.kind, gesture.group) for gesture in self.gestures))
+        if refusal is not None:
+            raise ValueError(refusal)
 
         return self
 
@@ -171,9 +151,9 @@ class Layout(BaseFrozen):
         Raises:
             ValueError: when two readouts name the same field.
         """
-        twice = repeated(tuple(readout.field for readout in self.readouts))
-        if twice:
-            raise ValueError(f"A field of the cursor reads once, and these take two readouts apiece: {twice}")
+        refusal = misread(self.readouts)
+        if refusal is not None:
+            raise ValueError(refusal)
 
         return self
 
@@ -184,16 +164,11 @@ class Layout(BaseFrozen):
         Raises:
             ValueError: when an interlude names a phase the captions leave out.
         """
-        uncaptioned = distinct(tuple(phase for phase in self.interludes if phase not in self.phases))
-        if uncaptioned:
-            raise ValueError(f"A phase play pauses at is captioned like any other, and these are not: {uncaptioned}")
+        refusal = uncaptioned(self.interludes, self.phases)
+        if refusal is not None:
+            raise ValueError(refusal)
 
         return self
-
-    def _groups_overlap(self, kind: ActionKind) -> bool:
-        """Whether one gesture of that kind stands for every group while another stands for one."""
-        groups = tuple(gesture.group for gesture in self.gestures if gesture.kind == kind)
-        return None in groups and len(groups) > 1
 
     @staticmethod
     def _laid_out(named: tuple[ZoneId, ...], laid: set[ZoneId], reached: str) -> None:

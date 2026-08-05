@@ -6,7 +6,7 @@ from cardwork.models.base import BaseFrozen
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation.address import Address, at, word_of
 from cardwork.presentation.commit import Commit
-from cardwork.presentation.gesture import Gesture, misnamed
+from cardwork.presentation.gesture import Gesture, Matching, misnamed
 
 
 class Making(BaseFrozen):
@@ -27,6 +27,11 @@ class Making(BaseFrozen):
     commit: Commit
     target: Address | None
     caption: str
+
+    @property
+    def matching(self) -> Matching:
+        """The kind and the group word a move is matched to this by, which stand the same at every seat."""
+        return self.kind, None if self.group is None else word_of(self.group)
 
     def gesture(self, seat: int) -> Gesture:
         """This move as one seat makes it, every zone it names concrete for that seat.

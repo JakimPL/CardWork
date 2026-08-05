@@ -13,9 +13,9 @@ from cardwork.moves.kind import ActionKind
 from cardwork.presentation import presets
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.fixture import Fixture
-from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
 from cardwork.presentation.lay import Lay
+from cardwork.presentation.making import Making
 from cardwork.presentation.readout import Readout
 from cardwork.presentation.scene import Scene
 from cardwork.presentation.scope import Scope
@@ -59,30 +59,23 @@ PHASES: Final[Mapping[str, str]] = {
 INTERLUDES: Final[Mapping[str, Interlude]] = presets.match_interludes()
 
 
-def gestures_of(seat: int) -> tuple[Gesture, ...]:
-    """One gesture per holding a card is committed from, each sealing it into the seat's own tray.
-
-    A commitment names its holding and a position within it, so the group of the gesture is the word the
-    intent carries and the zone it picks in is that holding.
-    """
-    return tuple(
-        Gesture(
-            kind=ActionKind.PLAY,
-            group=holding.name,
-            picked=holding.of(seat),
-            commit=Commit.ZONE,
-            target=TRAYS.of(seat),
-            caption=f"Seal this card from your {holding.name}",
-        )
-        for holding in HOLDINGS
+GESTURES: Final[tuple[Making, ...]] = tuple(
+    Making(
+        kind=ActionKind.PLAY,
+        group=holding,
+        picked=holding,
+        commit=Commit.ZONE,
+        target=TRAYS,
+        caption=f"Seal this card from your {holding.name}",
     )
-
+    for holding in HOLDINGS
+)
 
 SHOWDOWN_SCENE: Final[Scene] = Scene(
     title=TITLE,
     table=TABLE,
     seated=SEATED,
-    gestures=gestures_of,
+    gestures=GESTURES,
     readouts=READOUTS,
     phases=PHASES,
     interludes=INTERLUDES,

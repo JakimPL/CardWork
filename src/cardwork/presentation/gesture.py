@@ -6,7 +6,10 @@ from cardwork.models.base import BaseFrozen
 from cardwork.moves.actions import AnyAction, group_of
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation.commit import Commit
+from cardwork.presentation.repeats import repeated
 from cardwork.zones.zone import ZoneId
+
+type Matching = tuple[ActionKind, str | None]
 
 
 def misnamed(
@@ -43,6 +46,33 @@ def misnamed(
                 return f"A {kind} gesture said by its word lands on no zone, and names zone {target!r}"
 
             return None
+
+
+def mismatched(matchings: tuple[Matching, ...]) -> str | None:
+    """What a run of gestures gets wrong about the moves it answers, and None where every move reaches one.
+
+    A move is matched by its kind and the group it names, so a run answers each move once when no two of its
+    gestures are matched alike and a gesture standing for every group of a kind stands alone. A `Layout` and the
+    `Scene` it is drawn from are held to this one rule, so a run refused at a table is refused as a game states it.
+
+    Args:
+        matchings: the kind and group word of every gesture of the run, in the order the run states them.
+    """
+    twice = repeated(matchings)
+    if twice:
+        return f"A move matches one gesture, and these kinds and groups are stated twice: {twice}"
+
+    overlapping = tuple(kind for kind in ActionKind if _groups_overlap(matchings, kind))
+    if overlapping:
+        return f"A gesture over every group of a kind stands alone, and these do not: {overlapping}"
+
+    return None
+
+
+def _groups_overlap(matchings: tuple[Matching, ...], kind: ActionKind) -> bool:
+    """Whether one gesture of that kind stands for every group while another stands for one."""
+    groups = tuple(group for matched, group in matchings if matched == kind)
+    return None in groups and len(groups) > 1
 
 
 class Gesture(BaseFrozen):

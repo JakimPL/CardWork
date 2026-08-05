@@ -8,8 +8,8 @@ from cardwork.moves.kind import ActionKind
 from cardwork.presentation import presets
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.fixture import Fixture
-from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
+from cardwork.presentation.making import Making
 from cardwork.presentation.readout import Readout
 from cardwork.presentation.scene import Scene
 from cardwork.presentation.scope import Scope
@@ -44,39 +44,30 @@ PHASES: Final[Mapping[str, str]] = {
 INTERLUDES: Final[Mapping[str, Interlude]] = presets.match_interludes()
 
 
-def gestures_of(seat: int) -> tuple[Gesture, ...]:
-    """The two moves a turn is made of: a set laid down, and a card taken up.
-
-    A set is picked out of the seat's own hand and sent onto the discard it goes face up on, so a selection of
-    one card arms nothing until a second of that rank joins it. A draw runs the other way — the card is picked
-    off the stock the whole table shares and sent onto the seat's own hand — which is the one gesture of either
-    game that takes a card rather than lays one down.
-    """
-    return (
-        Gesture(
-            kind=ActionKind.DISCARD,
-            group=HANDS.name,
-            picked=HANDS.of(seat),
-            commit=Commit.ZONE,
-            target=DISCARD,
-            caption="Shed these cards as one rank",
-        ),
-        Gesture(
-            kind=ActionKind.TAKE,
-            group=STOCK,
-            picked=STOCK,
-            commit=Commit.ZONE,
-            target=HANDS.of(seat),
-            caption="Draw this card into your hand",
-        ),
-    )
-
+GESTURES: Final[tuple[Making, ...]] = (
+    Making(
+        kind=ActionKind.DISCARD,
+        group=HANDS,
+        picked=HANDS,
+        commit=Commit.ZONE,
+        target=DISCARD,
+        caption="Shed these cards as one rank",
+    ),
+    Making(
+        kind=ActionKind.TAKE,
+        group=STOCK,
+        picked=STOCK,
+        commit=Commit.ZONE,
+        target=HANDS,
+        caption="Draw this card into your hand",
+    ),
+)
 
 SHEDDING_SCENE: Final[Scene] = Scene(
     title=TITLE,
     table=TABLE,
     seated=SEATED,
-    gestures=gestures_of,
+    gestures=GESTURES,
     readouts=READOUTS,
     phases=PHASES,
     interludes=INTERLUDES,

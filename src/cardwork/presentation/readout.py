@@ -1,6 +1,7 @@
 from typing import Self
 
 from cardwork.models.base import BaseFrozen
+from cardwork.presentation.repeats import repeated
 from cardwork.presentation.scope import Scope
 from cardwork.states.state import GameState
 
@@ -50,3 +51,19 @@ class Readout(BaseFrozen):
             raise ValueError(f"{state.__name__} declares no field {field!r} for a readout to show")
 
         return cls(field=field, label=label, scope=scope)
+
+
+def misread(readouts: tuple[Readout, ...]) -> str | None:
+    """What a run of readouts gets wrong, and None where every field of the cursor reads once.
+
+    A figure shown twice under two words leaves a player weighing which of them to believe, so one field takes
+    one readout. A `Layout` and the `Scene` it is drawn from are held to this one rule.
+
+    Args:
+        readouts: the readouts of one run, in the order they are shown.
+    """
+    twice = repeated(tuple(readout.field for readout in readouts))
+    if twice:
+        return f"A field of the cursor reads once, and these take two readouts apiece: {twice}"
+
+    return None

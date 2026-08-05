@@ -7,7 +7,7 @@ from cardwork.moves.kind import ActionKind
 from cardwork.presentation.commit import Commit
 from cardwork.presentation.gesture import Gesture
 from cardwork.presentation.interlude import Interlude
-from cardwork.presentation.layout import Layout, distinct, repeated
+from cardwork.presentation.layout import Layout
 from cardwork.presentation.readout import Readout
 from cardwork.presentation.scope import Scope
 from cardwork.presentation.slot import Slot
@@ -206,11 +206,3 @@ def test_a_layout_tallies_a_zone_it_lays_out_nowhere() -> None:
 
     assert hand_of(OTHER) in tallied
     assert hand_of(OTHER) not in {slot.zone for slot in layout.slots}
-
-
-def test_distinct_names_each_value_once_in_the_order_it_first_appears() -> None:
-    assert distinct(("a", "b", "a", "c", "b")) == ("a", "b", "c")
-
-
-def test_repeated_names_the_values_appearing_more_than_once() -> None:
-    assert repeated(("a", "b", "a", "c", "b", "a")) == ("a", "b")

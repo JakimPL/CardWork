@@ -1,4 +1,7 @@
+from collections.abc import Mapping
 from enum import StrEnum
+
+from cardwork.presentation.repeats import distinct
 
 
 class Interlude(StrEnum):
@@ -15,3 +18,24 @@ class Interlude(StrEnum):
 
     ROUND = "round"
     MATCH = "match"
+
+
+def uncaptioned(
+    interludes: Mapping[str, Interlude],
+    phases: Mapping[str, str],
+) -> str | None:
+    """Which phase play pauses at the captions leave out, and None where every pause is captioned.
+
+    A pause is held open for a player to read where play stands, which is the words the phase reads under, so a
+    phase named as an interlude is one the captions hold. A `Layout` and the `Scene` it is drawn from are held to
+    this one rule.
+
+    Args:
+        interludes: the phases play pauses at, each under the pause it is read as.
+        phases: the words each phase of the game reads under.
+    """
+    missing = distinct(tuple(phase for phase in interludes if phase not in phases))
+    if missing:
+        return f"A phase play pauses at is captioned like any other, and these are not: {missing}"
+
+    return None
