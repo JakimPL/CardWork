@@ -4,7 +4,7 @@ from typing import Final
 
 from cardgames.backend.showdown.game import ShowdownGame
 from cardgames.backend.showdown.state import ShowdownState
-from cardgames.backend.showdown.zones import Holding, hand_of, tray_of, zone_of
+from cardgames.backend.showdown.zones import BLINDS, TRAYS
 from cardwork.cards.game import CardsOrJokers
 from cardwork.decks.deck import Deck
 from cardwork.decks.standard import standard_deck
@@ -12,8 +12,9 @@ from cardwork.moves.actions import Play
 from cardwork.moves.move import Move, Moves
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.transactions.transaction import Transaction, Transactions
-from cardwork.zones.zone import ZoneId, cards_of
-from cardwork.zones.zones import DISCARD
+from cardwork.zones.family import Family
+from cardwork.zones.zone import ZoneId
+from cardwork.zones.zones import DISCARD, HANDS
 
 SEATS: Final[int] = 3
 TWO_SEATS: Final[int] = 2
@@ -31,20 +32,20 @@ def a_match(players: int, rounds: int, seed: int) -> ShowdownGame:
     return ShowdownGame(players=players, deck=DECK, conclusion=Conclusion(rounds=rounds), rng=Random(seed))
 
 
-def commit(game: ShowdownGame, seat: int, holding: Holding, index: int) -> Transaction[ShowdownState]:
+def commit(game: ShowdownGame, seat: int, holding: Family, index: int) -> Transaction[ShowdownState]:
     """One seat commits the card at that position of that holding."""
     return game.submit(
-        Move(player=seat, action=Play(group=holding, indices=frozenset({index}))),
+        Move(player=seat, action=Play(group=holding.name, indices=frozenset({index}))),
         base_seq=game.head,
     )
 
 
-def a_holding_of(game: ShowdownGame, seat: int) -> Holding:
+def a_holding_of(game: ShowdownGame, seat: int) -> Family:
     """The holding a seat still has a card in, which is its hand for as long as that holds one."""
-    return Holding.HAND if game.board.zone(hand_of(seat)).cards else Holding.BLIND
+    return HANDS if game.board.holds(HANDS.of(seat)) else BLINDS
 
 
-def commit_the_turn(game: ShowdownGame, holding: Holding) -> Transactions[ShowdownState]:
+def commit_the_turn(game: ShowdownGame, holding: Family) -> Transactions[ShowdownState]:
     """Every seat owing a commitment seals the first card of that holding, and the table settles after them."""
     for seat in sorted(game.state.to_act):
         commit(game, seat, holding, FIRST_CARD)
@@ -82,24 +83,24 @@ def play_out(game: ShowdownGame, choose: Chooser) -> None:
 
 def held_by(game: ShowdownGame, seat: int) -> CardsOrJokers:
     """The cards one seat reads in its hand."""
-    return cards_of(game.board.zone(hand_of(seat)))
+    return game.board.cards(HANDS.of(seat))
 
 
-def holding_of(game: ShowdownGame, seat: int, holding: Holding) -> CardsOrJokers:
+def holding_of(game: ShowdownGame, seat: int, holding: Family) -> CardsOrJokers:
     """The cards one of a seat's holdings holds, as the rules read them."""
-    return cards_of(game.board.zone(zone_of(holding, seat)))
+    return game.board.cards(holding.of(seat))
 
 
 def sealed_by(game: ShowdownGame, seat: int) -> CardsOrJokers:
     """The card one seat has committed, which lies in its tray until the turn turns over."""
-    return cards_of(game.board.zone(tray_of(seat)))
+    return game.board.cards(TRAYS.of(seat))
 
 
 def revealed(game: ShowdownGame) -> CardsOrJokers:
     """Every card the round has turned over, in the order the turns revealed them."""
-    return cards_of(game.board.zone(DISCARD))
+    return game.board.cards(DISCARD)
 
 
 def every_zone(game: ShowdownGame) -> dict[ZoneId, CardsOrJokers]:
     """Every card on the table, filed under the zone holding it, which is what a refusal is read against."""
-    return {zone_id: cards_of(zone) for zone_id, zone in game.board.zones.items()}
+    return {zone_id: game.board.cards(zone_id) for zone_id in game.board.zones}

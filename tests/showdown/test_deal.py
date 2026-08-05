@@ -13,7 +13,7 @@ from cardgames.backend.showdown.rules import (
     ONE_CARD,
 )
 from cardgames.backend.showdown.state import ShowdownPhase, ShowdownState
-from cardgames.backend.showdown.zones import STOCK, blind_of, hand_of, tray_of
+from cardgames.backend.showdown.zones import BLINDS, STOCK, TRAYS
 from cardwork.decks.decks import jokers
 from cardwork.decks.standard import standard_deck
 from cardwork.effects.effects import Effects
@@ -22,7 +22,7 @@ from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import ONE_ROUND, Conclusion
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
-from cardwork.zones.zones import DISCARD
+from cardwork.zones.zones import DISCARD, HANDS
 from tests.cases import Case, descriptions
 
 from .driving import DECK, FULL_TABLE, ROUNDS, SEATS, SEED, TWO_SEATS, a_match
@@ -48,7 +48,7 @@ class ShortDealGame(ShowdownGame):
         counts = {
             zone: count
             for seat in rotation(leader, position.players)
-            for zone, count in ((hand_of(seat), HAND_SIZE - ONE_CARD), (blind_of(seat), BLIND_SIZE))
+            for zone, count in ((HANDS.of(seat), HAND_SIZE - ONE_CARD), (BLINDS.of(seat), BLIND_SIZE))
         }
         return Redeal(position, pile=STOCK, face_down=True).effects(counts, rng)
 
@@ -74,9 +74,9 @@ DEALS: Final[tuple[DealCase, ...]] = (
 def test_a_round_deals_every_seat_five_cards_to_read_and_five_it_may_not(case: DealCase) -> None:
     game = a_match(case.players, case.rounds, SEED)
 
-    assert all(len(game.board.zone(hand_of(seat)).cards) == case.read for seat in range(case.players))
-    assert all(len(game.board.zone(blind_of(seat)).cards) == case.blind for seat in range(case.players))
-    assert all(len(game.board.zone(tray_of(seat)).cards) == NO_CARDS for seat in range(case.players))
+    assert all(len(game.board.zone(HANDS.of(seat)).cards) == case.read for seat in range(case.players))
+    assert all(len(game.board.zone(BLINDS.of(seat)).cards) == case.blind for seat in range(case.players))
+    assert all(len(game.board.zone(TRAYS.of(seat)).cards) == NO_CARDS for seat in range(case.players))
     assert len(game.board.zone(STOCK).cards) == case.stocked
     assert len(game.board.zone(DISCARD).cards) == NO_CARDS
     assert game.state.phase == ShowdownPhase.COMMITTING
@@ -103,7 +103,7 @@ def test_every_card_dealt_and_every_card_left_in_the_stock_lies_face_down(showdo
     dealt = tuple(
         game_card
         for seat in range(SEATS)
-        for zone in (hand_of(seat), blind_of(seat))
+        for zone in (HANDS.of(seat), BLINDS.of(seat))
         for game_card in showdown.board.zone(zone).cards
     )
 
@@ -114,11 +114,11 @@ def test_every_card_dealt_and_every_card_left_in_the_stock_lies_face_down(showdo
 def test_a_seat_reads_its_own_hand_and_the_size_of_every_other_holding(showdown: ShowdownGame) -> None:
     view = showdown.view(observer=READER)
 
-    assert view.zones[hand_of(READER)].cards == showdown.board.zone(hand_of(READER)).cards
-    assert all(card is None for card in view.zones[hand_of(ANOTHER_SEAT)].cards)
-    assert len(view.zones[hand_of(ANOTHER_SEAT)].cards) == HAND_SIZE
-    assert all(card is None for card in view.zones[blind_of(ANOTHER_SEAT)].cards)
-    assert len(view.zones[blind_of(ANOTHER_SEAT)].cards) == BLIND_SIZE
+    assert view.zones[HANDS.of(READER)].cards == showdown.board.zone(HANDS.of(READER)).cards
+    assert all(card is None for card in view.zones[HANDS.of(ANOTHER_SEAT)].cards)
+    assert len(view.zones[HANDS.of(ANOTHER_SEAT)].cards) == HAND_SIZE
+    assert all(card is None for card in view.zones[BLINDS.of(ANOTHER_SEAT)].cards)
+    assert len(view.zones[BLINDS.of(ANOTHER_SEAT)].cards) == BLIND_SIZE
     assert all(card is None for card in view.zones[STOCK].cards)
     assert len(view.zones[STOCK].cards) == len(showdown.board.zone(STOCK).cards)
 
@@ -156,5 +156,5 @@ def test_a_deck_carrying_jokers_is_refused() -> None:
 
 
 def test_a_deal_leaving_a_seat_short_of_the_five_it_reads_is_refused() -> None:
-    with pytest.raises(GameValidationError, match=f"other than {HAND_SIZE} cards to read"):
+    with pytest.raises(GameValidationError, match=f"hold a {HANDS.name} of a size other than"):
         ShortDealGame(players=SEATS, deck=DECK, conclusion=Conclusion(rounds=ROUNDS), rng=Random(SEED))

@@ -11,7 +11,7 @@ from cardgames.backend.showdown.rules import (
     taken_by,
     turn_points,
 )
-from cardgames.backend.showdown.zones import Holding, tray_of
+from cardgames.backend.showdown.zones import TRAYS
 from cardwork.cards.card import Cards
 from cardwork.cards.cards import (
     ACE_OF_CLUBS,
@@ -35,7 +35,7 @@ from cardwork.cards.cards import (
 from cardwork.cards.joker import Joker
 from cardwork.exceptions import LogicError
 from cardwork.rounds.seating import rotation
-from cardwork.zones.zones import DISCARD
+from cardwork.zones.zones import DISCARD, HANDS
 from tests.cases import Case, descriptions
 
 from .driving import FIRST_CARD, SEATS, commit_the_turn, held_by, revealed
@@ -120,11 +120,11 @@ def test_the_cards_turn_over_face_up_on_the_discard_from_the_leader_round_the_ta
     order = rotation(showdown.state.led_by, SEATS)
     committed = {seat: held_by(showdown, seat)[FIRST_CARD] for seat in range(SEATS)}
 
-    commit_the_turn(showdown, Holding.HAND)
+    commit_the_turn(showdown, HANDS)
 
     assert revealed(showdown) == tuple(committed[seat] for seat in order)
     assert all(not game_card.face_down for game_card in showdown.board.zone(DISCARD).cards)
-    assert all(len(showdown.board.zone(tray_of(seat)).cards) == NO_CARDS for seat in range(SEATS))
+    assert all(len(showdown.board.zone(TRAYS.of(seat)).cards) == NO_CARDS for seat in range(SEATS))
 
 
 def test_the_turn_scores_its_points_to_the_seat_whose_card_was_strongest(showdown: ShowdownGame) -> None:
@@ -132,7 +132,7 @@ def test_the_turn_scores_its_points_to_the_seat_whose_card_was_strongest(showdow
     shown = tuple(held_by(showdown, seat)[FIRST_CARD] for seat in order)
     strongest = taken_by(shown)
 
-    commit_the_turn(showdown, Holding.HAND)
+    commit_the_turn(showdown, HANDS)
 
     assert showdown.state.round_points == awarded(
         (NOTHING,) * SEATS,
@@ -145,7 +145,7 @@ def test_the_turn_scores_its_points_to_the_seat_whose_card_was_strongest(showdow
 
 
 def test_the_reveal_the_points_and_the_next_turn_land_in_one_transaction(showdown: ShowdownGame) -> None:
-    settled = commit_the_turn(showdown, Holding.HAND)
+    settled = commit_the_turn(showdown, HANDS)
 
     assert len(settled) == ONE_TRANSACTION
     assert settled[FIRST_TRANSACTION].move is None

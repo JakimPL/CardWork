@@ -80,14 +80,15 @@ turns read a card out of by position, and a tray keeps the order the commitments
 | `Play(group="hand", indices={i})` | commit the card at position *i* of the five this seat reads |
 | `Play(group="blind", indices={i})` | commit the card at position *i* of the five lying face down |
 
-One intent covers the game, and `Holding` holds the two words it carries, so the vocabulary a client sends is
-closed and read by a `match`. `intents: ClassVar[Intents[Play]] = Intents(Play)` states the one of them, which
+One intent covers the game, and `HOLDINGS` holds the two families it comes out of, so the word a client sends
+is the name of a family and `family_named` reads it back to the zones that family stands at every seat.
+`intents: ClassVar[Intents[Play]] = Intents(Play)` states the one intent, which
 is what has every commitment reach the rules as a `Play` and every other intent be refused before them
 (`architecture.md` §5.3). A refusal names the rule it comes from:
 
 | the move | the refusal |
 |---|---|
-| a commitment naming another holding | `Seat 2 commits from its hand or its blind, and named 'sleeve'` |
+| a commitment naming another holding | `Seat 2 holds cards in 'hand' or 'blind', and named 'sleeve'` |
 | a commitment of several cards | `Seat 2 commits one card at a time, and named 2` |
 | a position the holding has run past | `Seat 2 named position 0 of a hand holding 0` |
 | any other intent | `Seat 2 makes a play, and offered a take`, which `intents` states and the engine answers |

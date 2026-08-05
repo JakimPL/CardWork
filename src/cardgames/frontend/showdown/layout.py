@@ -4,12 +4,10 @@ from typing import Final
 from cardgames.backend.showdown.rules import AWARD
 from cardgames.backend.showdown.state import ShowdownPhase, ShowdownState
 from cardgames.backend.showdown.zones import (
+    BLINDS,
     HOLDINGS,
     STOCK,
-    blind_of,
-    hand_of,
-    tray_of,
-    zone_of,
+    TRAYS,
 )
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation import presets
@@ -23,7 +21,7 @@ from cardwork.presentation.slot import Slot
 from cardwork.presentation.spread import Spread
 from cardwork.presentation.tally import Tally
 from cardwork.rounds.state import MatchPhase
-from cardwork.zones.zones import DISCARD
+from cardwork.zones.zones import DISCARD, HANDS
 
 TITLE: Final[str] = "Showdown"
 
@@ -63,9 +61,9 @@ def slots_of(seat: int) -> tuple[Slot, ...]:
     its true position for exactly that. The tray holds the one card of the turn.
     """
     return (
-        presets.hand(hand_of(seat), "Your hand", seat=seat, place=HELD),
+        presets.hand(HANDS.of(seat), "Your hand", seat=seat, place=HELD),
         Slot(
-            zone=blind_of(seat),
+            zone=BLINDS.of(seat),
             label="Your blind",
             seat=seat,
             spread=Spread.ROW,
@@ -73,7 +71,7 @@ def slots_of(seat: int) -> tuple[Slot, ...]:
             counted=False,
         ),
         Slot(
-            zone=tray_of(seat),
+            zone=TRAYS.of(seat),
             label="Sealed",
             seat=seat,
             spread=Spread.SLOT,
@@ -91,9 +89,9 @@ def seen_of(seat: int) -> tuple[Slot, ...]:
     The tray shows the card sealed there once the round opens it, which is what a showdown comes to.
     """
     return (
-        presets.holding(hand_of(seat), "Hand", seat=seat, place=HELD),
+        presets.holding(HANDS.of(seat), "Hand", seat=seat, place=HELD),
         Slot(
-            zone=blind_of(seat),
+            zone=BLINDS.of(seat),
             label="Blind",
             seat=seat,
             spread=Spread.STACK,
@@ -101,7 +99,7 @@ def seen_of(seat: int) -> tuple[Slot, ...]:
             counted=True,
         ),
         Slot(
-            zone=tray_of(seat),
+            zone=TRAYS.of(seat),
             label="Sealed",
             seat=seat,
             spread=Spread.SLOT,
@@ -120,11 +118,11 @@ def gestures_of(seat: int) -> tuple[Gesture, ...]:
     return tuple(
         Gesture(
             kind=ActionKind.PLAY,
-            group=holding,
-            picked=zone_of(holding, seat),
+            group=holding.name,
+            picked=holding.of(seat),
             commit=Commit.ZONE,
-            target=tray_of(seat),
-            caption=f"Seal this card from your {holding}",
+            target=TRAYS.of(seat),
+            caption=f"Seal this card from your {holding.name}",
         )
         for holding in HOLDINGS
     )
@@ -133,9 +131,9 @@ def gestures_of(seat: int) -> tuple[Gesture, ...]:
 def counts_of(seat: int) -> tuple[Tally, ...]:
     """What the table reads of a seat: the size of both holdings, and a tray saying whether it has committed."""
     return (
-        Tally(zone=hand_of(seat), label="Hand"),
-        Tally(zone=blind_of(seat), label="Blind"),
-        Tally(zone=tray_of(seat), label="Sealed"),
+        Tally(zone=HANDS.of(seat), label="Hand"),
+        Tally(zone=BLINDS.of(seat), label="Blind"),
+        Tally(zone=TRAYS.of(seat), label="Sealed"),
     )
 
 

@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from random import Random
 from typing import ClassVar, Final
 
@@ -21,6 +22,7 @@ from cardwork.decks.standard import ONE_DECK, standard_multiplicity
 from cardwork.effects.effects import Effects, MoveCards, SetFace, SetState
 from cardwork.exceptions import GameValidationError, IllegalMove
 from cardwork.games.capacity import Capacity
+from cardwork.games.dealt import confirm_dealt
 from cardwork.games.intents import Intents
 from cardwork.moves.actions import Give, Take
 from cardwork.moves.move import Move, Moves
@@ -31,8 +33,8 @@ from cardwork.rounds.redeal import Admits, Redeal
 from cardwork.rounds.seating import next_seat, rotation
 from cardwork.rounds.state import MatchPhase
 from cardwork.states.state import NOTHING
-from cardwork.zones.zone import Zones, cards_of
-from cardwork.zones.zones import STACK, hand_of
+from cardwork.zones.zone import Zones
+from cardwork.zones.zones import HANDS, STACK
 
 ONE_CARD: Final[int] = 1
 
@@ -95,16 +97,11 @@ class PassingGame(RoundGame[PassingState]):
         Raises:
             GameValidationError: when a hand holds a number of cards other than the deal gives it.
         """
-        leader = position.state.led_by
-        short = tuple(
-            seat
-            for seat in range(position.players)
-            if len(position.board.zone(hand_of(seat)).cards) != self._dealt(seat, leader)
+        confirm_dealt(
+            position,
+            HANDS,
+            self._sizes(position, position.state.led_by),
         )
-        if short:
-            raise GameValidationError(
-                f"Seats {short} hold a hand of a size other than the {HAND_SIZE} the deal gives them"
-            )
 
     def deal_round(
         self,
@@ -118,7 +115,10 @@ class PassingGame(RoundGame[PassingState]):
         deal handing that seat a win is drawn again, so a round arrives to be played for: the shuffle settles
         who holds what, and the win is left for a seat to reach.
         """
-        counts = {hand_of(seat): self._dealt(seat, leader) for seat in rotation(leader, position.players)}
+        counts = HANDS.dealt(
+            self._sizes(position, leader),
+            rotation(leader, position.players),
+        )
         redeal = Redeal(
             position,
             pile=PILE,
@@ -130,6 +130,14 @@ class PassingGame(RoundGame[PassingState]):
             self._still_to_be_won(leader),
         )
 
+    def _sizes(
+        self,
+        position: Position[PassingState],
+        leader: int,
+    ) -> Mapping[int, int]:
+        """How many cards each seat is dealt: three, and a fourth for the seat leading the round."""
+        return {seat: HAND_ON_TURN if seat == leader else HAND_SIZE for seat in position.seats}
+
     def _still_to_be_won(self, leader: int) -> Admits[PassingState]:
         """The question every draw of a deal is put to: does it leave the leader a hand that has yet to win.
 
@@ -137,7 +145,7 @@ class PassingGame(RoundGame[PassingState]):
         """
 
         def admits(dealt: Position[PassingState]) -> bool:
-            return not declares(cards_of(dealt.board.zone(hand_of(leader))))
+            return not declares(dealt.board.cards(HANDS.of(leader)))
 
         return admits
 
@@ -166,8 +174,7 @@ class PassingGame(RoundGame[PassingState]):
             return self._decided(position)
 
         acted = self._acted(position, move)
-        settled: Effects[PassingState] = (SetState(state=acted),)
-        return settled + self._decided(position.with_state(acted))
+        return (SetState(state=acted),) + self._decided(position.with_state(acted))
 
     def round_over(self, position: Position[PassingState]) -> bool:
         return position.state.phase == PassingPhase.DECIDED
@@ -199,25 +206,17 @@ class PassingGame(RoundGame[PassingState]):
             case Give() as passing:
                 return self._passed(move.player, passing)
 
-    def legal_moves(self, position: Position[PassingState]) -> Moves:
-        """Every exchange and pass the seat on turn may make.
+    def moves_of(
+        self,
+        position: Position[PassingState],
+        seat: int,
+    ) -> Moves:
+        """The moves one seat may make from this position, in the order a turn takes them.
 
         A hand that wins is awarded the round in the transaction that dealt or completed it, so a seat reading
-        this list holds no win and has only these two to weigh.
+        this list holds no win and has only the exchange and the pass to weigh.
         """
-        return tuple(
-            move
-            for seat in sorted(position.state.to_act)
-            for move in self._turn_of(
-                position,
-                seat,
-            )
-        )
-
-    def _turn_of(self, position: Position[PassingState], seat: int) -> Moves:
-        """The moves one seat may make from this position, in the order a turn takes them."""
-        held = position.board.zone(hand_of(seat))
-        places = tuple(frozenset({index}) for index in range(len(held.cards)))
+        places = tuple(frozenset({index}) for index in range(position.board.count(HANDS.of(seat))))
         exchanges = (
             tuple(Move(player=seat, action=Take(group=PILE, indices=place)) for place in places)
             if self._may_exchange(position)
@@ -237,11 +236,7 @@ class PassingGame(RoundGame[PassingState]):
 
     def _may_exchange(self, position: Position[PassingState]) -> bool:
         """Whether the turn still holds its exchange and the pile a card for it to take."""
-        return bool(position.board.zone(PILE).cards) and not position.state.swapped
-
-    def _dealt(self, seat: int, leader: int) -> int:
-        """How many cards a seat is dealt: three, and a fourth for the seat leading the round."""
-        return HAND_ON_TURN if seat == leader else HAND_SIZE
+        return position.board.holds(PILE) and not position.state.swapped
 
     def _validate_exchange(
         self,
@@ -258,7 +253,7 @@ class PassingGame(RoundGame[PassingState]):
         if exchange.group != PILE:
             raise IllegalMove(f"Seat {seat} exchanges with the {PILE}, and named {exchange.group!r}")
 
-        if not position.board.zone(PILE).cards:
+        if not position.board.holds(PILE):
             raise IllegalMove(f"Seat {seat} exchanges with a pile that has run out")
 
         if position.state.swapped:
@@ -294,7 +289,7 @@ class PassingGame(RoundGame[PassingState]):
         Raises:
             IllegalMove: when they name several cards, or a position beyond the hand.
         """
-        held = len(position.board.zone(hand_of(seat)).cards)
+        held = position.board.count(HANDS.of(seat))
         if len(indices) != ONE_CARD:
             raise IllegalMove(f"Seat {seat} names one card at a time, and named {len(indices)}")
 
@@ -306,9 +301,9 @@ class PassingGame(RoundGame[PassingState]):
 
         The hand gives its card up first, so the position named is the one the seat was reading.
         """
-        exchanged: Effects[PassingState] = (
+        return (
             MoveCards(
-                source=hand_of(seat),
+                source=HANDS.of(seat),
                 indices=given_up,
                 target=STACK,
                 face_down=False,
@@ -316,25 +311,26 @@ class PassingGame(RoundGame[PassingState]):
             MoveCards(
                 source=PILE,
                 indices=frozenset({TOP_OF_THE_PILE}),
-                target=hand_of(seat),
+                target=HANDS.of(seat),
                 face_down=True,
             ),
         )
-        return exchanged
 
     def _passed(self, seat: int, passing: Give) -> Effects[PassingState]:
         """The card handed on to the next seat, arriving face down as everything in a hand does."""
-        passed: Effects[PassingState] = (
+        return (
             MoveCards(
-                source=hand_of(seat),
+                source=HANDS.of(seat),
                 indices=passing.indices,
-                target=hand_of(passing.target_player),
+                target=HANDS.of(passing.target_player),
                 face_down=True,
             ),
         )
-        return passed
 
-    def _decided(self, position: Position[PassingState]) -> Effects[PassingState]:
+    def _decided(
+        self,
+        position: Position[PassingState],
+    ) -> Effects[PassingState]:
         """The win the hand on turn reads, shown and scored, or nothing where the hand holds none.
 
         A win asks nothing of the seat holding it: passing it on gives it up and gains that seat nothing, so
@@ -345,8 +341,7 @@ class PassingGame(RoundGame[PassingState]):
         if seat is None:
             return ()
 
-        held = position.board.zone(hand_of(seat))
-        if not declares(cards_of(held)):
+        if not declares(position.board.cards(HANDS.of(seat))):
             return ()
 
         return self._shown(position, seat) + (SetState(state=self._won_by(position, seat)),)
@@ -357,15 +352,13 @@ class PassingGame(RoundGame[PassingState]):
         seat: int,
     ) -> Effects[PassingState]:
         """The winning hand turned face up, so the table reads the win the round closed on."""
-        held = len(position.board.zone(hand_of(seat)).cards)
-        shown: Effects[PassingState] = (
+        return (
             SetFace(
-                zone=hand_of(seat),
-                indices=frozenset(range(held)),
+                zone=HANDS.of(seat),
+                indices=frozenset(range(position.board.count(HANDS.of(seat)))),
                 face_down=False,
             ),
         )
-        return shown
 
     def _acted(
         self,
@@ -389,7 +382,7 @@ class PassingGame(RoundGame[PassingState]):
 
         A turn closes on its pass, so the exchange that empties the pile is still awarded the win it drew.
         """
-        if not position.board.zone(PILE).cards:
+        if not position.board.holds(PILE):
             return self._drawn(position)
 
         return position.state.with_changes(
@@ -399,10 +392,7 @@ class PassingGame(RoundGame[PassingState]):
 
     def _drawn(self, position: Position[PassingState]) -> PassingState:
         """The round decided by an exhausted pile, which scores every seat the nothing its tally already reads."""
-        return position.state.with_changes(
-            phase=PassingPhase.DECIDED,
-            to_act=frozenset(),
-        )
+        return position.state.at_rest(PassingPhase.DECIDED)
 
     def _won_by(
         self,
@@ -410,9 +400,8 @@ class PassingGame(RoundGame[PassingState]):
         winner: int,
     ) -> PassingState:
         """The round decided by a hand that wins, which scores its winner the point a round is worth."""
-        return position.state.with_changes(
-            phase=PassingPhase.DECIDED,
-            to_act=frozenset(),
+        return position.state.at_rest(
+            PassingPhase.DECIDED,
             winner=winner,
-            round_points=tuple(ROUND_POINT if seat == winner else NOTHING for seat in range(position.players)),
+            round_points=tuple(ROUND_POINT if seat == winner else NOTHING for seat in position.seats),
         )

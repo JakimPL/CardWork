@@ -1,5 +1,5 @@
 from random import Random
-from typing import ClassVar
+from typing import ClassVar, Final
 
 from cardgames.backend.showdown.rules import (
     AWARD,
@@ -16,21 +16,19 @@ from cardgames.backend.showdown.rules import (
 )
 from cardgames.backend.showdown.state import ShowdownPhase, ShowdownState
 from cardgames.backend.showdown.zones import (
+    BLINDS,
     HOLDINGS,
     SEALED_CARD,
     STOCK,
-    Holding,
-    blind_of,
-    hand_of,
+    TRAYS,
     showdown_zones,
-    tray_of,
-    zone_of,
 )
 from cardwork.decks.deck import Deck
 from cardwork.decks.standard import confirm_standard_deck
 from cardwork.effects.effects import Effects, MoveCards, SetState
-from cardwork.exceptions import GameValidationError, IllegalMove
+from cardwork.exceptions import IllegalMove
 from cardwork.games.capacity import Capacity
+from cardwork.games.dealt import confirm_dealt
 from cardwork.games.intents import Intents
 from cardwork.moves.actions import Play
 from cardwork.moves.move import Move, Moves
@@ -40,27 +38,14 @@ from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
 from cardwork.rounds.state import MatchPhase
 from cardwork.states.state import NOTHING
-from cardwork.zones.zone import Zones, cards_of
-from cardwork.zones.zones import DISCARD
+from cardwork.zones.family import Family, family_named
+from cardwork.zones.zone import Zones
+from cardwork.zones.zones import DISCARD, HANDS
 
-
-def holding_named(seat: int, group: str) -> Holding:
-    """The holding a commitment names, read against the two words this game knows.
-
-    Raises:
-        IllegalMove: when the word names neither holding.
-    """
-    match group:
-        case Holding.HAND:
-            return Holding.HAND
-
-        case Holding.BLIND:
-            return Holding.BLIND
-
-        case _:
-            raise IllegalMove(
-                f"Seat {seat} commits from its {Holding.HAND} or its {Holding.BLIND}, and named {group!r}"
-            )
+HOLDING_SIZES: Final[tuple[tuple[Family, int], ...]] = (
+    (HANDS, HAND_SIZE),
+    (BLINDS, BLIND_SIZE),
+)
 
 
 class ShowdownGame(RoundGame[ShowdownState]):
@@ -101,17 +86,8 @@ class ShowdownGame(RoundGame[ShowdownState]):
         Raises:
             GameValidationError: when a seat holds either of them at a size other than the deal gives it.
         """
-        short = tuple(
-            seat
-            for seat in range(position.players)
-            if (
-                len(position.board.zone(hand_of(seat)).cards),
-                len(position.board.zone(blind_of(seat)).cards),
-            )
-            != (HAND_SIZE, BLIND_SIZE)
-        )
-        if short:
-            raise GameValidationError(f"Seats {short} hold other than {HAND_SIZE} cards to read and {BLIND_SIZE} blind")
+        for holding, size in HOLDING_SIZES:
+            confirm_dealt(position, holding, size)
 
     def deal_round(
         self,
@@ -119,14 +95,15 @@ class ShowdownGame(RoundGame[ShowdownState]):
         leader: int,
         rng: Random,
     ) -> Effects[ShowdownState]:
-        """Every card gathered and shuffled, then five dealt to a seat and five blind, from the leader onwards."""
+        """Every card gathered and shuffled, then five dealt to a seat and five blind, from the leader onwards.
+
+        Both holdings of a seat are dealt before the next seat is reached, so the counts name the zones in the
+        order the cards leave the stock.
+        """
         counts = {
-            zone: count
-            for seat in rotation(leader, position.players)
-            for zone, count in ((hand_of(seat), HAND_SIZE), (blind_of(seat), BLIND_SIZE))
+            holding.of(seat): size for seat in rotation(leader, position.players) for holding, size in HOLDING_SIZES
         }
-        redeal = Redeal(position, pile=STOCK, face_down=True)
-        return redeal.effects(counts, rng)
+        return Redeal(position, pile=STOCK, face_down=True).effects(counts, rng)
 
     def opening_state(
         self,
@@ -136,7 +113,7 @@ class ShowdownGame(RoundGame[ShowdownState]):
         """The first turn of the round, which every seat owes a commitment to at once."""
         return position.state.with_changes(
             phase=ShowdownPhase.COMMITTING,
-            to_act=range(position.players),
+            to_act=position.seats,
             turn_number=FIRST_TURN,
         )
 
@@ -153,21 +130,13 @@ class ShowdownGame(RoundGame[ShowdownState]):
         the last of them, and land in one transaction, so a client reads a turn whole.
         """
         if move is not None:
-            committed_by: Effects[ShowdownState] = (
-                SetState(
-                    state=self._committed(
-                        position,
-                        move,
-                    )
-                ),
-            )
-            return committed_by
+            return (SetState(state=self._committed(position, move)),)
 
         return self._turn_settled(position)
 
     def round_over(self, position: Position[ShowdownState]) -> bool:
         """Whether both holdings of every seat have run out, which the last turn of a round leaves them at."""
-        return not any(self._holding(position, seat) for seat in range(position.players))
+        return not self._committing(position)
 
     def validate(self, position: Position[ShowdownState], move: Move) -> None:
         """Confirm the commitment names one card of a holding that holds it.
@@ -177,13 +146,15 @@ class ShowdownGame(RoundGame[ShowdownState]):
                 holding holds.
         """
         play = self.intents.read(move)
-        holding = holding_named(move.player, play.group)
-        held = len(position.board.zone(zone_of(holding, move.player)).cards)
+        holding = family_named(HOLDINGS, play.group, move.player)
+        held = position.board.count(holding.of(move.player))
         if len(play.indices) != ONE_CARD:
             raise IllegalMove(f"Seat {move.player} commits one card at a time, and named {len(play.indices)}")
 
         if max(play.indices) >= held:
-            raise IllegalMove(f"Seat {move.player} named position {max(play.indices)} of a {holding} holding {held}")
+            raise IllegalMove(
+                f"Seat {move.player} named position {max(play.indices)} of a {holding.name} holding {held}"
+            )
 
     def expand(
         self,
@@ -193,25 +164,17 @@ class ShowdownGame(RoundGame[ShowdownState]):
     ) -> Effects[ShowdownState]:
         """The card sealed face down in the seat's own tray, where it lies unread until the turn turns over."""
         play = self.intents.read(move)
-        holding = holding_named(move.player, play.group)
-        sealed: Effects[ShowdownState] = (
+        holding = family_named(HOLDINGS, play.group, move.player)
+        return (
             MoveCards(
-                source=zone_of(holding, move.player),
+                source=holding.of(move.player),
                 indices=play.indices,
-                target=tray_of(move.player),
+                target=TRAYS.of(move.player),
                 face_down=True,
             ),
         )
-        return sealed
 
-    def legal_moves(
-        self,
-        position: Position[ShowdownState],
-    ) -> Moves:
-        """Every card each seat that has yet to commit may commit, from its hand and from its blind."""
-        return tuple(move for seat in sorted(position.state.to_act) for move in self._commitments_of(position, seat))
-
-    def _commitments_of(
+    def moves_of(
         self,
         position: Position[ShowdownState],
         seat: int,
@@ -220,10 +183,10 @@ class ShowdownGame(RoundGame[ShowdownState]):
         return tuple(
             Move(
                 player=seat,
-                action=Play(group=holding, indices=frozenset({index})),
+                action=Play(group=holding.name, indices=frozenset({index})),
             )
             for holding in HOLDINGS
-            for index in range(len(position.board.zone(zone_of(holding, seat)).cards))
+            for index in range(position.board.count(holding.of(seat)))
         )
 
     def _committed(
@@ -244,7 +207,7 @@ class ShowdownGame(RoundGame[ShowdownState]):
         states which seat played which and the whole table reads every one of them.
         """
         order = rotation(position.state.led_by, position.players)
-        sealed = tuple(cards_of(position.board.zone(tray_of(seat))) for seat in order)
+        sealed = tuple(position.board.cards(TRAYS.of(seat)) for seat in order)
         if any(len(tray) != ONE_CARD for tray in sealed):
             return ()
 
@@ -252,7 +215,7 @@ class ShowdownGame(RoundGame[ShowdownState]):
         strongest = taken_by(revealed)
         turned: Effects[ShowdownState] = tuple(
             MoveCards(
-                source=tray_of(seat),
+                source=TRAYS.of(seat),
                 indices=frozenset({SEALED_CARD}),
                 target=DISCARD,
                 face_down=False,
@@ -278,20 +241,13 @@ class ShowdownGame(RoundGame[ShowdownState]):
         the last turn the round played.
         """
         state = position.state
-        playing = frozenset(
-            seat
-            for seat in range(position.players)
-            if self._holding(
-                position,
-                seat,
-            )
-        )
+        playing = self._committing(position)
         return state.with_changes(
             round_points=awarded(state.round_points, winner, taken),
             to_act=playing,
             turn_number=state.turn_number + ONE_TURN if playing else state.turn_number,
         )
 
-    def _holding(self, position: Position[ShowdownState], seat: int) -> int:
-        """How many cards a seat has left to commit, counting both of its holdings."""
-        return sum(len(position.board.zone(zone_of(holding, seat)).cards) for holding in HOLDINGS)
+    def _committing(self, position: Position[ShowdownState]) -> frozenset[int]:
+        """The seats with a card left to commit, which either holding may hold."""
+        return frozenset(seat for holding in HOLDINGS for seat in position.holding(holding))

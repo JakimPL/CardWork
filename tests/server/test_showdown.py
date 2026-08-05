@@ -13,7 +13,7 @@ from cardgames.backend.showdown.rules import (
     TURNS,
 )
 from cardgames.backend.showdown.state import ShowdownState
-from cardgames.backend.showdown.zones import Holding, blind_of, hand_of, tray_of
+from cardgames.backend.showdown.zones import BLINDS, TRAYS
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
 from cardserver.sessions import TableSession
 from cardwork.decks.deck import Deck
@@ -22,7 +22,8 @@ from cardwork.moves.actions import Play
 from cardwork.moves.move import Move
 from cardwork.rounds.conclusion import ONE_ROUND, Conclusion
 from cardwork.rounds.state import MatchPhase
-from cardwork.zones.zones import DISCARD
+from cardwork.zones.family import Family
+from cardwork.zones.zones import DISCARD, HANDS
 
 from .conftest import DEAL, MOVES, VIEW, command, credentials, served
 
@@ -39,14 +40,14 @@ def a_showdown_table() -> ShowdownGame:
     return ShowdownGame(players=SEATS, deck=DECK, conclusion=Conclusion(rounds=ONE_ROUND), rng=Random(SEED))
 
 
-def commitment(seat: int, holding: Holding) -> Move:
+def commitment(seat: int, holding: Family) -> Move:
     """One seat committing the first card of that holding to the turn."""
-    return Move(player=seat, action=Play(group=holding, indices=FIRST_CARD))
+    return Move(player=seat, action=Play(group=holding.name, indices=FIRST_CARD))
 
 
-def a_holding_of(session: TableSession[ShowdownState], seat: int) -> Holding:
+def a_holding_of(session: TableSession[ShowdownState], seat: int) -> Family:
     """The holding a seat still has a card in, which is its hand for as long as that holds one."""
-    return Holding.HAND if session.view(observer=None).zones[hand_of(seat)].cards else Holding.BLIND
+    return HANDS if session.view(observer=None).zones[HANDS.of(seat)].cards else BLINDS
 
 
 async def commit_the_turn(client: AsyncClient, session: TableSession[ShowdownState], turn: int) -> None:
@@ -64,36 +65,36 @@ async def test_a_seat_reads_the_five_it_holds_while_the_five_it_plays_blind_read
         own = await client.get(VIEW, headers=credentials(0))
         spectator = await client.get(VIEW)
 
-    assert all(card is not None for card in own.json()["zones"][hand_of(0)]["cards"])
-    assert own.json()["zones"][blind_of(0)]["cards"] == [None] * BLIND_SIZE
-    assert spectator.json()["zones"][hand_of(0)]["cards"] == [None] * HAND_SIZE
-    assert spectator.json()["zones"][blind_of(0)]["cards"] == [None] * BLIND_SIZE
+    assert all(card is not None for card in own.json()["zones"][HANDS.of(0)]["cards"])
+    assert own.json()["zones"][BLINDS.of(0)]["cards"] == [None] * BLIND_SIZE
+    assert spectator.json()["zones"][HANDS.of(0)]["cards"] == [None] * HAND_SIZE
+    assert spectator.json()["zones"][BLINDS.of(0)]["cards"] == [None] * BLIND_SIZE
 
 
 async def test_a_commitment_is_sealed_from_the_whole_table_while_the_turn_stands_open() -> None:
     async with served(a_showdown_table(), SHOWDOWN_SCENE) as (client, _):
         accepted = await client.post(
             MOVES,
-            json=command(commitment(0, Holding.HAND), DEAL, "commitment"),
+            json=command(commitment(0, HANDS), DEAL, "commitment"),
             headers=credentials(0),
         )
         own = await client.get(VIEW, headers=credentials(0))
         spectator = await client.get(VIEW)
 
     assert accepted.status_code == HTTPStatus.OK
-    assert own.json()["zones"][tray_of(0)]["cards"] == [None] * ONE_CARD
-    assert spectator.json()["zones"][tray_of(0)]["cards"] == [None] * ONE_CARD
-    assert len(own.json()["zones"][hand_of(0)]["cards"]) == HAND_SIZE - ONE_CARD
+    assert own.json()["zones"][TRAYS.of(0)]["cards"] == [None] * ONE_CARD
+    assert spectator.json()["zones"][TRAYS.of(0)]["cards"] == [None] * ONE_CARD
+    assert len(own.json()["zones"][HANDS.of(0)]["cards"]) == HAND_SIZE - ONE_CARD
     assert sorted(own.json()["state"]["to_act"]) == STILL_TO_COMMIT
 
 
 async def test_a_second_commitment_in_one_turn_is_refused_over_the_wire() -> None:
     async with served(a_showdown_table(), SHOWDOWN_SCENE) as (client, session):
-        await client.post(MOVES, json=command(commitment(0, Holding.HAND), DEAL, "first"), headers=credentials(0))
+        await client.post(MOVES, json=command(commitment(0, HANDS), DEAL, "first"), headers=credentials(0))
 
         response = await client.post(
             MOVES,
-            json=command(commitment(0, Holding.BLIND), session.head, "second"),
+            json=command(commitment(0, BLINDS), session.head, "second"),
             headers=credentials(0),
         )
 
@@ -113,7 +114,7 @@ async def test_a_turn_every_seat_has_committed_to_turns_over_once_the_window_has
     zones = view.json()["zones"]
     assert len(zones[DISCARD]["cards"]) == SEATS
     assert all(card is not None for card in zones[DISCARD]["cards"])
-    assert all(zones[tray_of(seat)]["cards"] == [] for seat in range(SEATS))
+    assert all(zones[TRAYS.of(seat)]["cards"] == [] for seat in range(SEATS))
     assert state["turn_number"] == SECOND_TURN
     assert state["rounds"] == ONE_ROUND
     assert sum(state["round_points"]) > NOTHING

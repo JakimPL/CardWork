@@ -1,50 +1,34 @@
-from enum import StrEnum
 from typing import Final
 
 from cardwork.decks.deck import Deck
 from cardwork.decks.decks import to_game_cards
 from cardwork.zones import presets
+from cardwork.zones.family import Family
 from cardwork.zones.zone import Zone, ZoneId, Zones
-from cardwork.zones.zones import discard
+from cardwork.zones.zones import HANDS, discard
 
 STOCK: Final[ZoneId] = "stock"
-TRAY: Final[str] = "tray"
 SEALED_CARD: Final[int] = 0
 
-
-class Holding(StrEnum):
-    """The two holdings a seat commits from, which is the word a commitment names beside its card.
-
-    A hand is the five cards a seat reads; a blind is the five it does not. Both are the seat's own, so the
-    word and the seat together name the zone the card comes out of.
-    """
-
-    HAND = "hand"
-    BLIND = "blind"
-
-
-HOLDINGS: Final[tuple[Holding, ...]] = tuple(Holding)
-
-
-def zone_of(holding: Holding, seat: int) -> ZoneId:
-    """The zone one seat's holding stands for, which is what the word a commitment names resolves to."""
-    return f"{holding}:{seat}"
-
-
-def hand_of(seat: int) -> ZoneId:
-    return zone_of(Holding.HAND, seat)
-
-
-def blind_of(seat: int) -> ZoneId:
-    return zone_of(Holding.BLIND, seat)
-
-
-def tray_of(seat: int) -> ZoneId:
-    return f"{TRAY}:{seat}"
+BLINDS: Final[Family] = Family(
+    name="blind",
+    ordered=True,
+    visibility=presets.HIDDEN,
+)
+TRAYS: Final[Family] = Family(
+    name="tray",
+    ordered=True,
+    visibility=presets.HIDDEN,
+)
+HOLDINGS: Final[tuple[Family, ...]] = (HANDS, BLINDS)
 
 
 def showdown_zones(players: int, deck: Deck) -> Zones:
     """The table a showdown round is played on: two holdings and a tray for each seat, the stock and the discard.
+
+    A hand is the five cards a seat reads and a blind the five it does not, which are the two holdings a
+    commitment comes out of. Each is a family standing at every seat, so the name of the family is the word a
+    commitment names its holding by and the seat says which zone that word reaches.
 
     A hand lies face down, which its owner reads and the rest of the table reads the size of. A blind and a tray
     lie under the policy reading to nobody, so the five a seat may not read stay unread by everybody its owner
@@ -56,32 +40,10 @@ def showdown_zones(players: int, deck: Deck) -> Zones:
     turns read a card out of by position, and the run of a tray is the order the commitments were made in, so
     the table keeps both.
     """
-    seated = {
-        zone.id: zone
-        for seat in range(players)
-        for zone in (
-            Zone(
-                id=hand_of(seat),
-                owner=seat,
-                visibility=presets.HAND,
-                ordered=False,
-            ),
-            Zone(
-                id=blind_of(seat),
-                owner=seat,
-                visibility=presets.HIDDEN,
-                ordered=True,
-            ),
-            Zone(
-                id=tray_of(seat),
-                owner=seat,
-                visibility=presets.HIDDEN,
-                ordered=True,
-            ),
-        )
-    }
     return {
-        **seated,
+        **HANDS.zones(players),
+        **BLINDS.zones(players),
+        **TRAYS.zones(players),
         STOCK: Zone(
             id=STOCK,
             visibility=presets.PILE,

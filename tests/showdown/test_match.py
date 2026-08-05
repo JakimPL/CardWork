@@ -16,11 +16,11 @@ from cardgames.backend.showdown.rules import (
     TURNS,
 )
 from cardgames.backend.showdown.state import ShowdownPhase
-from cardgames.backend.showdown.zones import STOCK, blind_of, hand_of
+from cardgames.backend.showdown.zones import BLINDS, STOCK
 from cardwork.rounds.conclusion import ONE_ROUND
 from cardwork.rounds.seating import next_seat
 from cardwork.rounds.state import MatchPhase
-from cardwork.zones.zones import DISCARD
+from cardwork.zones.zones import DISCARD, HANDS
 from tests.cases import Case, descriptions
 
 from .driving import (
@@ -78,8 +78,8 @@ def test_each_turn_of_a_round_reveals_one_card_of_every_seat(showdown: ShowdownG
 def test_ten_turns_run_both_holdings_out_and_the_round_that_follows_is_dealt_afresh(showdown: ShowdownGame) -> None:
     play_a_round(showdown)
 
-    assert all(len(showdown.board.zone(hand_of(seat)).cards) == HAND_SIZE for seat in range(SEATS))
-    assert all(len(showdown.board.zone(blind_of(seat)).cards) == BLIND_SIZE for seat in range(SEATS))
+    assert all(len(showdown.board.zone(HANDS.of(seat)).cards) == HAND_SIZE for seat in range(SEATS))
+    assert all(len(showdown.board.zone(BLINDS.of(seat)).cards) == BLIND_SIZE for seat in range(SEATS))
     assert len(showdown.board.zone(DISCARD).cards) == NOTHING
     assert len(showdown.board.zone(STOCK).cards) == STOCKED_AFRESH
     assert showdown.state.round_number == SECOND_ROUND

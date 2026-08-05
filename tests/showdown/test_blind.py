@@ -6,12 +6,13 @@ from hypothesis import strategies as st
 
 from cardgames.backend.showdown.rules import BLIND_SIZE, HAND_SIZE
 from cardgames.backend.showdown.state import ShowdownState
-from cardgames.backend.showdown.zones import blind_of, hand_of
+from cardgames.backend.showdown.zones import BLINDS
 from cardwork.cards.card import Card
 from cardwork.cards.cards import STANDARD_CARDS
 from cardwork.cards.game import GameCard
 from cardwork.positions.position import Position
 from cardwork.views.projection import project_position
+from cardwork.zones.zones import HANDS
 
 from .driving import ROUNDS, SEATS, SEED, a_match
 
@@ -27,7 +28,7 @@ def restocked(position: Position[ShowdownState], cards: tuple[Card, ...]) -> Pos
     Substitution is what `tests/views` states concealment as: a view surviving any card standing in a place is
     a view carrying nothing of what stands there.
     """
-    blind = position.board.zone(blind_of(OWNER))
+    blind = position.board.zone(BLINDS.of(OWNER))
     stood = blind.with_cards(tuple(GameCard(card=card, face_down=True) for card in cards))
     return position.with_board(position.board.with_zones(stood))
 
@@ -46,13 +47,13 @@ def test_a_blind_reads_the_same_to_everybody_whatever_stands_in_it(cards: list[C
 def test_a_blind_reports_its_size_to_every_observer_and_its_cards_to_none(observer: int | None) -> None:
     view = project_position(DEALT, SEQ, observer, legal=())
 
-    assert all(card is None for card in view.zones[blind_of(OWNER)].cards)
-    assert len(view.zones[blind_of(OWNER)].cards) == BLIND_SIZE
+    assert all(card is None for card in view.zones[BLINDS.of(OWNER)].cards)
+    assert len(view.zones[BLINDS.of(OWNER)].cards) == BLIND_SIZE
 
 
 def test_a_seat_reads_the_five_of_its_hand_while_the_five_of_its_blind_stay_unread() -> None:
     view = project_position(DEALT, SEQ, OWNER, legal=())
 
-    assert view.zones[hand_of(OWNER)].cards == DEALT.board.zone(hand_of(OWNER)).cards
-    assert len(view.zones[hand_of(OWNER)].cards) == HAND_SIZE
-    assert all(card is None for card in view.zones[blind_of(OWNER)].cards)
+    assert view.zones[HANDS.of(OWNER)].cards == DEALT.board.zone(HANDS.of(OWNER)).cards
+    assert len(view.zones[HANDS.of(OWNER)].cards) == HAND_SIZE
+    assert all(card is None for card in view.zones[BLINDS.of(OWNER)].cards)
