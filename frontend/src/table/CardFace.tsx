@@ -6,6 +6,8 @@ import { useArtwork } from "../play/useArtwork";
 import { drawnAt } from "./artwork";
 import { classes } from "./classes";
 import { clicking } from "./clicks";
+import type { Handling } from "./dragging";
+import { handled } from "./dragging";
 
 /**
  * The suits that draw in red, whose values are the glyphs themselves as `cardwork.cards.suit` states them.
@@ -35,6 +37,7 @@ interface CardFaceProps {
   dimmed: boolean;
   arriving: boolean;
   onPick: (() => void) | null;
+  handling: Handling | null;
 }
 
 /**
@@ -51,11 +54,14 @@ interface CardFaceProps {
  * A card that has just been laid where it lies comes in from the hand it was played out of, which is what a
  * player watching the table sees happen.
  *
+ * A card of a run whose order is its owner's to set is taken hold of where it lies and carried to another place
+ * in that run, and it draws faded while it travels, so a player reads the run as it is about to lie.
+ *
  * A table opened with a pack of artwork draws every card as the picture that pack holds for it, and the same
  * element carries it: what a card is called, how it lies and what a press does with it are the drawing of a
  * card whichever way its face is arrived at.
  */
-export function CardFace({ card, selected, dimmed, arriving, onPick }: CardFaceProps): ReactElement {
+export function CardFace({ card, selected, dimmed, arriving, onPick, handling }: CardFaceProps): ReactElement {
   const artwork = useArtwork();
   const marks = classes(
     "card",
@@ -64,20 +70,30 @@ export function CardFace({ card, selected, dimmed, arriving, onPick }: CardFaceP
     selected && "selected",
     dimmed && "dimmed",
     arriving && "arriving",
+    handling !== null && "sortable",
+    handling !== null && handling.carried && "carried",
   );
   const label = card === null ? UNREAD : named(faceOf(card.card));
   const drawn = artwork === null ? glyphs(card) : picture(artwork, card);
+  const handles = handled(handling);
 
   if (onPick === null) {
     return (
-      <div className={marks} aria-label={label}>
+      <div className={marks} aria-label={label} {...handles}>
         {drawn}
       </div>
     );
   }
 
   return (
-    <button type="button" className={marks} aria-label={label} aria-pressed={selected} onClick={clicking(onPick)}>
+    <button
+      type="button"
+      className={marks}
+      aria-label={label}
+      aria-pressed={selected}
+      onClick={clicking(onPick)}
+      {...handles}
+    >
       {drawn}
     </button>
   );

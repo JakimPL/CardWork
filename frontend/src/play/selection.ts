@@ -1,6 +1,7 @@
 import type { Commit, Gesture, Layout } from "../api/layout";
 import type { AnyAction, Move } from "../api/moves";
-import type { PositionView, ZoneId } from "../api/views";
+import type { PositionView, ProjectedCard, ZoneId, ZoneView } from "../api/views";
+import { cardsAt, sameRun } from "./cards";
 
 /** The three ways a move is sent, which mirror `cardwork.presentation.commit.Commit`. */
 const ZONE = "zone" satisfies Commit;
@@ -19,6 +20,17 @@ export type Target = { commit: typeof ZONE; zone: ZoneId } | { commit: typeof SE
 export interface Selection {
   zone: ZoneId;
   indices: number[];
+}
+
+/**
+ * A selection as it was made: the cards picked up, and the cards that lay at the positions naming them.
+ *
+ * A move quotes positions, so what a selection stands for is the cards lying at those positions. Keeping the ones
+ * it was made on is what lets the page tell a table that has moved on from a hand that has.
+ */
+export interface Held {
+  selection: Selection;
+  picked: ProjectedCard[];
 }
 
 /**
@@ -163,6 +175,23 @@ export function pickedUp(standing: Prospect, zone: ZoneId, index: number): Selec
   }
 
   return pickable(standing.offers, zone, index) ? { zone, indices: [index] } : null;
+}
+
+/** One selection with the cards it was made on, read out of the zone as it stood at the moment of the picking. */
+export function heldFrom(zones: Record<ZoneId, ZoneView>, selection: Selection): Held {
+  return { selection, picked: cardsAt(zones[selection.zone], selection.indices) };
+}
+
+/**
+ * Whether a selection still names the cards it was made on, which is what leaves it standing in a player's hand.
+ *
+ * A table moves on for reasons of its own: another seat plays, another seat sorts the cards it is holding, the
+ * rules settle a round. A selection outlives every commit that leaves its own cards lying where they lay, and
+ * comes back down as they move — which is the moment its positions would come to name other cards than the ones
+ * a player picked up.
+ */
+export function stands(held: Held, zones: Record<ZoneId, ZoneView>): boolean {
+  return sameRun(held.picked, cardsAt(zones[held.selection.zone], held.selection.indices));
 }
 
 /**

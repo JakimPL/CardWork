@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { useState } from "react";
 
 import type { Slot as Arrangement, Spread } from "../api/layout";
 import type { ProjectedCard, ZoneView } from "../api/views";
@@ -10,6 +11,8 @@ import type { Playing } from "../play/usePlay";
 import { CardFace } from "./CardFace";
 import { classes } from "./classes";
 import { clicking } from "./clicks";
+import type { Carry, Handling } from "./dragging";
+import { allowing, carriedTo, grasped, laidOut, moved, reaching } from "./dragging";
 import { fanning } from "./sizing";
 
 /** How many cards of a heap a card that lands on it comes to rest on, which is the one it covers. */
@@ -41,20 +44,65 @@ interface SlotProps {
  *
  * A zone the cards in hand can be sent onto lies under a place to send them, so a player commits by pointing
  * at where the cards go.
+ *
+ * A zone whose order is this seat's own to set is laid out by hand: a card is taken hold of where it lies, the
+ * run closes up behind it and opens where it is carried to, and letting it go there sends the order it comes to
+ * lie in. What a player carries a card over is the run as it is about to read, so the order they are choosing is
+ * the order in front of them. The table is what settles it, so the cards lie as the table holds them until the
+ * commit carrying the new order arrives — which is how every other command reaches this page too.
  */
 export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement {
+  const [carrying, setCarrying] = useState<Carry | null>(null);
   const cards = zone?.cards ?? [];
-  const shown = shownIn(slot.spread, cards, landedIn(arrivals, slot.zone));
+  const drawn = shownIn(slot.spread, cards, landedIn(arrivals, slot.zone));
+  const sortable = laysOut(zone, drawn, cards);
+  const shown = laidOut(drawn, carrying);
   const onto: Target = { commit: "zone", zone: slot.zone };
   const landing = offerTo(playing.standing, onto);
   const picking = picksIn(playing.standing, slot.zone);
+
+  const release = (): void => {
+    setCarrying(null);
+  };
+
+  const lay = (): void => {
+    if (carrying !== null && moved(carrying)) {
+      playing.arrange(
+        slot.zone,
+        shown.map((held) => held.index),
+      );
+    }
+
+    release();
+  };
+
+  const handling = (place: number, index: number): Handling | null =>
+    sortable
+      ? {
+          place: index,
+          carried: carrying !== null && carrying.from === index,
+          grasp: () => {
+            setCarrying(grasped(index));
+          },
+          reach: () => {
+            setCarrying((held) => carriedTo(held, place));
+          },
+          release,
+        }
+      : null;
+
   return (
     <section className={classes("slot", slot.spread, landing !== null && "live")}>
       <header className="slot-label">
         <span className="label">{slot.label}</span>
         {slot.counted && <span className="count">{cards.length}</span>}
       </header>
-      <div className={classes("cards", cards.length > shown.length && "deep")} style={fanning(shown.length)}>
+      <div
+        className={classes("cards", cards.length > shown.length && "deep")}
+        style={fanning(shown.length)}
+        onDragOver={sortable ? allowing : undefined}
+        onDrop={sortable ? reaching(lay) : undefined}
+      >
         {landing !== null && (
           <button
             type="button"
@@ -69,7 +117,7 @@ export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement
         {shown.length === 0 ? (
           <div className="card empty" aria-label={`${slot.label}, holding nothing`} />
         ) : (
-          shown.map((held) => (
+          shown.map((held, place) => (
             <CardFace
               key={held.index}
               card={held.card}
@@ -83,12 +131,24 @@ export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement
                     }
                   : null
               }
+              handling={handling(place, held.index)}
             />
           ))
         )}
       </div>
     </section>
   );
+}
+
+/**
+ * Whether a player lays this zone out themselves, which the table says and the drawing of it has to allow.
+ *
+ * The table resolves who may order which zone, and a run drawn whole is what a player orders by hand: every card
+ * of it is there to take hold of and to carry to, so the order they lay down names each position the zone holds.
+ * A spread reading a zone by the card on top of it says the depth beneath in a figure instead.
+ */
+function laysOut(zone: ZoneView | undefined, drawn: Held[], cards: ProjectedCard[]): boolean {
+  return (zone?.arrangeable ?? false) && drawn.length === cards.length;
 }
 
 /**

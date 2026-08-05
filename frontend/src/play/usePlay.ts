@@ -1,26 +1,22 @@
 import { useCallback, useMemo, useState } from "react";
 
 import type { Layout } from "../api/layout";
+import type { CommandAccepted } from "../api/moves";
 import { movedOn, reasonOf, Refused } from "../api/refusal";
 import type { Seat } from "../api/seat";
 import type { PositionView, ZoneId } from "../api/views";
 import { guidance } from "./guidance";
-import type { Offered, Prospect, Selection, Target } from "./selection";
-import { offersOf, offerTo, pickedUp, prospect } from "./selection";
-import { commandFor, deliver, named } from "./sending";
-
-/** A selection as it is held: the cards, and the position they were picked out of. */
-interface Held {
-  selection: Selection;
-  seq: number;
-}
+import type { Held, Offered, Prospect, Target } from "./selection";
+import { heldFrom, offersOf, offerTo, pickedUp, prospect, stands } from "./selection";
+import { commandFor, deliver, lay, named, orderFor } from "./sending";
 
 /**
- * Playing a table from one seat: what the cards on screen may do, and the four ways of doing it.
+ * Playing a table from one seat: what the cards on screen may do, and the ways of doing it.
  *
  * A move landing on a place is sent by `commit`, which is given the place pointed at and finds the move that
  * goes there. A move landing on none is sent by `say`, which is given the move itself, since the words drawn for
- * it stand for that move and nothing else.
+ * it stand for that move and nothing else. `arrange` sends no move at all: it is the order a player laid a zone
+ * of its own out in, which the table records beside the moves and no turn stands in the way of.
  */
 export interface Playing {
   standing: Prospect;
@@ -29,6 +25,7 @@ export interface Playing {
   pick: (zone: ZoneId, index: number) => void;
   commit: (target: Target) => void;
   say: (offer: Offered) => void;
+  arrange: (zone: ZoneId, order: number[]) => void;
   clear: () => void;
 }
 
@@ -41,8 +38,13 @@ export interface Playing {
  * a hand of cards from committing itself. A move landing on no place leaves on a click at the words standing for
  * it, which the empty hand it names arms.
  *
- * A selection is held against the position it was made in. The table moving on — by this seat's own move
- * landing or another's — leaves it behind rather than carrying it onto cards that have since shifted.
+ * A selection is held against the cards it was made on. Every commit is read against them, so a table moving on
+ * for reasons of its own — another seat's move, another seat sorting its own cards — leaves a selection standing,
+ * and the cards it names moving is what puts it down.
+ *
+ * A command that lands puts the cards in hand back down, since a move played takes them out of the zone they were
+ * picked from and an order laid down leaves them lying elsewhere in it: either way the positions the selection
+ * named are positions other cards have come to.
  *
  * @param seat - the table played at and the token the seat is held by.
  * @param layout - how this seat lays the table out, which the moves are read through.
@@ -54,7 +56,7 @@ export function usePlay(seat: Seat, layout: Layout, view: PositionView, refresh:
   const [notice, setNotice] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
-  const selection = held !== null && held.seq === view.seq ? held.selection : null;
+  const selection = held !== null && stands(held, view.zones) ? held.selection : null;
   const offers = useMemo(() => offersOf(layout, view), [layout, view]);
   const standing = useMemo(() => prospect(offers, selection), [offers, selection]);
 
@@ -66,21 +68,21 @@ export function usePlay(seat: Seat, layout: Layout, view: PositionView, refresh:
   const pick = useCallback(
     (zone: ZoneId, index: number) => {
       const taken = pickedUp(standing, zone, index);
-      setHeld(taken === null ? null : { selection: taken, seq: view.seq });
+      setHeld(taken === null ? null : heldFrom(view.zones, taken));
       setNotice(null);
     },
-    [standing, view.seq],
+    [standing, view.zones],
   );
 
-  const send = useCallback(
-    (offer: Offered) => {
+  const command = useCallback(
+    (attempt: () => Promise<CommandAccepted>) => {
       if (sending) {
         return;
       }
 
       setSending(true);
       setNotice(null);
-      deliver(seat, commandFor(offer.move, view.seq, named()))
+      attempt()
         .then(() => {
           setHeld(null);
         })
@@ -94,7 +96,21 @@ export function usePlay(seat: Seat, layout: Layout, view: PositionView, refresh:
           setSending(false);
         });
     },
-    [seat, view.seq, sending, refresh],
+    [sending, refresh],
+  );
+
+  const send = useCallback(
+    (offer: Offered) => {
+      command(() => deliver(seat, commandFor(offer.move, view.seq, named())));
+    },
+    [command, seat, view.seq],
+  );
+
+  const arrange = useCallback(
+    (zone: ZoneId, order: number[]) => {
+      command(() => lay(seat, orderFor(zone, order, view.seq, named())));
+    },
+    [command, seat, view.seq],
   );
 
   const commit = useCallback(
@@ -107,5 +123,5 @@ export function usePlay(seat: Seat, layout: Layout, view: PositionView, refresh:
     [standing, send],
   );
 
-  return { standing, hint: guidance(layout, view, standing, notice), sending, pick, commit, say: send, clear };
+  return { standing, hint: guidance(layout, view, standing, notice), sending, pick, commit, say: send, arrange, clear };
 }

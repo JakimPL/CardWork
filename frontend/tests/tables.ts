@@ -170,6 +170,12 @@ export function offering(view: PositionView, legal: Move[]): PositionView {
   return { ...view, legal };
 }
 
+/** The same position, with one zone the table says this seat lays out in whatever order it pleases. */
+export function sortable(view: PositionView, zone: ZoneId): PositionView {
+  const held = view.zones[zone] ?? { id: zone, owner: SEAT, arrangeable: false, cards: [] };
+  return { ...view, zones: { ...view.zones, [zone]: { ...held, arrangeable: true } } };
+}
+
 export function aTake(indices: number[]): Move {
   return { player: SEAT, action: { kind: "take", group: PILE, indices } };
 }
@@ -202,5 +208,5 @@ const IDLE = (): void => undefined;
 
 /** The table as it is played, for a test reading what a prospect comes to. */
 export function aPlaying(standing: Prospect): Playing {
-  return { standing, hint: "", sending: false, pick: IDLE, commit: IDLE, say: IDLE, clear: IDLE };
+  return { standing, hint: "", sending: false, pick: IDLE, commit: IDLE, say: IDLE, arrange: IDLE, clear: IDLE };
 }

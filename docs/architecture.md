@@ -1471,8 +1471,8 @@ the host mounts. It holds three layers of its own, and each names only what is b
 | layer | states |
 |---|---|
 | `api` | what a table answers and what a client sends: the layout vocabulary, the projections, the seat, the refusals, and the calls that read them |
-| `play` | what a client makes of those answers: the seat an address names, the view a commit leaves, the figures a readout reads, the boundary a commit pauses at |
-| `table` | what appears on screen: the standing, the three groups of zones, a station, a slot, a card, the line saying where play stands, the report a boundary is read at |
+| `play` | what a client makes of those answers: the seat an address names, the view a commit leaves, one card read against another, the figures a readout reads, the boundary a commit pauses at |
+| `table` | what appears on screen: the standing, the three groups of zones, a station, a slot, a card, a card carried by hand, the line saying where play stands, the report a boundary is read at |
 
 **The types come from the document where a document exists, and by hand where one cannot.** `/layout` is the
 one answer that stands apart from a game's own state, so it publishes a schema and `openapi-typescript`
@@ -1549,9 +1549,30 @@ stroke resting on a control leaves to the browser, so a move said either way is 
 request arriving twice commits a single time. A refusal a table answered stands, and a request that reached no
 answer at all is sent again under the same name — the two are told apart by whether the table spoke. A refused
 position is read afresh and the selection put down with it; a refused move keeps the cards in hand and the
-sentence the game phrased reaches the line under them. A selection is held against the sequence it was made
-at, so the table moving on — this seat's own move landing, or another's — leaves it behind rather than
-carrying it onto cards that have since shifted.
+sentence the game phrased reaches the line under them.
+
+**A selection is held against the cards it was made on, not against the sequence.** A move quotes positions, so
+what a selection stands for is the cards lying at those positions: `play/cards.ts` reads them out of the zone at
+the moment of the picking, and every commit that follows is read against them. A table moves on for reasons of its
+own — another seat plays, another seat sorts the cards it holds, the rules settle a round — and a selection
+outlives every one of those, since none of them touched the cards a player is holding. Those cards moving is what
+puts it down, which is the moment its positions would otherwise come to name other cards. A run of cards nobody at
+this seat reads is the same run however it is permuted, which is what a position of a stock names anyway: the
+place, rather than whichever card happens to lie in it. A command that lands puts the cards in hand back down
+either way, since a move played takes them out of the zone and an order laid down leaves them lying elsewhere in
+it.
+
+**A hand is laid out by hand.** `ZoneView.arrangeable` is the table's word on whether this seat orders this zone
+(§3.4), and where it says so every card of the run is taken hold of where it lies and carried to another place in
+it. What the player reads while carrying is the run as it is about to lie — the cards it passes over close up
+behind it and open at the place it is being let go over — and letting go sends exactly that reading, since
+`table/dragging.ts` answers with one run that serves both the drawing and the order. A card is dragged rather than
+clicked, so ordering a hand stands beside playing out of it: the same card picks up on a click, and neither
+gesture is ever mistaken for the other. The run drawn is what may be ordered, so a spread reading a zone by the
+card on top of it says its depth in a figure and leaves the ordering to the zones a player can see whole. The
+table settles it like any other command: the cards lie as the table holds them until the commit carrying the new
+order arrives, which is also what tells every other seat nothing — a permuted run of placeholders reads the same
+as it read (§6).
 
 **The page is held to the same standard as the Python.** Prettier formats it, ESLint reads it with the types
 in hand — the strict type-checked rules, the React and hook rules, and three house rules carried over from the

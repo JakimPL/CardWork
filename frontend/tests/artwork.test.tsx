@@ -40,7 +40,7 @@ const joker = (red: boolean): ProjectedCard => ({ card: { red }, face_down: fals
 const drawn = (place: ProjectedCard, artwork: Artwork | null): string =>
   renderToStaticMarkup(
     <Drawn value={artwork}>
-      <CardFace card={place} selected={false} dimmed={false} arriving={false} onPick={null} />
+      <CardFace card={place} selected={false} dimmed={false} arriving={false} onPick={null} handling={null} />
     </Drawn>,
   );
 
