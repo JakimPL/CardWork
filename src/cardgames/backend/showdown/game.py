@@ -129,7 +129,8 @@ class ShowdownGame(RoundGame[ShowdownState]):
             for seat in rotation(leader, position.players)
             for zone, count in ((hand_of(seat), HAND_SIZE), (blind_of(seat), BLIND_SIZE))
         }
-        return Redeal(position, pile=STOCK, face_down=True).effects(counts, rng)
+        redeal = Redeal(position, pile=STOCK, face_down=True)
+        return redeal.effects(counts, rng)
 
     def opening_state(
         self,

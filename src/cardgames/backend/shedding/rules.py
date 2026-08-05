@@ -101,10 +101,10 @@ def drawn_from(stock: int) -> Indices:
         stock: how many cards the stock holds.
 
     Raises:
-        ValueError: when the stock has run out, which leaves no card to draw.
+        LogicError: when the stock has run out, which leaves no card to draw.
     """
     if stock <= NO_CARDS:
-        raise ValueError("A draw takes the card at the end of the stock, and the stock has run out")
+        raise LogicError("A draw takes the card at the end of the stock, and the stock has run out")
 
     return frozenset({stock - ONE_CARD})
 

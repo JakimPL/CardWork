@@ -4,6 +4,7 @@ from pydantic import model_validator
 
 from cardwork.decks.deck import Deck
 from cardwork.decks.decks import compare_decks
+from cardwork.exceptions import GameValidationError
 from cardwork.models.base import BaseFrozen
 from cardwork.zones.zone import Zone, ZoneId, Zones
 
@@ -51,8 +52,13 @@ class Board(BaseFrozen):
         """Confirm that the cards spread across the zones still add up to the starting deck.
 
         Raises:
-            ValueError: when the zones hold a multiset of cards differing from `starting_deck`.
+            GameValidationError: when the zones hold a multiset of cards differing from `starting_deck`.
         """
         cards = tuple(card for zone in self.zones.values() for card in zone.cards)
+        if len(cards) != len(self.starting_deck):
+            raise GameValidationError(
+                f"Zones hold {len(cards)} cards while the starting deck {len(self.starting_deck)}"
+            )
+
         if not compare_decks(cards, self.starting_deck):
-            raise ValueError(f"Zones hold {len(cards)} cards differing from the starting deck")
+            raise GameValidationError(f"Zones hold {len(cards)} cards differing from the starting deck")

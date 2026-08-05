@@ -38,7 +38,7 @@ def taken_by(revealed: Sequence[CardOrJoker]) -> int:
     if not revealed:
         raise LogicError("A turn goes to the strongest of the cards revealed, and none were")
 
-    return STRENGTH.argmaxima(tuple(suited(card) for card in revealed))[STRONGEST]
+    return STRENGTH.argmaxima(suited(revealed))[STRONGEST]
 
 
 def turn_points(revealed: Sequence[CardOrJoker], winner: int) -> int:

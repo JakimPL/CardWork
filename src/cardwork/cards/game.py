@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Iterable
+from typing import overload
 
-from cardwork.cards.card import Card
+from cardwork.cards.card import Card, Cards
 from cardwork.cards.joker import Joker
+from cardwork.exceptions import LogicError
 from cardwork.models.base import BaseFrozen
 
-CardOrJoker = Card | Joker
-
+type CardOrJoker = Card | Joker
 type CardsOrJokers = tuple[CardOrJoker, ...]
 
 
@@ -38,13 +39,32 @@ def is_joker(game_card: CardOrJoker | GameCard) -> bool:
     return isinstance(game_card, Joker)
 
 
-def suited(card: CardOrJoker) -> Card:
+@overload
+def suited(game_cards: Iterable[CardOrJoker] | Iterable[GameCard]) -> Cards: ...
+
+
+@overload
+def suited(game_cards: CardOrJoker | GameCard) -> Card: ...
+
+
+def suited(
+    game_cards: CardOrJoker | GameCard | Iterable[CardOrJoker] | Iterable[GameCard],
+) -> Card | Cards:
     """The card read as a suited one, which every card of the deck this game is played with is.
 
     Raises:
-        ValueError: when the card is a joker, which the one standard deck of this game holds none of.
+        LogicError: when the card is a joker, which the one standard deck of this game holds none of.
     """
-    if is_joker(card):
-        raise ValueError(f"This game is played with suited cards alone, and read {card}")
+    single = isinstance(game_cards, (Card, Joker, GameCard))
+    iterable = (game_cards,) if single else game_cards
 
-    return cast(Card, card)
+    result: list[Card] = []
+
+    for obj in iterable:
+        card = obj.card if isinstance(obj, GameCard) else obj
+        if not isinstance(card, Card):
+            raise LogicError(f"This game is played with suited cards alone, and read {card}")
+
+        result.append(card)
+
+    return result[0] if single else tuple(result)
