@@ -11,21 +11,15 @@ import type { Playing } from "../play/usePlay";
 import { CardFace } from "./CardFace";
 import { classes } from "./classes";
 import { clicking } from "./clicks";
-import type { Carry, Handling, Places, Point } from "./dragging";
-import { carriedTo, grasped, laidOut, sent, travelled } from "./dragging";
+import type { Carry, Handling, Places, Point, Shift } from "./dragging";
+import { carriedTo, grasped, laidOut, placesOf, restingOn, sent } from "./dragging";
 import { fanning } from "./sizing";
 
 /** How many cards of a heap a card that lands on it comes to rest on, which is the one it covers. */
 const RESTING_ON = 1;
 
-/** Which children of a run are the places it draws, which is every card lying in it. */
-const DRAWN = ":scope > .card";
-
 /** What a player presses to leave a run as the table holds it, wherever the card in hand has been carried to. */
 const ABANDONING = "Escape";
-
-/** What the reach of a card divides by to stand at the middle of it, which lies midway along either side. */
-const MIDWAY = 2;
 
 /** One card of a zone at the position it lies at, which is the position a move addressing it names. */
 interface Held {
@@ -55,25 +49,29 @@ interface SlotProps {
  * at where the cards go.
  *
  * A zone whose order is this seat's own to set is laid out by hand: a card is taken hold of where it lies and
- * travels with the pointer that took it, the run closes up behind it and opens at the place it stands nearest,
- * and letting go sends the order it has come to lie in. The card under the hand and the run opening ahead of it
- * are one reading of one gesture, so the order a player is choosing is the order in front of them, and letting
- * the card go sends that reading from wherever on the page they let it go. A player leaves the run as it stood by
- * carrying the card home again or by pressing escape, and the table is what settles it either way: the cards lie
- * as the table holds them until the commit carrying the new order arrives, which is how every other command
- * reaches this page too.
+ * travels with the pointer that took it, the run closes up behind it and opens at the place the card has come to
+ * cover, and letting go sends the order it has come to lie in. The card under the hand and the run opening ahead
+ * of it are one reading of one gesture, so the order a player is choosing is the order in front of them, and
+ * letting the card go sends that reading from wherever on the page they let it go. A player leaves the run as it
+ * stood by carrying the card home again or by pressing escape.
+ *
+ * The run stays laid out as the player laid it until the table hands that order back, so a card let go lies where
+ * it was put and the commit carrying the order home changes nothing on screen. A card let go under the hand that
+ * laid it stands raised where it came to rest, and eases nowhere, since the hand is still on it.
  *
  * A press that carries a card no distance at all is a press, so a run a player also plays out of answers both.
  */
 export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement {
   const [carrying, setCarrying] = useState<Carry | null>(null);
+  const [laid, setLaid] = useState<number | null>(null);
   const run = useRef<HTMLDivElement | null>(null);
   const places = useRef<Places | null>(null);
-  const sorting = useRef(false);
+  const pressed = useRef(true);
   const cards = zone?.cards ?? [];
   const drawn = shownIn(slot.spread, cards, landedIn(arrivals, slot.zone));
   const sortable = laysOut(zone, drawn, cards);
-  const shown = laidOut(drawn, carrying);
+  const read = arrangedBy(drawn, playing.laidIn(slot.zone));
+  const shown = laidOut(read, carrying);
   const onto: Target = { commit: "zone", zone: slot.zone };
   const landing = offerTo(playing.standing, onto);
   const picking = picksIn(playing.standing, slot.zone);
@@ -86,6 +84,7 @@ export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement
 
     const abandon = (event: KeyboardEvent): void => {
       if (event.key === ABANDONING) {
+        pressed.current = false;
         setCarrying(null);
       }
     };
@@ -96,7 +95,8 @@ export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement
     };
   }, [held]);
 
-  const release = (): void => {
+  const abandoned = (): void => {
+    pressed.current = false;
     setCarrying(null);
   };
 
@@ -105,8 +105,14 @@ export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement
     return where === null ? null : carriedTo(carrying, where, at);
   };
 
+  const rested = (going: Carry | null, at: Point): number | null => {
+    const where = places.current;
+    return going === null || where === null ? null : restingOn(going, where, at);
+  };
+
   const lay = (at: Point): void => {
-    const order = sent(drawn, carry(at));
+    const going = carry(at);
+    const order = sent(read, going);
     if (order !== null) {
       playing.arrange(
         slot.zone,
@@ -114,37 +120,55 @@ export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement
       );
     }
 
-    release();
+    if (going !== null) {
+      pressed.current = going.by === null;
+    }
+
+    setLaid(rested(going, at));
+    setCarrying(null);
   };
 
   const pick = (index: number): void => {
-    if (!sorting.current) {
+    if (pressed.current) {
       playing.pick(slot.zone, index);
     }
   };
 
-  const handling = (index: number): Handling | null =>
+  const handling = (place: number): Handling | null =>
     sortable
       ? {
-          carried: carrying !== null && carrying.from === index,
-          travel: carrying !== null && carrying.from === index ? carrying.by : null,
+          carried: travelOf(carrying, place) !== null,
+          laid: laid === place,
+          travel: travelOf(carrying, place),
           grasp: (at: Point) => {
+            if (held) {
+              return;
+            }
+
             places.current = placesOf(run.current);
-            sorting.current = false;
+            pressed.current = true;
+            setLaid(null);
             if (places.current !== null) {
-              setCarrying(grasped(index, places.current, at));
+              setCarrying(grasped(place, places.current, at));
             }
           },
           carry: (at: Point) => {
-            const carried = carry(at);
-            if (carried !== null && travelled(carried, at)) {
-              sorting.current = true;
+            if (laid !== null && laid !== place) {
+              setLaid(null);
             }
 
-            setCarrying(carried);
+            setCarrying((standing) => {
+              const where = places.current;
+              return where === null ? null : carriedTo(standing, where, at);
+            });
           },
           release: lay,
-          abandon: release,
+          abandon: abandoned,
+          leave: () => {
+            if (laid === place) {
+              setLaid(null);
+            }
+          },
         }
       : null;
 
@@ -169,7 +193,7 @@ export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement
         {shown.length === 0 ? (
           <div className="card empty" aria-label={`${slot.label}, holding nothing`} />
         ) : (
-          shown.map((lying) => (
+          shown.map((lying, place) => (
             <CardFace
               key={lying.index}
               card={lying.card}
@@ -183,7 +207,7 @@ export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement
                     }
                   : null
               }
-              handling={handling(lying.index)}
+              handling={handling(place)}
             />
           ))
         )}
@@ -193,26 +217,26 @@ export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement
 }
 
 /**
- * Where a run draws each of its places, read off the page as a card of it is taken hold of.
+ * One run in the order the player laid it out, and in the order the table holds it where they have laid none.
  *
- * A run keeps the places it was drawn with for the whole of a carry, so reading them once as the card comes up
- * answers every point the pointer goes on to stand at. They are read off the drawing itself, which is what lets a
- * fan of any size, closed up to whatever room its zone has, be carried through by the card the player can see.
+ * A carry is read against the run as it is drawn, so an order laid by hand is applied before one is: the places a
+ * card is taken from and carried to are places of the run in front of the player, which is what the order they
+ * send is read off.
  *
- * Returns:
- *     Where the places lie, and nothing for a run drawing none.
+ * A laid order names every card of the run once, and a run it no longer names is one the table has moved on from.
  */
-function placesOf(run: HTMLDivElement | null): Places | null {
-  const drawn = run === null ? [] : [...run.querySelectorAll(DRAWN)].map((place) => place.getBoundingClientRect());
-  const first = drawn.at(0);
-  if (first === undefined) {
-    return null;
+function arrangedBy(drawn: Held[], order: number[] | null): Held[] {
+  if (order === null) {
+    return drawn;
   }
 
-  return {
-    middles: drawn.map((place) => place.x + place.width / MIDWAY),
-    along: first.y + first.height / MIDWAY,
-  };
+  const laid = order.flatMap((index) => drawn.filter((lying) => lying.index === index));
+  return laid.length === drawn.length ? laid : drawn;
+}
+
+/** How far the card drawn at one place of a run stands from it, which is nothing for a card lying where it lies. */
+function travelOf(carrying: Carry | null, place: number): Shift | null {
+  return carrying !== null && carrying.to === place ? carrying.by : null;
 }
 
 /**

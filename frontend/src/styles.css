@@ -285,6 +285,7 @@ body {
 
 .slot {
   --card-width: calc(var(--card-height) * var(--card-aspect-width) / var(--card-aspect-height));
+  --raised: calc(var(--card-height) * -0.06);
   --radius: calc(var(--card-height) * 0.07);
   --depth: calc(var(--card-height) * 0.03);
   --face: clamp(14px, calc(var(--card-height) * 0.4), 128px);
@@ -499,6 +500,10 @@ button.card {
  * off the table by the shadow it casts, and it goes where the pointer goes rather than easing after it. The cards
  * it passed over close up behind it and open ahead of it in their own time, which reads as the run making room —
  * so what the player sees is the card in their hand and the order it is about to lie in.
+ *
+ * A card let go under the hand that laid it stands at the height a card under the hand stands at, and arrives
+ * there in one step: the hand is still on it, so it is still a card in hand and reads as one until the hand
+ * comes off it. A card the hand came off, or let go over the card beside it, lies as the run draws it.
  */
 
 .card.sortable {
@@ -510,6 +515,11 @@ button.card {
   z-index: 2;
   cursor: grabbing;
   box-shadow: 0 12px 22px rgb(0 0 0 / 50%);
+  transition: none;
+}
+
+.card.laid {
+  transform: translateY(var(--raised));
   transition: none;
 }
 
@@ -543,7 +553,7 @@ button.card {
 }
 
 .slot.fan button.card:hover {
-  transform: translateY(calc(var(--card-height) * -0.06));
+  transform: translateY(var(--raised));
 }
 
 /* A reader who asks for stillness gets the same table, arrived at in one step. */

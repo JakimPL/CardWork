@@ -206,7 +206,20 @@ export function landing(zone: ZoneId, cards: number): Arrivals {
 /** A click that does nothing, since what these tests read is the drawing rather than what follows one. */
 const IDLE = (): void => undefined;
 
+/** A seat that has laid no order of its own down, which is a page drawing every zone as the table holds it. */
+const LAID_NONE = (): number[] | null => null;
+
 /** The table as it is played, for a test reading what a prospect comes to. */
 export function aPlaying(standing: Prospect): Playing {
-  return { standing, hint: "", sending: false, pick: IDLE, commit: IDLE, say: IDLE, arrange: IDLE, clear: IDLE };
+  return {
+    standing,
+    hint: "",
+    sending: false,
+    pick: IDLE,
+    commit: IDLE,
+    say: IDLE,
+    arrange: IDLE,
+    laidIn: LAID_NONE,
+    clear: IDLE,
+  };
 }

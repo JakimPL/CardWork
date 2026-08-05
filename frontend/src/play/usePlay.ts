@@ -5,6 +5,8 @@ import type { CommandAccepted } from "../api/moves";
 import { movedOn, reasonOf, Refused } from "../api/refusal";
 import type { Seat } from "../api/seat";
 import type { PositionView, ZoneId } from "../api/views";
+import type { Laid } from "./arranging";
+import { laidFrom, laidIn } from "./arranging";
 import { guidance } from "./guidance";
 import type { Held, Offered, Prospect, Target } from "./selection";
 import { heldFrom, offersOf, offerTo, pickedUp, prospect, stands } from "./selection";
@@ -17,6 +19,9 @@ import { commandFor, deliver, lay, named, orderFor } from "./sending";
  * goes there. A move landing on none is sent by `say`, which is given the move itself, since the words drawn for
  * it stand for that move and nothing else. `arrange` sends no move at all: it is the order a player laid a zone
  * of its own out in, which the table records beside the moves and no turn stands in the way of.
+ *
+ * `laidIn` answers that order back while the table has yet to hand it over, so the cards stay where the player
+ * put them from the moment they let go.
  */
 export interface Playing {
   standing: Prospect;
@@ -26,6 +31,7 @@ export interface Playing {
   commit: (target: Target) => void;
   say: (offer: Offered) => void;
   arrange: (zone: ZoneId, order: number[]) => void;
+  laidIn: (zone: ZoneId) => number[] | null;
   clear: () => void;
 }
 
@@ -46,6 +52,10 @@ export interface Playing {
  * picked from and an order laid down leaves them lying elsewhere in it: either way the positions the selection
  * named are positions other cards have come to.
  *
+ * An order a player lays down stands on screen from the moment they let go until the table hands it back, so the
+ * cards lie where they were put while the command travels. A command the table refuses leaves the page reading
+ * the table rather than the hand, which is what puts such an order back down.
+ *
  * @param seat - the table played at and the token the seat is held by.
  * @param layout - how this seat lays the table out, which the moves are read through.
  * @param view - the position as it stands, which a move is weighed and sent against.
@@ -53,6 +63,7 @@ export interface Playing {
  */
 export function usePlay(seat: Seat, layout: Layout, view: PositionView, refresh: () => void): Playing {
   const [held, setHeld] = useState<Held | null>(null);
+  const [laid, setLaid] = useState<Laid | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
@@ -75,9 +86,9 @@ export function usePlay(seat: Seat, layout: Layout, view: PositionView, refresh:
   );
 
   const command = useCallback(
-    (attempt: () => Promise<CommandAccepted>) => {
+    (attempt: () => Promise<CommandAccepted>): boolean => {
       if (sending) {
-        return;
+        return false;
       }
 
       setSending(true);
@@ -88,6 +99,7 @@ export function usePlay(seat: Seat, layout: Layout, view: PositionView, refresh:
         })
         .catch((trouble: unknown) => {
           setNotice(reasonOf(trouble));
+          setLaid(null);
           if (trouble instanceof Refused && movedOn(trouble)) {
             refresh();
           }
@@ -95,6 +107,8 @@ export function usePlay(seat: Seat, layout: Layout, view: PositionView, refresh:
         .finally(() => {
           setSending(false);
         });
+
+      return true;
     },
     [sending, refresh],
   );
@@ -108,10 +122,15 @@ export function usePlay(seat: Seat, layout: Layout, view: PositionView, refresh:
 
   const arrange = useCallback(
     (zone: ZoneId, order: number[]) => {
-      command(() => lay(seat, orderFor(zone, order, view.seq, named())));
+      const laying = laidFrom(view.zones, zone, order);
+      if (command(() => lay(seat, orderFor(zone, order, view.seq, named())))) {
+        setLaid(laying);
+      }
     },
-    [command, seat, view.seq],
+    [command, seat, view.seq, view.zones],
   );
+
+  const reading = useCallback((zone: ZoneId): number[] | null => laidIn(laid, zone, view.zones), [laid, view.zones]);
 
   const commit = useCallback(
     (target: Target) => {
@@ -123,5 +142,15 @@ export function usePlay(seat: Seat, layout: Layout, view: PositionView, refresh:
     [standing, send],
   );
 
-  return { standing, hint: guidance(layout, view, standing, notice), sending, pick, commit, say: send, arrange, clear };
+  return {
+    standing,
+    hint: guidance(layout, view, standing, notice),
+    sending,
+    pick,
+    commit,
+    say: send,
+    arrange,
+    laidIn: reading,
+    clear,
+  };
 }
