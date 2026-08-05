@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from pydantic import model_validator
 
-from cardwork.decks.deck import Deck
-from cardwork.decks.decks import compare_decks
-from cardwork.exceptions import GameValidationError
+from cardwork.cards.game import CardsOrJokers
+from cardwork.decks.deck import Deck, Indices
+from cardwork.decks.decks import compare_decks, named
+from cardwork.exceptions import GameValidationError, LogicError
 from cardwork.models.base import BaseFrozen
-from cardwork.zones.zone import Zone, ZoneId, Zones
+from cardwork.zones.zone import Zone, ZoneId, Zones, cards_of
 
 
 class Board(BaseFrozen):
@@ -14,6 +15,11 @@ class Board(BaseFrozen):
 
     The board is mechanism: it records where cards sit and who may see them, and leaves to the rules
     what any of that means.
+
+    Every reading the board answers is addressed by the id of one zone, since a zone is as much as the
+    board knows: how many cards lie there, which cards they are, what stands at the end of the run, and
+    what the places of a move name. A reading refuses an id the board holds no zone under, which names a
+    missing zone at the reading that wants it.
     """
 
     starting_deck: Deck
@@ -37,6 +43,45 @@ class Board(BaseFrozen):
             raise KeyError(f"Unknown zone {zone_id!r}; the board holds {sorted(self.zones)}")
 
         return self.zones[zone_id]
+
+    def cards(self, zone_id: ZoneId) -> CardsOrJokers:
+        """The cards one zone holds as the rules read them, apart from the face they lie at."""
+        return cards_of(self.zone(zone_id))
+
+    def count(self, zone_id: ZoneId) -> int:
+        """How many cards one zone holds, which is what a rule reading a hand by its length asks."""
+        return len(self.zone(zone_id).cards)
+
+    def holds(self, zone_id: ZoneId) -> bool:
+        """Whether one zone holds a card, which is what a stock still worth drawing from answers to."""
+        return bool(self.zone(zone_id).cards)
+
+    def top(self, zone_id: ZoneId, count: int) -> CardsOrJokers:
+        """The last cards of a run, which is the end a pile is read from.
+
+        A pile is read from its top: the cards laid on last stand at the end of the run, so a play that put
+        three cards there is read by taking three off the top. Reading none of them gives no cards.
+
+        Args:
+            zone_id: the zone whose run is read.
+            count: how many cards are read off the top, up to the whole of the run.
+
+        Raises:
+            LogicError: when the count is negative, or names more cards than the zone holds.
+        """
+        held = self.count(zone_id)
+        if not 0 <= count <= held:
+            raise LogicError(f"Zone {zone_id!r} holds {held} cards, and {count} were read off its top")
+
+        return self.cards(zone_id)[held - count :]
+
+    def taken(self, zone_id: ZoneId, indices: Indices) -> CardsOrJokers:
+        """The cards the given places name, out of the run one zone holds, in the run's own order.
+
+        Raises:
+            KeyError: when a place lies past the cards the zone holds.
+        """
+        return named(self.cards(zone_id), indices)
 
     def with_zones(self, *replacements: Zone) -> Board:
         """Produce a board in which each replacement stands in for the zone sharing its id.

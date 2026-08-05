@@ -1,12 +1,30 @@
 from collections import Counter
+from collections.abc import Sequence
 
-from cardwork.cards.game import CardOrJoker, GameCard, is_joker
+from cardwork.cards.game import CardOrJoker, CardsOrJokers, GameCard, is_joker
 from cardwork.cards.joker import Joker
-from cardwork.decks.deck import Deck, GameCards, GameDeck
+from cardwork.decks.deck import Deck, GameCards, GameDeck, Indices
 
 
 def normalize_deck(deck: GameDeck) -> list[CardOrJoker]:
     return [game_card.card if isinstance(game_card, GameCard) else game_card for game_card in deck]
+
+
+def named(cards: Sequence[CardOrJoker], indices: Indices) -> CardsOrJokers:
+    """The cards standing at the given places of a run, in the order the run holds them.
+
+    A client names the cards it plays by where they stand in the run it was shown, so this is the step from
+    the places a move carries to the cards a rule reads. The cards come back in the run's own order, which
+    leaves the reading the same whichever way a client named the places.
+
+    Raises:
+        KeyError: when a place lies past the end of the run.
+    """
+    size = len(cards)
+    if indices and max(indices) >= size:
+        raise KeyError(f"Place {max(indices)} lies past the {size} cards of the run")
+
+    return tuple(card for place, card in enumerate(cards) if place in indices)
 
 
 def to_game_cards(deck: GameDeck, *, face_down: bool) -> GameCards:
