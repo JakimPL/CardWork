@@ -3,7 +3,7 @@ from typing import Final
 
 from cardgames.backend.shedding.rules import AWARD
 from cardgames.backend.shedding.state import SheddingPhase, SheddingState
-from cardgames.backend.shedding.zones import HAND, STOCK
+from cardgames.backend.shedding.zones import STOCK
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation import presets
 from cardwork.presentation.commit import Commit
@@ -15,7 +15,7 @@ from cardwork.presentation.scope import Scope
 from cardwork.presentation.slot import Slot
 from cardwork.presentation.tally import Tally
 from cardwork.rounds.state import MatchPhase
-from cardwork.zones.zones import DISCARD, hand_of
+from cardwork.zones.zones import DISCARD, HANDS
 
 TITLE: Final[str] = "Shedding"
 
@@ -53,7 +53,7 @@ def slots_of(seat: int) -> tuple[Slot, ...]:
     others that go with it. It grows by the cards a turn draws, so this is the one holding in either game that
     lies at no settled size.
     """
-    return (presets.hand(hand_of(seat), "Your hand", seat=seat, place=HELD),)
+    return (presets.hand(HANDS.of(seat), "Your hand", seat=seat, place=HELD),)
 
 
 def seen_of(seat: int) -> tuple[Slot, ...]:
@@ -62,7 +62,7 @@ def seen_of(seat: int) -> tuple[Slot, ...]:
     A seat down to two cards is what everybody else is playing against, so the size of a holding is the whole of
     what a hand tells the table, and it lies there to be counted at a glance.
     """
-    return (presets.holding(hand_of(seat), "Hand", seat=seat, place=HELD),)
+    return (presets.holding(HANDS.of(seat), "Hand", seat=seat, place=HELD),)
 
 
 def gestures_of(seat: int) -> tuple[Gesture, ...]:
@@ -76,8 +76,8 @@ def gestures_of(seat: int) -> tuple[Gesture, ...]:
     return (
         Gesture(
             kind=ActionKind.DISCARD,
-            group=HAND,
-            picked=hand_of(seat),
+            group=HANDS.name,
+            picked=HANDS.of(seat),
             commit=Commit.ZONE,
             target=DISCARD,
             caption="Shed these cards as one rank",
@@ -87,7 +87,7 @@ def gestures_of(seat: int) -> tuple[Gesture, ...]:
             group=STOCK,
             picked=STOCK,
             commit=Commit.ZONE,
-            target=hand_of(seat),
+            target=HANDS.of(seat),
             caption="Draw this card into your hand",
         ),
     )
@@ -95,7 +95,7 @@ def gestures_of(seat: int) -> tuple[Gesture, ...]:
 
 def counts_of(seat: int) -> tuple[Tally, ...]:
     """What the table reads of a seat's cards, which is how many of them it holds."""
-    return (Tally(zone=hand_of(seat), label="Cards"),)
+    return (Tally(zone=HANDS.of(seat), label="Cards"),)
 
 
 SHEDDING_SCENE: Final[Scene] = Scene(

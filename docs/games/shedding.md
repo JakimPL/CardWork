@@ -27,9 +27,9 @@ which its owner reads and the rest of the table reads the size of.
 | a shed | lays two cards or more of one rank face up on the discard |
 | a draw | takes the card at the end of the stock into the hand, face down |
 
-Either way the turn passes to the next seat. `rules.reads_alike` holds the shed rule whole: `SameRank` at as
-many places as there are cards, so a pair, a triplet and four of a rank all answer to it and cards of two ranks
-answer to none of them.
+Either way the turn passes to the next seat. `rules.SHEDDING_RANKING` holds the shed rule whole: `SameRank` at
+two, three and four places, which is as far as one standard deck reaches, so a pair, a triplet and four of a
+rank each take a place in it and cards of two ranks read as none of them.
 
 **That is the whole of the choice, and it is a real one.** A seat holding a pair may lay it down or hold it back
 and fish for the third of its rank, which is worth doing only while the stock has cards left to hand over — and
@@ -40,7 +40,7 @@ pairs beside the three of them, so a set is chosen as well as found.
 is the fewest a hand runs to, so going out takes the round on the spot and closes it. Otherwise the round runs
 until the stock has run out and no seat holds a set — a seat with neither is passed over, since it has nothing
 it may do — and the shortest hand at the table takes it, every one of them where several stand equally short.
-`rules.taken_by` reads the award off the hands as they lie, so one rule scores either close.
+`position.fewest(HANDS)` reads the shortest hands off the table as they lie, so one rule scores either close.
 
 **The match belongs to the standing once the clauses its table was opened with are met**, which is a count of
 rounds where this is played as it was written and any of `Conclusion`'s three where a table asks for something
@@ -107,9 +107,9 @@ the three of them and a client reading the list reads the whole choice. The list
 only — a seat holding no set with the stock run out — and that is the seat a settlement pass hands the turn past,
 so a table at rest always stands with a seat that has something to do.
 
-The sets come from the ranks of the hand rather than from its positions: `rules.sets_in` files each position
-under the rank standing there and takes the subsets of two and more, which lists eleven sets for four of a rank
-and never walks the 2ⁿ subsets of a hand of any size.
+The sets come from the ranking rather than from the positions of the hand: `SHEDDING_RANKING.selections` reads
+each of its three patterns into the places a hand fills it at, the strongest leading, which lists eleven sets
+for four of a rank and asks the ranks of the hand rather than the 2ⁿ subsets of it.
 
 ---
 
@@ -196,19 +196,22 @@ seat holding the most round wins, which the scene states as `Award.HIGHEST`.
 
 ## 6. What it asked the framework for
 
-**Nothing.** This is the first game to add no primitive to any layer below it, which is the claim the two before
-it were written to make good on. What it does is put what stands there under a load none of it had carried:
+**Nothing of its own.** This is the first game to add no primitive to any layer below it, which is the claim the
+two before it were written to make good on. Two readings it wanted the framework now states — the shortest hand
+at the table, and every set a hand offers — and what it does besides is put what stands there under a load none
+of it had carried:
 
 - **`Discard`** was in the vocabulary from the start and unspoken until now (`moves/actions.py`).
 - **A move naming several cards** travels the projection, the wire, `legal_moves` and the interface's selection
   unchanged, since `indices` was a set the whole way along.
-- **`SameRank(places=n)`** is read at a size the cards decide rather than a pattern the rules fix, which is what
-  `matches` over a pattern built per question is for (`combinations.md` §6).
+- **`SameRank`** stands at three sizes in one `Ranking`, which reads a hand into the sets it may shed and holds
+  a shed to a set — the two readings of one rule, out of one declaration (`combinations.md`).
 - **A gesture committing onto the observer's own zone** exercises the pairing in the direction neither earlier
   game took (`presentation.md` §1).
 - **A zone that grows through a round** is what the interface's fan was measured against, at seventeen cards.
 
-Everything else it consults as it stands: `Redeal` for the gather and the deal, `rotation` and `next_seat` for
-the seats a round deals and travels in, `cards_of` for reading a zone as the rules read it, the `HAND` and `PILE`
-visibility presets, and `RoundGame` for the match around the round — including `match_over`, which reads the
-`Conclusion` its table was opened with, so this game states not one line about how long it runs.
+Everything else it consults as it stands: `Redeal` for the gather and the deal, `rotation`, `next_seat` and
+`following` for the seats a round deals, travels in and passes over, `Board.cards` and `Board.taken` for reading
+a zone as the rules read it, the `HAND` and `PILE` visibility presets, and `RoundGame` for the match around the
+round — including `match_over`, which reads the `Conclusion` its table was opened with, so this game states not
+one line about how long it runs.

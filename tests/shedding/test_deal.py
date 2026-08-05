@@ -5,7 +5,7 @@ from typing import Final
 import pytest
 
 from cardgames.backend.shedding.game import SheddingGame
-from cardgames.backend.shedding.rules import HAND_SIZE, NOTHING, SHED_LEAST
+from cardgames.backend.shedding.rules import HAND_SIZE, SHED_LEAST
 from cardgames.backend.shedding.state import SheddingPhase, SheddingState
 from cardgames.backend.shedding.zones import STOCK
 from cardwork.decks.standard import standard_deck, standard_decks
@@ -15,7 +15,8 @@ from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
-from cardwork.zones.zones import DISCARD, hand_of
+from cardwork.states.state import NOTHING
+from cardwork.zones.zones import DISCARD, HANDS
 from tests.cases import Case, descriptions
 
 from .driving import (
@@ -46,7 +47,7 @@ class ShortDealGame(SheddingGame):
         leader: int,
         rng: Random,
     ) -> Effects[SheddingState]:
-        counts = {hand_of(seat): HAND_SIZE - 1 for seat in rotation(leader, position.players)}
+        counts = {HANDS.of(seat): HAND_SIZE - 1 for seat in rotation(leader, position.players)}
         return Redeal(position, pile=STOCK, face_down=True).effects(counts, rng)
 
 
@@ -68,7 +69,7 @@ DEALS: Final[tuple[DealCase, ...]] = (
 def test_a_round_deals_four_cards_to_every_seat_and_leaves_the_rest_in_the_stock(case: DealCase) -> None:
     game = a_match(case.players, ROUNDS, SEED)
 
-    assert all(len(game.board.zone(hand_of(seat)).cards) == case.each for seat in range(case.players))
+    assert all(len(game.board.zone(HANDS.of(seat)).cards) == case.each for seat in range(case.players))
     assert stocked(game) == case.stocked
     assert len(game.board.zone(DISCARD).cards) == NO_CARDS
     assert game.state.phase == SheddingPhase.SHEDDING
@@ -96,7 +97,7 @@ def test_a_table_opens_offering_the_seat_leading_the_round_its_turn(shedding: Sh
 
 
 def test_a_hand_lies_face_down_and_the_stock_with_it(shedding: SheddingGame) -> None:
-    hands = tuple(shedding.board.zone(hand_of(seat)) for seat in range(SEATS))
+    hands = tuple(shedding.board.zone(HANDS.of(seat)) for seat in range(SEATS))
 
     assert all(game_card.face_down for hand in hands for game_card in hand.cards)
     assert all(game_card.face_down for game_card in shedding.board.zone(STOCK).cards)
@@ -105,9 +106,9 @@ def test_a_hand_lies_face_down_and_the_stock_with_it(shedding: SheddingGame) -> 
 def test_a_seat_reads_its_own_hand_and_the_size_of_every_other(shedding: SheddingGame) -> None:
     view = shedding.view(observer=READER)
 
-    assert view.zones[hand_of(READER)].cards == shedding.board.zone(hand_of(READER)).cards
-    assert all(card is None for card in view.zones[hand_of(ANOTHER_SEAT)].cards)
-    assert len(view.zones[hand_of(ANOTHER_SEAT)].cards) == HAND_SIZE
+    assert view.zones[HANDS.of(READER)].cards == shedding.board.zone(HANDS.of(READER)).cards
+    assert all(card is None for card in view.zones[HANDS.of(ANOTHER_SEAT)].cards)
+    assert len(view.zones[HANDS.of(ANOTHER_SEAT)].cards) == HAND_SIZE
     assert all(card is None for card in view.zones[STOCK].cards)
     assert len(view.zones[STOCK].cards) == stocked(shedding)
 
@@ -117,7 +118,7 @@ def test_a_spectator_reads_the_discard_and_the_size_of_everything_else(shedding:
 
     view = shedding.view(observer=None)
 
-    assert all(card is None for seat in range(SEATS) for card in view.zones[hand_of(seat)].cards)
+    assert all(card is None for seat in range(SEATS) for card in view.zones[HANDS.of(seat)].cards)
     assert all(card is None for card in view.zones[STOCK].cards)
     assert view.zones[DISCARD].cards == shedding.board.zone(DISCARD).cards
     assert len(view.zones[DISCARD].cards) >= SHED_LEAST

@@ -4,9 +4,9 @@ from typing import Final
 import pytest
 
 from cardgames.backend.shedding.game import SheddingGame
-from cardgames.backend.shedding.rules import NOTHING, ROUND_POINT, SHED_LEAST
+from cardgames.backend.shedding.rules import ROUND_POINT, SHED_LEAST
 from cardgames.backend.shedding.state import SheddingPhase
-from cardgames.backend.shedding.zones import HAND, STOCK
+from cardgames.backend.shedding.zones import STOCK
 from cardwork.cards.cards import (
     EIGHT_OF_CLUBS,
     FIVE_OF_DIAMONDS,
@@ -26,8 +26,9 @@ from cardwork.exceptions import IllegalMove, NotYourTurn
 from cardwork.moves.actions import Discard, Play, Take
 from cardwork.moves.move import Move
 from cardwork.rounds.seating import next_seat
+from cardwork.states.state import NOTHING
 from cardwork.zones.zone import cards_of
-from cardwork.zones.zones import DISCARD, hand_of
+from cardwork.zones.zones import DISCARD, HANDS
 
 from .driving import (
     SEATS,
@@ -67,7 +68,7 @@ def test_a_draw_takes_the_card_at_the_end_of_the_stock_into_the_hand(shedding: S
     draw(shedding)
 
     assert held_by(shedding, seat)[LAST_CARD] == taken
-    assert shedding.board.zone(hand_of(seat)).cards[LAST_CARD].face_down
+    assert shedding.board.zone(HANDS.of(seat)).cards[LAST_CARD].face_down
     assert len(held_by(shedding, seat)) == held + 1
     assert stocked(shedding) == stock - 1
     assert shedding.state.to_act == frozenset({next_seat(seat, SEATS)})
@@ -92,7 +93,7 @@ def test_a_shed_lays_the_set_face_up_on_the_discard_and_hands_the_turn_on(sheddi
 
     assert cards_of(laid.board.zone(DISCARD)) == A_PAIR
     assert all(not game_card.face_down for game_card in laid.board.zone(DISCARD).cards)
-    assert cards_of(laid.board.zone(hand_of(ON_TURN))) == ODD_CARDS
+    assert cards_of(laid.board.zone(HANDS.of(ON_TURN))) == ODD_CARDS
     assert laid.state.phase == SheddingPhase.SHEDDING
     assert laid.state.to_act == frozenset({FOLLOWING})
     laid.board.validate_board()
@@ -106,7 +107,7 @@ def test_shedding_two_of_a_triplet_leaves_the_third_of_that_rank_in_hand(sheddin
     laid = shedding.step(position, a_shed(ON_TURN, frozenset({0, 2})), Random(SEED))
 
     assert cards_of(laid.board.zone(DISCARD)) == (FIVE_OF_SPADES, FIVE_OF_DIAMONDS)
-    assert cards_of(laid.board.zone(hand_of(ON_TURN))) == (FIVE_OF_HEARTS,)
+    assert cards_of(laid.board.zone(HANDS.of(ON_TURN))) == (FIVE_OF_HEARTS,)
     assert laid.state.phase == SheddingPhase.SHEDDING
 
 
@@ -116,7 +117,7 @@ def test_a_seat_shedding_its_last_cards_goes_out_and_takes_the_round(shedding: S
 
     out = shedding.step(position, a_shed(ON_TURN, frozenset({0, 1})), Random(SEED))
 
-    assert cards_of(out.board.zone(hand_of(ON_TURN))) == ()
+    assert cards_of(out.board.zone(HANDS.of(ON_TURN))) == ()
     assert out.state.phase == SheddingPhase.DECIDED
     assert out.state.winner == ON_TURN
     assert out.state.to_act == frozenset()
@@ -202,7 +203,7 @@ def test_a_round_two_seats_stand_equally_short_in_goes_to_both_of_them(shedding:
 def test_shedding_from_a_group_this_game_holds_no_cards_in_is_refused(shedding: SheddingGame) -> None:
     seat = seat_on_turn(shedding)
 
-    with pytest.raises(IllegalMove, match=f"sheds from its {HAND}"):
+    with pytest.raises(IllegalMove, match=f"sheds from its {HANDS.name}"):
         shedding.submit(
             Move(player=seat, action=Discard(group="sleeve", indices=frozenset({0, 1}))),
             base_seq=shedding.head,
@@ -269,7 +270,7 @@ def test_an_intent_this_game_leaves_out_is_refused(shedding: SheddingGame) -> No
 
     with pytest.raises(IllegalMove, match="makes a discard or a take, and offered a play"):
         shedding.submit(
-            Move(player=seat, action=Play(group=HAND, indices=frozenset({0}))),
+            Move(player=seat, action=Play(group=HANDS.name, indices=frozenset({0}))),
             base_seq=shedding.head,
         )
 

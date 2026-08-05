@@ -3,9 +3,9 @@ from random import Random
 from typing import Final
 
 from cardgames.backend.shedding.game import SheddingGame
-from cardgames.backend.shedding.rules import drawn_from, sets_in
+from cardgames.backend.shedding.rules import SHEDDING_RANKING, drawn_from
 from cardgames.backend.shedding.state import SheddingState
-from cardgames.backend.shedding.zones import HAND, STOCK
+from cardgames.backend.shedding.zones import STOCK
 from cardwork.cards.game import CardsOrJokers
 from cardwork.decks.deck import Deck, Indices
 from cardwork.decks.decks import to_game_cards
@@ -15,8 +15,8 @@ from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.transactions.transaction import Transaction
-from cardwork.zones.zone import ZoneId, cards_of
-from cardwork.zones.zones import DISCARD, hand_of
+from cardwork.zones.zone import ZoneId
+from cardwork.zones.zones import DISCARD, HANDS
 
 SEATS: Final[int] = 3
 TWO_SEATS: Final[int] = 2
@@ -49,7 +49,7 @@ def seat_on_turn(game: SheddingGame) -> int:
 
 def held_by(game: SheddingGame, seat: int) -> CardsOrJokers:
     """The cards one seat holds, as the rules read them."""
-    return cards_of(game.board.zone(hand_of(seat)))
+    return game.board.cards(HANDS.of(seat))
 
 
 def every_hand(game: SheddingGame) -> tuple[CardsOrJokers, ...]:
@@ -59,12 +59,12 @@ def every_hand(game: SheddingGame) -> tuple[CardsOrJokers, ...]:
 
 def stocked(game: SheddingGame) -> int:
     """How many cards the stock still holds."""
-    return len(game.board.zone(STOCK).cards)
+    return game.board.count(STOCK)
 
 
 def a_shed(seat: int, places: Indices) -> Move:
     """One seat shedding the cards standing at those positions of its own hand."""
-    return Move(player=seat, action=Discard(group=HAND, indices=places))
+    return Move(player=seat, action=Discard(group=HANDS.name, indices=places))
 
 
 def a_draw(seat: int, stock: int) -> Move:
@@ -89,7 +89,7 @@ def left_over(hands: Sequence[CardsOrJokers]) -> int:
 
 def a_set_held_by(game: SheddingGame, seat: int) -> Indices | None:
     """The first set the seat's hand holds, and None where it holds none."""
-    sets = sets_in(held_by(game, seat))
+    sets = SHEDDING_RANKING.selections(held_by(game, seat))
     return sets[FIRST_CARD] if sets else None
 
 
@@ -118,7 +118,7 @@ def a_table_of(
 
     board = game.board
     laid = tuple(
-        board.zone(hand_of(seat)).with_cards(to_game_cards(hand, face_down=True)) for seat, hand in enumerate(hands)
+        board.zone(HANDS.of(seat)).with_cards(to_game_cards(hand, face_down=True)) for seat, hand in enumerate(hands)
     )
     return Position(
         board=board.with_zones(
@@ -133,7 +133,7 @@ def a_table_of(
 
 def every_zone(game: SheddingGame) -> dict[ZoneId, CardsOrJokers]:
     """Every card on the table, filed under the zone holding it, which is what a refusal is read against."""
-    return {zone_id: cards_of(zone) for zone_id, zone in game.board.zones.items()}
+    return {zone_id: game.board.cards(zone_id) for zone_id in game.board.zones}
 
 
 def shedding_first(moves: Moves) -> Move:
@@ -148,7 +148,7 @@ def play_to_a_shed(game: SheddingGame) -> None:
     Raises:
         ValueError: when the table comes to rest with nothing shed, which a deck of pairs never leaves it at.
     """
-    while not game.board.zone(DISCARD).cards:
+    while not game.board.holds(DISCARD):
         moves = game.legal_moves(game.position)
         if moves:
             game.submit(shedding_first(moves), base_seq=game.head)

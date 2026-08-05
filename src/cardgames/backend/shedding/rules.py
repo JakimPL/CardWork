@@ -1,22 +1,19 @@
-from collections.abc import Mapping, Sequence
-from itertools import combinations
+from collections.abc import Sequence
 from typing import Final
 
-from cardwork.cards.card import Card
 from cardwork.cards.game import CardOrJoker
 from cardwork.cards.orders import RANK_SEQUENCE, SUIT_SEQUENCE
-from cardwork.cards.rank import Rank
-from cardwork.combinations.detect import matches
 from cardwork.combinations.patterns.same_rank import SameRank
 from cardwork.combinations.policy import Duplicates, Evaluation
+from cardwork.combinations.ranking import Ranking
 from cardwork.decks.deck import Indices
 from cardwork.exceptions import LogicError
 from cardwork.states.award import Award
-from cardwork.states.state import NOTHING, Points
 
 AWARD: Final[Award] = Award.HIGHEST
 HAND_SIZE: Final[int] = 4
 SHED_LEAST: Final[int] = 2
+ALIKE_MOST: Final[int] = len(SUIT_SEQUENCE)
 ONE_CARD: Final[int] = 1
 ROUND_POINT: Final[int] = 1
 NO_CARDS: Final[int] = 0
@@ -32,60 +29,10 @@ SHEDDING_EVALUATION: Final[Evaluation] = Evaluation(
     duplicates=Duplicates.COUNT,
 )
 
-
-def ranked(card: CardOrJoker) -> Rank:
-    """The rank a card reads as, which every card of the deck this game is played with carries.
-
-    Raises:
-        LogicError: when the card is a joker, which the one standard deck of this game holds none of.
-    """
-    if isinstance(card, Card):
-        return card.rank
-
-    raise LogicError(f"This game is played with suited cards alone, and read {card}")
-
-
-def reads_alike(cards: Sequence[CardOrJoker]) -> bool:
-    """Whether the cards are a set: two of them or more, every one reading as the one rank.
-
-    This is the whole rule a shed is held to, and `SameRank` at as many places as there are cards states it:
-    a pair, a triplet and four of a rank all answer to it, and cards of two ranks answer to none of them.
-    """
-    return len(cards) >= SHED_LEAST and matches(
-        cards,
-        SameRank(places=len(cards)),
-        SHEDDING_EVALUATION,
-    )
-
-
-def alike_places(hand: Sequence[CardOrJoker]) -> Mapping[Rank, tuple[int, ...]]:
-    """The positions of a hand filed under the rank the card standing at each of them reads as."""
-    places: dict[Rank, tuple[int, ...]] = {}
-    for place, card in enumerate(hand):
-        rank = ranked(card)
-        places[rank] = places.get(rank, ()) + (place,)
-
-    return places
-
-
-def holds_a_set(hand: Sequence[CardOrJoker]) -> bool:
-    """Whether the hand holds a set to shed, which is two of its cards or more reading as one rank."""
-    return any(len(places) >= SHED_LEAST for places in alike_places(hand).values())
-
-
-def sets_in(hand: Sequence[CardOrJoker]) -> tuple[Indices, ...]:
-    """Every set of positions a hand may shed, from a pair of one rank up to the whole of that rank.
-
-    A set is drawn from the positions one rank stands at, so every one of them reads alike by construction,
-    and the ranks of a hand are what keeps the list short: a hand offers as many sets as its repeated ranks
-    hold subsets, rather than as many as its positions do.
-    """
-    return tuple(
-        frozenset(chosen)
-        for places in alike_places(hand).values()
-        for size in range(SHED_LEAST, len(places) + 1)
-        for chosen in combinations(places, size)
-    )
+SHEDDING_RANKING: Final[Ranking] = Ranking(
+    patterns=tuple(SameRank(places=places) for places in range(SHED_LEAST, ALIKE_MOST + ONE_CARD)),
+    evaluation=SHEDDING_EVALUATION,
+)
 
 
 def drawn_from(stock: int) -> Indices:
@@ -115,27 +62,4 @@ def may_act(hand: Sequence[CardOrJoker], stock: int) -> bool:
         hand: the cards the seat holds.
         stock: how many cards the stock holds.
     """
-    return stock > NO_CARDS or holds_a_set(hand)
-
-
-def taken_by(hands: Sequence[int]) -> Points:
-    """The round's award: the point it is worth to each seat left holding the fewest cards.
-
-    A seat that sheds its last card holds none, which is the fewest a hand runs to, so a seat going out takes
-    the round it closes. A round the stock ran out of goes to the shortest hand at the table, and to each of
-    them where several stand as short as one another.
-
-    Args:
-        hands: how many cards each seat holds, in seat order.
-    """
-    fewest = min(hands)
-    return tuple(ROUND_POINT if held == fewest else NOTHING for held in hands)
-
-
-def gone_out(hands: Sequence[int]) -> int | None:
-    """The seat that shed its last card, and None where every seat is still holding one.
-
-    Args:
-        hands: how many cards each seat holds, in seat order.
-    """
-    return next((seat for seat, held in enumerate(hands) if held == NO_CARDS), None)
+    return stock > NO_CARDS or SHEDDING_RANKING.strongest(hand) is not None

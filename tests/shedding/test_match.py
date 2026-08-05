@@ -7,7 +7,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from cardgames.backend.shedding.game import SheddingGame
-from cardgames.backend.shedding.rules import NOTHING, ROUND_POINT
+from cardgames.backend.shedding.rules import ROUND_POINT
 from cardgames.backend.shedding.state import SheddingPhase
 from cardgames.backend.shedding.zones import STOCK
 from cardwork.cards.cards import (
@@ -20,7 +20,8 @@ from cardwork.cards.game import CardsOrJokers
 from cardwork.effects.fold import fold
 from cardwork.rounds.conclusion import ONE_ROUND
 from cardwork.rounds.state import MatchPhase
-from cardwork.zones.zones import DISCARD, hand_of
+from cardwork.states.state import NOTHING
+from cardwork.zones.zones import DISCARD, HANDS
 from tests.cases import Case, descriptions
 
 from .driving import (
@@ -89,7 +90,7 @@ def test_a_match_runs_its_rounds_out_to_the_cards_it_was_dealt_from(case: MatchC
     game = a_match_played_out(case)
     stocked = len(game.board.zone(STOCK).cards)
     shed = len(game.board.zone(DISCARD).cards)
-    held = sum(len(game.board.zone(hand_of(seat)).cards) for seat in range(case.players))
+    held = sum(len(game.board.zone(HANDS.of(seat)).cards) for seat in range(case.players))
 
     assert stocked + shed + held == len(game.board.starting_deck)
     for seq in range(game.head + 1):

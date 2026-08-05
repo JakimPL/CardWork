@@ -5,39 +5,33 @@ from cardgames.backend.shedding.rules import (
     AWARD,
     HAND_SIZE,
     NO_CARDS,
+    ROUND_POINT,
     SEATS_LEAST,
     SEATS_MOST,
     SHED_LEAST,
+    SHEDDING_RANKING,
     drawn_from,
-    gone_out,
     may_act,
-    reads_alike,
-    sets_in,
-    taken_by,
 )
 from cardgames.backend.shedding.state import SheddingPhase, SheddingState
-from cardgames.backend.shedding.zones import (
-    HAND,
-    STOCK,
-    shedding_zones,
-)
-from cardwork.cards.game import CardsOrJokers
+from cardgames.backend.shedding.zones import STOCK, shedding_zones
 from cardwork.decks.deck import Deck
 from cardwork.decks.standard import confirm_standard_deck
 from cardwork.effects.effects import Effects, MoveCards, SetState
-from cardwork.exceptions import GameValidationError, IllegalMove
+from cardwork.exceptions import IllegalMove
 from cardwork.games.capacity import Capacity
+from cardwork.games.dealt import confirm_dealt
 from cardwork.games.intents import Intents
 from cardwork.moves.actions import Discard, Take
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.rounds.game import RoundGame
 from cardwork.rounds.redeal import Redeal
-from cardwork.rounds.seating import next_seat, rotation
+from cardwork.rounds.seating import following, next_seat, rotation
 from cardwork.rounds.state import MatchPhase
 from cardwork.states.state import NOTHING
-from cardwork.zones.zone import Zones, cards_of
-from cardwork.zones.zones import DISCARD, hand_of
+from cardwork.zones.zone import Zones
+from cardwork.zones.zones import DISCARD, HANDS
 
 
 class SheddingGame(RoundGame[SheddingState]):
@@ -45,8 +39,9 @@ class SheddingGame(RoundGame[SheddingState]):
 
     A round deals every seat four cards and runs the turns those hold. **A turn either sheds or draws.** A shed
     lays two cards or more of one rank face up on the discard, so four alike go out in one turn and a pair at a
-    time takes two; `rules.reads_alike` holds that rule whole. A draw takes one card of the stock into the hand.
-    Either way the turn passes to the next seat.
+    time takes two; `rules.SHEDDING_RANKING` holds that rule whole, as the two, three and four of a rank one
+    standard deck reaches. A draw takes one card of the stock into the hand. Either way the turn passes to the
+    next seat.
 
     That is the whole of the choice, and it is a real one: a seat holding a pair may lay it down or hold it back
     and fish for the third of its rank, which a hand is only ever worth doing while the stock has cards left to
@@ -86,13 +81,7 @@ class SheddingGame(RoundGame[SheddingState]):
         Raises:
             GameValidationError: when a hand holds a number of cards other than the deal gives it.
         """
-        short = tuple(
-            seat for seat in range(position.players) if len(position.board.zone(hand_of(seat)).cards) != HAND_SIZE
-        )
-        if short:
-            raise GameValidationError(
-                f"Seats {short} hold a hand of a size other than the {HAND_SIZE} the deal gives them"
-            )
+        confirm_dealt(position, HANDS, HAND_SIZE)
 
     def deal_round(
         self,
@@ -101,7 +90,7 @@ class SheddingGame(RoundGame[SheddingState]):
         rng: Random,
     ) -> Effects[SheddingState]:
         """Every card gathered and shuffled, then four dealt to each seat from the leader round the table."""
-        counts = {hand_of(seat): HAND_SIZE for seat in rotation(leader, position.players)}
+        counts = HANDS.dealt(HAND_SIZE, rotation(leader, position.players))
         return Redeal(position, pile=STOCK, face_down=True).effects(counts, rng)
 
     def opening_state(
@@ -131,8 +120,7 @@ class SheddingGame(RoundGame[SheddingState]):
         if move is None:
             return self._standing(position)
 
-        acted: Effects[SheddingState] = (SetState(state=self._acted(position, move)),)
-        return acted
+        return (SetState(state=self._acted(position, move)),)
 
     def round_over(self, position: Position[SheddingState]) -> bool:
         return position.state.phase == SheddingPhase.DECIDED
@@ -164,33 +152,22 @@ class SheddingGame(RoundGame[SheddingState]):
             case Take():
                 return self._drew(position, move.player)
 
-    def legal_moves(self, position: Position[SheddingState]) -> Moves:
-        """Every set the seat on turn may shed, and the draw it may take while the stock holds a card.
+    def moves_of(self, position: Position[SheddingState], seat: int) -> Moves:
+        """Every set one seat may shed, and the draw it may take while the stock holds a card.
 
-        A triplet in hand lists both of its pairs beside the three of them, so a client reading this list reads
-        the whole choice a turn carries. The list is empty for a seat holding no set with the stock run out,
-        which is the seat a settlement pass hands the turn past.
+        A triplet in hand lists the three of them and each of their pairs, so a client reading this list reads
+        the whole choice a turn carries. A seat holding no set with the stock run out is offered nothing, which
+        is the seat a settlement pass hands the turn past.
         """
-        return tuple(move for seat in sorted(position.state.to_act) for move in self._turn_of(position, seat))
-
-    def _turn_of(self, position: Position[SheddingState], seat: int) -> Moves:
-        """The moves one seat may make from this position: each set of its hand, then the draw."""
         sheds = tuple(
-            Move(player=seat, action=Discard(group=HAND, indices=places))
-            for places in sets_in(self._held_by(position, seat))
+            Move(player=seat, action=Discard(group=HANDS.name, indices=places))
+            for places in SHEDDING_RANKING.selections(position.board.cards(HANDS.of(seat)))
         )
-        stock = len(position.board.zone(STOCK).cards)
-        draws = (
-            (
-                Move(
-                    player=seat,
-                    action=Take(group=STOCK, indices=drawn_from(stock)),
-                ),
-            )
-            if stock > NO_CARDS
-            else ()
-        )
-        return sheds + draws
+        if not position.board.holds(STOCK):
+            return sheds
+
+        drawn = drawn_from(position.board.count(STOCK))
+        return sheds + (Move(player=seat, action=Take(group=STOCK, indices=drawn)),)
 
     def _validate_shed(
         self,
@@ -204,19 +181,19 @@ class SheddingGame(RoundGame[SheddingState]):
             IllegalMove: when the shed names another group, names fewer than two cards, names a position
                 beyond the hand, or names cards reading as more than one rank.
         """
-        if shedding.group != HAND:
-            raise IllegalMove(f"Seat {seat} sheds from its {HAND}, and named {shedding.group!r}")
+        if shedding.group != HANDS.name:
+            raise IllegalMove(f"Seat {seat} sheds from its {HANDS.name}, and named {shedding.group!r}")
 
         if len(shedding.indices) < SHED_LEAST:
             raise IllegalMove(f"Seat {seat} sheds {SHED_LEAST} cards or more, and named {len(shedding.indices)}")
 
-        held = self._held_by(position, seat)
-        if max(shedding.indices) >= len(held):
-            raise IllegalMove(f"Seat {seat} named position {max(shedding.indices)} of a hand holding {len(held)}")
+        held = position.board.count(HANDS.of(seat))
+        if max(shedding.indices) >= held:
+            raise IllegalMove(f"Seat {seat} named position {max(shedding.indices)} of a hand holding {held}")
 
-        named = tuple(held[place] for place in sorted(shedding.indices))
-        if not reads_alike(named):
-            shown = " ".join(str(card) for card in named)
+        shed = position.board.taken(HANDS.of(seat), shedding.indices)
+        if SHEDDING_RANKING.exactly(shed) is None:
+            shown = " ".join(str(card) for card in shed)
             raise IllegalMove(f"Seat {seat} sheds cards reading as one rank, and named {shown}")
 
     def _validate_draw(
@@ -234,7 +211,7 @@ class SheddingGame(RoundGame[SheddingState]):
         if drawing.group != STOCK:
             raise IllegalMove(f"Seat {seat} draws from the {STOCK}, and named {drawing.group!r}")
 
-        stock = len(position.board.zone(STOCK).cards)
+        stock = position.board.count(STOCK)
         if stock == NO_CARDS:
             raise IllegalMove(f"Seat {seat} draws from a {STOCK} that has run out")
 
@@ -246,15 +223,14 @@ class SheddingGame(RoundGame[SheddingState]):
 
     def _laid(self, seat: int, shedding: Discard) -> Effects[SheddingState]:
         """The set laid face up on the discard, where the whole table reads what a turn shed."""
-        laid: Effects[SheddingState] = (
+        return (
             MoveCards(
-                source=hand_of(seat),
+                source=HANDS.of(seat),
                 indices=shedding.indices,
                 target=DISCARD,
                 face_down=False,
             ),
         )
-        return laid
 
     def _drew(
         self,
@@ -262,23 +238,14 @@ class SheddingGame(RoundGame[SheddingState]):
         seat: int,
     ) -> Effects[SheddingState]:
         """The card at the end of the stock taken into the hand, face down as everything in a hand is."""
-        drew: Effects[SheddingState] = (
+        return (
             MoveCards(
                 source=STOCK,
-                indices=drawn_from(len(position.board.zone(STOCK).cards)),
-                target=hand_of(seat),
+                indices=drawn_from(position.board.count(STOCK)),
+                target=HANDS.of(seat),
                 face_down=True,
             ),
         )
-        return drew
-
-    def _held_by(
-        self,
-        position: Position[SheddingState],
-        seat: int,
-    ) -> CardsOrJokers:
-        """The cards one seat holds, as the rules read them."""
-        return cards_of(position.board.zone(hand_of(seat)))
 
     def _may_act(
         self,
@@ -287,8 +254,8 @@ class SheddingGame(RoundGame[SheddingState]):
     ) -> bool:
         """Whether one seat has a turn to take from this position."""
         return may_act(
-            self._held_by(position, seat),
-            len(position.board.zone(STOCK).cards),
+            position.board.cards(HANDS.of(seat)),
+            position.board.count(STOCK),
         )
 
     def _acted(
@@ -297,8 +264,8 @@ class SheddingGame(RoundGame[SheddingState]):
         move: Move,
     ) -> SheddingState:
         """The cursor the round stands on once a turn has landed: the round closed on a seat out, or the turn passed on."""
-        if not self._held_by(position, move.player):
-            return self._decided(position)
+        if not position.board.holds(HANDS.of(move.player)):
+            return self._decided(position, winner=move.player)
 
         return position.state.with_changes(to_act=next_seat(move.player, position.players))
 
@@ -320,32 +287,34 @@ class SheddingGame(RoundGame[SheddingState]):
         seat: int,
     ) -> Effects[SheddingState]:
         """The turn handed to the next seat that may act, and the round decided where no seat may."""
-        following = next(
-            (
-                other
-                for other in rotation(next_seat(seat, position.players), position.players)
-                if self._may_act(position, other)
-            ),
-            None,
+        onwards = following(
+            seat,
+            position.players,
+            lambda other: self._may_act(position, other),
+            including=False,
         )
-        standing = self._decided(position) if following is None else position.state.with_changes(to_act=following)
-        passed: Effects[SheddingState] = (SetState(state=standing),)
-        return passed
+        if onwards is None:
+            return (SetState(state=self._decided(position, winner=None)),)
 
-    def _decided(self, position: Position[SheddingState]) -> SheddingState:
+        return (SetState(state=position.state.with_changes(to_act=onwards)),)
+
+    def _decided(
+        self,
+        position: Position[SheddingState],
+        winner: int | None,
+    ) -> SheddingState:
         """The round closed: the award to the shortest hand at the table, and the seat that went out where one did.
 
         One rule scores either close. A seat shedding its last card is the shortest hand there can be, and a
         round the stock ran out of is read the same way, so the award follows from the hands as they lie.
-        """
-        hands = self._hands(position)
-        return position.state.with_changes(
-            phase=SheddingPhase.DECIDED,
-            to_act=frozenset(),
-            winner=gone_out(hands),
-            round_points=taken_by(hands),
-        )
 
-    def _hands(self, position: Position[SheddingState]) -> tuple[int, ...]:
-        """How many cards each seat holds, in seat order, which is what a closing round is scored on."""
-        return tuple(len(position.board.zone(hand_of(seat)).cards) for seat in range(position.players))
+        Args:
+            position: the table as the round leaves it.
+            winner: the seat that shed its last card, and None for a round the stock ran out of.
+        """
+        shortest = position.fewest(HANDS)
+        return position.state.at_rest(
+            SheddingPhase.DECIDED,
+            winner=winner,
+            round_points=tuple(ROUND_POINT if seat in shortest else NOTHING for seat in position.seats),
+        )
