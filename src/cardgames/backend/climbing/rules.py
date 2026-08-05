@@ -10,7 +10,6 @@ from cardwork.combinations.poker import (
     STRAIGHT,
     STRAIGHT_FLUSH,
     TRIPLET,
-    TWO_PAIR,
 )
 from cardwork.combinations.policy import Duplicates, Evaluation
 from cardwork.combinations.ranking import Ranking
@@ -23,7 +22,6 @@ AWARD: Final[Award] = Award.HIGHEST
 CLIMBING_PATTERNS: Final[tuple[Pattern, ...]] = (
     HIGH_CARD,
     PAIR,
-    TWO_PAIR,
     TRIPLET,
     STRAIGHT,
     FLUSH,
