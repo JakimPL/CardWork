@@ -516,9 +516,23 @@ button.card {
   position: absolute;
   z-index: 1;
   border: 0;
+  border-radius: var(--radius);
   background: none;
   cursor: pointer;
   inset: calc(var(--gap) / -2);
+}
+
+/*
+ * The place under a hand carrying cards, which is the one about to take them.
+ *
+ * Every place the cards in hand may go to is already ringed, so the one the hand has reached says so more brightly
+ * and takes a wash of the same colour: a player carrying cards across the table reads where they are about to land
+ * before they let go of them.
+ */
+
+.landing.aimed {
+  background: rgb(111 207 151 / 18%);
+  box-shadow: 0 0 0 3px var(--live);
 }
 
 .page.sending .landing,
@@ -549,23 +563,24 @@ button.card {
 }
 
 /*
- * A card of a run its owner orders, and the same card while it is being carried to another place in that run.
+ * A card a hand may take hold of, and the same card while a hand is carrying it.
  *
- * The hand a player sets the order of says so by the grip it offers, which is the one mark a run being sortable
- * carries: the cards read as cards, and taking hold of one is a thing the pointer discovers where it lies. A run
- * ordered by hand answers the hand alone, so a finger carrying a card across it moves that card.
+ * A run a player plays out of or sets the order of says so by the grip it offers, which is the one mark such a
+ * card carries: the cards read as cards, and taking hold of one is a thing the pointer discovers where it lies. A
+ * card being carried answers the hand alone, so a finger travelling across the page carries that card.
  *
- * The card in hand travels with the pointer holding it and lies over the run it is being carried across, raised
- * off the table by the shadow it casts, and it goes where the pointer goes rather than easing after it. The cards
- * it passed over close up behind it and open ahead of it in their own time, which reads as the run making room —
- * so what the player sees is the card in their hand and the order it is about to lie in.
+ * The card in hand travels with the pointer holding it and lies over what it is carried across, raised off the
+ * table by the shadow it casts, and it goes where the pointer goes rather than easing after it. Carried through
+ * the run it came out of, the cards it passed over close up behind it and open ahead of it in their own time,
+ * which reads as the run making room — so what the player sees is the card in their hand and the order it is
+ * about to lie in.
  *
  * A card let go under the hand that laid it stands at the height a card under the hand stands at, and arrives
  * there in one step: the hand is still on it, so it is still a card in hand and reads as one until the hand
  * comes off it. A card the hand came off, or let go over the card beside it, lies as the run draws it.
  */
 
-.card.sortable {
+.card.carryable {
   cursor: grab;
   touch-action: none;
 }

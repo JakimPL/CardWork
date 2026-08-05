@@ -128,6 +128,11 @@ export function offerTo(standing: Prospect, target: Target): Offered | null {
   return standing.armed.find((offer) => offer.target !== null && keyOf(offer.target) === keyOf(target)) ?? null;
 }
 
+/** One name per place, which is how two moves are told to be sent onto the same one, and one place from another. */
+export function keyOf(target: Target): string {
+  return target.commit === ZONE ? `${ZONE}:${target.zone}` : `${SEAT}:${target.seat}`;
+}
+
 /**
  * The moves a word sends, out of every move the table offers, whichever of them the cards in hand arm.
  *
@@ -329,11 +334,6 @@ function saidOf(armed: Offered[]): Offered[] {
 /** The cards in hand, which reads as none of them while nothing is picked up. */
 function heldIn(selection: Selection | null): number[] {
   return selection === null ? [] : selection.indices;
-}
-
-/** One name per place, which is how two moves are told to be sent onto the same one. */
-function keyOf(target: Target): string {
-  return target.commit === ZONE ? `${ZONE}:${target.zone}` : `${SEAT}:${target.seat}`;
 }
 
 /** The selection left when one card is put back down, and none once the last of them is. */

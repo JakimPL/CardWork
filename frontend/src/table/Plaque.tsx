@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { useMemo } from "react";
 
 import type { Layout, Plaque as Standing } from "../api/layout";
 import type { PositionView } from "../api/views";
@@ -7,7 +8,7 @@ import type { Target } from "../play/selection";
 import { offerTo } from "../play/selection";
 import type { Playing } from "../play/usePlay";
 import { classes } from "./classes";
-import { clicking } from "./clicks";
+import { Landing } from "./Landing";
 import { drawnAt } from "./placing";
 
 interface PlaqueProps {
@@ -31,20 +32,12 @@ interface PlaqueProps {
 export function Plaque({ plaque, layout, view, playing }: PlaqueProps): ReactElement {
   const acting = view.state.to_act.includes(plaque.seat);
   const seated = plaque.seat === layout.observer;
-  const onto: Target = { commit: "seat", seat: plaque.seat };
+  const onto = useMemo<Target>(() => ({ commit: "seat", seat: plaque.seat }), [plaque.seat]);
   const landing = drawnAt(layout, plaque.seat) ? null : offerTo(playing.standing, onto);
   return (
     <div className={classes("plaque", acting && "acting", seated && "own", landing !== null && "live")}>
       {landing !== null && (
-        <button
-          type="button"
-          className="landing"
-          title={landing.caption}
-          aria-label={`${landing.caption}: ${plaque.name}`}
-          onClick={clicking(() => {
-            playing.commit(onto);
-          })}
-        />
+        <Landing onto={onto} caption={landing.caption} label={`${landing.caption}: ${plaque.name}`} playing={playing} />
       )}
       <span className="who">{seated ? `${plaque.name} (you)` : plaque.name}</span>
       <dl className="figures">

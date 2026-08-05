@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { useMemo } from "react";
 
 import type { Layout } from "../api/layout";
 import type { PositionView } from "../api/views";
@@ -8,7 +9,7 @@ import type { Target } from "../play/selection";
 import { offerTo } from "../play/selection";
 import type { Playing } from "../play/usePlay";
 import { classes } from "./classes";
-import { clicking } from "./clicks";
+import { Landing } from "./Landing";
 import type { Station as Seated } from "./placing";
 import { Zones } from "./Zones";
 
@@ -31,25 +32,17 @@ interface StationProps {
  * since the room round the edge of a table runs deeper than it runs wide.
  *
  * A seat the cards in hand can be sent to lies under a place to send them, so a card is passed by pointing at
- * the player it goes to.
+ * the player it goes to, or by carrying it onto them.
  */
 export function Station({ station, layout, view, arrivals, playing }: StationProps): ReactElement {
   const acting = view.state.to_act.includes(station.seat);
-  const onto: Target = { commit: "seat", seat: station.seat };
+  const onto = useMemo<Target>(() => ({ commit: "seat", seat: station.seat }), [station.seat]);
   const landing = offerTo(playing.standing, onto);
   const name = nameOf(layout, station.seat);
   return (
     <div className={classes("station", acting && "acting", landing !== null && "live")}>
       {landing !== null && (
-        <button
-          type="button"
-          className="landing"
-          title={landing.caption}
-          aria-label={`${landing.caption}: ${name}`}
-          onClick={clicking(() => {
-            playing.commit(onto);
-          })}
-        />
+        <Landing onto={onto} caption={landing.caption} label={`${landing.caption}: ${name}`} playing={playing} />
       )}
       <span className="who">{name}</span>
       <Zones place="theirs" slots={station.slots} view={view} arrivals={arrivals} playing={playing} />

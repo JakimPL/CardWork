@@ -14,6 +14,7 @@ import { answering } from "./clicks";
 import { Curtain } from "./Curtain";
 import { Header } from "./Header";
 import { clears, says } from "./keys";
+import { Reaching } from "./landings";
 import { own, ringOf, shared, SIDES } from "./placing";
 import { Sitting } from "./Sitting";
 import { crowding, shaping } from "./sizing";
@@ -44,6 +45,9 @@ interface PlayfieldProps {
  *
  * The proportions of a card stand on the page itself, since every card on it is drawn from the one pack the
  * table serves: a pack written at another shape is drawn at that shape, hand and table alike.
+ *
+ * The places a move is sent by are held for the whole page, since the cards travel under the hand that took hold
+ * of them: a move is sent by carrying its cards onto the place it goes to as readily as by pointing at that place.
  *
  * Three presses put the cards in hand back down, which between them cover every way a table is played: a click
  * on the page away from the cards, a press of the other button wherever it lands, and `Escape`. The first is the
@@ -96,36 +100,38 @@ export function Playfield({
   }, [clear, say, spoken]);
 
   return (
-    <div
-      className={classes("page", playing.sending && "sending")}
-      style={shaping(artwork)}
-      onClick={clear}
-      onContextMenu={answering(clear)}
-      role="presentation"
-    >
-      <Header layout={layout} view={view} playing={playing} />
-      <main className="felt" style={crowding(ring)}>
-        {SIDES.map((side) => (
-          <Sitting
-            key={side}
-            side={side}
-            seats={ring[side]}
-            layout={layout}
-            view={view}
-            arrivals={arrivals}
-            playing={playing}
-          />
-        ))}
-        <Zones place="shared" slots={shared(layout)} view={view} arrivals={arrivals} playing={playing} />
-      </main>
-      <footer className="controls">
-        <Zones place="own" slots={own(layout)} view={view} arrivals={arrivals} playing={playing} />
-        <p className="guidance" role="status">
-          {playing.hint}
-        </p>
-        <StatusLine layout={layout} view={view} connection={connection} trouble={trouble} />
-      </footer>
-      {report !== null && <Curtain layout={layout} report={report} dismiss={dismiss} />}
-    </div>
+    <Reaching>
+      <div
+        className={classes("page", playing.sending && "sending")}
+        style={shaping(artwork)}
+        onClick={clear}
+        onContextMenu={answering(clear)}
+        role="presentation"
+      >
+        <Header layout={layout} view={view} playing={playing} />
+        <main className="felt" style={crowding(ring)}>
+          {SIDES.map((side) => (
+            <Sitting
+              key={side}
+              side={side}
+              seats={ring[side]}
+              layout={layout}
+              view={view}
+              arrivals={arrivals}
+              playing={playing}
+            />
+          ))}
+          <Zones place="shared" slots={shared(layout)} view={view} arrivals={arrivals} playing={playing} />
+        </main>
+        <footer className="controls">
+          <Zones place="own" slots={own(layout)} view={view} arrivals={arrivals} playing={playing} />
+          <p className="guidance" role="status">
+            {playing.hint}
+          </p>
+          <StatusLine layout={layout} view={view} connection={connection} trouble={trouble} />
+        </footer>
+        {report !== null && <Curtain layout={layout} report={report} dismiss={dismiss} />}
+      </div>
+    </Reaching>
   );
 }

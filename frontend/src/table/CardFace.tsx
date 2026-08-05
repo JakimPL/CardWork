@@ -54,9 +54,10 @@ interface CardFaceProps {
  * A card that has just been laid where it lies comes in from the hand it was played out of, which is what a
  * player watching the table sees happen.
  *
- * A card of a run whose order is its owner's to set is taken hold of where it lies and carried to another place
- * in that run, and it lies over the run while it travels, so a player reads the run as it is about to lie. Let go
- * under the hand that laid it, it stands raised where it came to rest for as long as the hand is on it.
+ * A card a move picks in is taken hold of where it lies and carried to where it is going, and it lies over the
+ * table while it travels: carried through the run it came out of it reads as the run about to lie, and carried
+ * clear of that run it reads as a card on its way somewhere else. Let go under the hand that laid it, it stands
+ * raised where it came to rest for as long as the hand is on it.
  *
  * A table opened with a pack of artwork draws every card as the picture that pack holds for it, and the same
  * element carries it: what a card is called, how it lies and what a press does with it are the drawing of a
@@ -71,7 +72,7 @@ export function CardFace({ card, selected, dimmed, arriving, onPick, handling }:
     selected && "selected",
     dimmed && "dimmed",
     arriving && "arriving",
-    handling !== null && "sortable",
+    handling !== null && "carryable",
     handling !== null && handling.carried && "carried",
     handling !== null && handling.laid && "laid",
   );

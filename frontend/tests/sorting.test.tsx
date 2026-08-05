@@ -11,6 +11,7 @@ import {
   carriedTo,
   grasped,
   handled,
+  heldAt,
   laidOut,
   moved,
   nearest,
@@ -25,14 +26,23 @@ import { own, shared } from "../src/table/placing";
 import { Zones } from "../src/table/Zones";
 import { aLayout, aPlaying, aView, card, DEALT_FROM, HAND, HELD, LAID_ON, PILE, sortable, STACK } from "./tables";
 
-/** The run these tests carry a card through, which is a hand of four read by its ranks. */
+/** The run these tests carry cards through, which is a hand of four read by its ranks. */
 const RUN = ["9♦", "8♠", "4♦", "K♣"];
 
 /**
  * Where that run is drawn: four places a hundred apart, all of them at the one height a run lies at, each card
- * of it reaching wider than the places stand apart — which is a fan, where each card covers the one before.
+ * of it reaching wider than the places stand apart — which is a fan, where each card covers the one before. The
+ * order of it is this seat's own to set, which is what a carry through it lays down.
  */
-const PLACES: Places = { middles: [100, 200, 300, 400], along: 500, reach: { across: 140, down: 190 } };
+const PLACES: Places = {
+  middles: [100, 200, 300, 400],
+  along: 500,
+  reach: { across: 140, down: 190 },
+  orderable: true,
+};
+
+/** The same run with the table keeping the order of it, which is a run carried out of and never through. */
+const KEPT: Places = { ...PLACES, orderable: false };
 
 /** The press a pointer makes of itself, and one it makes of a button standing beside that. */
 const PRESSED = 0;
@@ -65,7 +75,10 @@ const RESTING = aPlaying(prospect([], null));
 const IDLE = (): void => undefined;
 
 /** The card at the second place taken hold of a little right of the middle of it, as a hand on it would be. */
-const TAKEN = grasped(1, PLACES, { across: 210, down: 505 });
+const TAKEN = grasped(1, [], PLACES, { across: 210, down: 505 });
+
+/** The third card of the run pressed with the first already in hand, which takes hold of the two of them. */
+const GATHERED = grasped(2, [0, 2], PLACES, { across: 310, down: 505 });
 
 /** How one place of a run is handled, which a test states the part of it that it means to read. */
 function handling(answers: Partial<Handling>): Handling {
@@ -102,29 +115,49 @@ function aPress(button: number, at: Point, holding: Holding): PointerEvent<HTMLE
   } as unknown as PointerEvent<HTMLElement>;
 }
 
-/** A card the hand has carried, which stands off the place the run draws it by however far it has come. */
+/** Cards the hand has carried, which stand off the places the run draws them by however far they have come. */
 interface Carried extends Carry {
   by: Shift;
 }
 
-/** The carry one point states of the card in hand, which every point states of a card taken hold of. */
+/** The carry one point states of the cards in hand, which every point states of cards taken hold of. */
 function pressedTo(taken: Carry, at: Point): Carry {
   const carried = carriedTo(taken, PLACES, at);
   if (carried === null) {
-    throw new Error("a card taken hold of is carried by every point the pointer stands at");
+    throw new Error("cards taken hold of are carried by every point the pointer stands at");
   }
 
   return carried;
 }
 
-/** The same, of a point the hand has carried the card to, which is a card standing off its place. */
+/** The same, of a point the hand has carried the cards to, which is cards standing off their places. */
 function carriedFrom(taken: Carry, at: Point): Carried {
   const carried = pressedTo(taken, at);
   if (carried.by === null) {
-    throw new Error("a card the hand has carried anywhere stands off the place the run draws it");
+    throw new Error("cards the hand has carried anywhere stand off the places the run draws them");
   }
 
   return { ...carried, by: carried.by };
+}
+
+/** Where the run draws the card the hand pressed, which is what the block of cards in hand hangs from. */
+function pressedAt(carried: Carry): number {
+  const place = heldAt(carried).at(carried.rank);
+  if (place === undefined) {
+    throw new Error("the cards in hand hold the card the hand pressed among them");
+  }
+
+  return place;
+}
+
+/** Where one place of the run is drawn, for a test reading a card against the place it stands at. */
+function middleOf(place: number): number {
+  const middle = PLACES.middles.at(place);
+  if (middle === undefined) {
+    throw new Error("a card lies at a place the run draws");
+  }
+
+  return middle;
 }
 
 function drawing(view: PositionView, place: Placement, playing: Playing): string {
@@ -145,7 +178,7 @@ function named(drawing: string): string[] {
 
 /** How many cards of one drawing a player may take hold of. */
 function grippable(drawing: string): number {
-  return [...drawing.matchAll(/sortable/g)].length;
+  return [...drawing.matchAll(/carryable/g)].length;
 }
 
 describe("the place of a run one point stands at", () => {
@@ -170,43 +203,113 @@ describe("the place of a run one point stands at", () => {
 
 describe("a card carried to another place of the run it lies in", () => {
   it("comes to lie at the place it was let go at, and the cards it passed over close up behind it", () => {
-    expect(laidOut(RUN, { ...TAKEN, from: 0, to: 2 })).toEqual(["8♠", "4♦", "9♦", "K♣"]);
+    expect(laidOut(RUN, { ...TAKEN, from: [0], to: 2 })).toEqual(["8♠", "4♦", "9♦", "K♣"]);
   });
 
   it("reads the same way carried back the other way, which is the run read from the far end", () => {
-    expect(laidOut(RUN, { ...TAKEN, from: 3, to: 1 })).toEqual(["9♦", "K♣", "8♠", "4♦"]);
+    expect(laidOut(RUN, { ...TAKEN, from: [3], to: 1 })).toEqual(["9♦", "K♣", "8♠", "4♦"]);
   });
 
   it("lies first or last where it was carried to either end of the run", () => {
-    expect(laidOut(RUN, { ...TAKEN, from: 2, to: 0 })).toEqual(["4♦", "9♦", "8♠", "K♣"]);
-    expect(laidOut(RUN, { ...TAKEN, from: 1, to: RUN.length - 1 })).toEqual(["9♦", "4♦", "K♣", "8♠"]);
+    expect(laidOut(RUN, { ...TAKEN, from: [2], to: 0 })).toEqual(["4♦", "9♦", "8♠", "K♣"]);
+    expect(laidOut(RUN, { ...TAKEN, from: [1], to: RUN.length - 1 })).toEqual(["9♦", "4♦", "K♣", "8♠"]);
   });
 
   it("holds every card of the run, whichever card was carried and wherever it came to lie", () => {
     for (const from of RUN.keys()) {
       for (const to of RUN.keys()) {
-        expect([...laidOut(RUN, { ...TAKEN, from, to })].sort()).toEqual([...RUN].sort());
+        expect([...laidOut(RUN, { ...TAKEN, from: [from], to })].sort()).toEqual([...RUN].sort());
       }
     }
   });
 
   it("leaves the run as it lies where it was carried to the place it came from", () => {
-    expect(laidOut(RUN, { ...TAKEN, from: 2, to: 2 })).toEqual(RUN);
+    expect(laidOut(RUN, { ...TAKEN, from: [2], to: 2 })).toEqual(RUN);
   });
 
   it("leaves the run as it lies where the place taken from is one the run holds no card at", () => {
-    expect(laidOut(RUN, { ...TAKEN, from: RUN.length, to: 0 })).toEqual(RUN);
+    expect(laidOut(RUN, { ...TAKEN, from: [RUN.length], to: 0 })).toEqual(RUN);
   });
 
   it("leaves the run as it lies while no card is being carried through it at all", () => {
     expect(laidOut(RUN, null)).toEqual(RUN);
   });
+
+  it("leaves the run as it lies while the hand is carrying the card clear of it", () => {
+    expect(laidOut(RUN, { ...TAKEN, from: [0], to: null, by: { across: 30, down: -400 } })).toEqual(RUN);
+  });
+});
+
+describe("the cards one press takes hold of", () => {
+  it("are the cards in hand where the card pressed is one of them", () => {
+    expect(GATHERED.from).toEqual([0, 2]);
+    expect(GATHERED.rank).toBe(1);
+  });
+
+  it("are that card alone where the cards in hand are other cards of the run", () => {
+    const alone = grasped(1, [0, 2], PLACES, { across: 210, down: 505 });
+
+    expect(alone.from).toEqual([1]);
+    expect(alone.rank).toBe(0);
+  });
+
+  it("are that card alone where the player is holding nothing at all", () => {
+    expect(TAKEN.from).toEqual([1]);
+    expect(TAKEN.rank).toBe(0);
+  });
+
+  it("lie in the order the run reads them, whichever order the player picked them up in", () => {
+    const picked = grasped(2, [2, 0], PLACES, { across: 310, down: 505 });
+
+    expect(picked.from).toEqual([0, 2]);
+    expect(picked.rank).toBe(1);
+  });
+});
+
+describe("cards carried together", () => {
+  it("come to lie in a block at the place they were let go at, whichever places they came out of", () => {
+    expect(laidOut(RUN, { ...GATHERED, to: 1 })).toEqual(["8♠", "9♦", "4♦", "K♣"]);
+  });
+
+  it("lie along the end of the run the hand carried them past, since a run holds the cards it holds", () => {
+    const far = carriedFrom(GATHERED, { across: 470, down: 505 });
+    const near = carriedFrom(GATHERED, { across: 40, down: 505 });
+
+    expect(far.to).toBe(RUN.length - GATHERED.from.length);
+    expect(laidOut(RUN, far)).toEqual(["8♠", "K♣", "9♦", "4♦"]);
+    expect(near.to).toBe(0);
+    expect(laidOut(RUN, near)).toEqual(["9♦", "4♦", "8♠", "K♣"]);
+  });
+
+  it("say there is an order to lay down even where the first of them stays where it lay", () => {
+    expect(moved({ ...GATHERED, to: 0 })).toBe(true);
+    expect(laidOut(RUN, { ...GATHERED, to: 0 })).toEqual(["9♦", "4♦", "8♠", "K♣"]);
+  });
+
+  it("say there is none where the run already reads them as the block they are", () => {
+    expect(moved({ ...GATHERED, from: [1, 2], to: 1 })).toBe(false);
+  });
+
+  it("stand off their places by the one shift, with the pressed card under the hand", () => {
+    const carried = carriedFrom(GATHERED, { across: 250, down: 470 });
+
+    expect(heldAt(carried)).toEqual([0, 1]);
+    expect(carried.by).toEqual({ across: 40, down: -35 });
+    expect(middleOf(pressedAt(carried)) + carried.held.across + carried.by.across).toBe(250);
+    expect(PLACES.along + carried.held.down + carried.by.down).toBe(470);
+  });
+
+  it("keep the places they came out of while the hand is carrying them clear of the run", () => {
+    const away = carriedFrom(GATHERED, { across: 310, down: 900 });
+
+    expect(away.to).toBeNull();
+    expect(heldAt(away)).toEqual([0, 2]);
+  });
 });
 
 describe("a card taken hold of", () => {
   it("lies where it lay until it is carried off, which is a run standing as it stood", () => {
-    expect(TAKEN.from).toBe(1);
-    expect(TAKEN.to).toBe(1);
+    expect(TAKEN.to).toBeNull();
     expect(TAKEN.by).toBeNull();
     expect(moved(TAKEN)).toBe(false);
     expect(laidOut(RUN, TAKEN)).toEqual(RUN);
@@ -219,22 +322,22 @@ describe("a card taken hold of", () => {
   it("lies where it lay under a hand that has gone as good as nowhere, which is what a click leaves it", () => {
     const still = pressedTo(TAKEN, { across: 213, down: 503 });
 
-    expect(still.to).toBe(1);
+    expect(still.to).toBeNull();
     expect(still.by).toBeNull();
     expect(moved(still)).toBe(false);
   });
 
   it("lies where it lay pressed by the part of it lying over the card before it, which no click carries", () => {
-    const edge = grasped(1, PLACES, AN_EDGE);
+    const edge = grasped(1, [], PLACES, AN_EDGE);
     const still = pressedTo(edge, AN_EDGE);
 
     expect(edge.held).toEqual({ across: -60, down: 5 });
-    expect(still.to).toBe(1);
+    expect(still.to).toBeNull();
     expect(sent(RUN, still)).toBeNull();
   });
 
   it("goes where the card goes rather than where the pointer within it stands, whichever part was pressed", () => {
-    const edge = grasped(1, PLACES, AN_EDGE);
+    const edge = grasped(1, [], PLACES, AN_EDGE);
 
     expect(carriedFrom(edge, { across: 240, down: 505 }).to).toBe(2);
     expect(carriedFrom(edge, { across: 190, down: 505 }).to).toBe(1);
@@ -253,24 +356,34 @@ describe("a card taken hold of", () => {
     expect(moved(carried)).toBe(true);
   });
 
-  it("stands under the hand carrying it wherever the run has opened, which is the card the player moves", () => {
+  it("stands under the hand carrying it wherever the run draws it, which is the card the player moves", () => {
     for (const across of [100, 155, 260, 380, 640]) {
       const carried = carriedFrom(TAKEN, { across, down: 470 });
-      const middle = PLACES.middles.at(carried.to);
 
-      expect(middle).toBeDefined();
-      expect((middle ?? 0) + carried.held.across + carried.by.across).toBe(across);
+      expect(middleOf(pressedAt(carried)) + carried.held.across + carried.by.across).toBe(across);
       expect(PLACES.along + carried.held.down + carried.by.down).toBe(470);
     }
   });
 
   it("keeps the place it was taken from however far it is carried", () => {
-    expect(carriedFrom(TAKEN, { across: 4000, down: 500 }).from).toBe(1);
-    expect(carriedFrom(carriedFrom(TAKEN, { across: 400, down: 500 }), { across: 100, down: 500 }).from).toBe(1);
+    expect(carriedFrom(TAKEN, { across: 4000, down: 500 }).from).toEqual([1]);
+    expect(carriedFrom(carriedFrom(TAKEN, { across: 400, down: 500 }), { across: 100, down: 500 }).from).toEqual([1]);
   });
 
   it("carries nothing where nothing was taken hold of", () => {
     expect(carriedTo(null, PLACES, { across: 300, down: 500 })).toBeNull();
+  });
+});
+
+describe("a card of a run whose order the table keeps", () => {
+  it("travels under the hand with the run standing as it stood, wherever the hand carries it", () => {
+    const taken = grasped(1, [], KEPT, { across: 210, down: 505 });
+    const carried = carriedTo(taken, KEPT, { across: 260, down: 505 });
+
+    expect(carried?.to).toBeNull();
+    expect(carried?.by).toEqual({ across: 50, down: 0 });
+    expect(laidOut(RUN, carried)).toEqual(RUN);
+    expect(sent(RUN, carried)).toBeNull();
   });
 });
 
@@ -322,6 +435,13 @@ describe("the place a hand rests on having laid a card down at it", () => {
     expect(restingOn(carried, PLACES, { across: 310, down: 505 })).toBe(2);
   });
 
+  it("is the place the pressed card came to lie at, of the cards a hand carried together", () => {
+    const carried = carriedFrom(GATHERED, { across: 210, down: 505 });
+
+    expect(heldAt(carried)).toEqual([0, 1]);
+    expect(restingOn(carried, PLACES, { across: 210, down: 505 })).toBe(1);
+  });
+
   it("is none where the hand let the card go over the card lying beside it", () => {
     const carried = carriedFrom(TAKEN, { across: 250, down: 505 });
 
@@ -330,7 +450,7 @@ describe("the place a hand rests on having laid a card down at it", () => {
   });
 
   it("is none where the hand came off the run altogether", () => {
-    const carried = carriedFrom(TAKEN, { across: 310, down: 505 });
+    const carried = carriedFrom(TAKEN, { across: 310, down: 900 });
 
     expect(restingOn(carried, PLACES, { across: 310, down: 900 })).toBeNull();
   });
@@ -342,25 +462,25 @@ describe("the place a hand rests on having laid a card down at it", () => {
 
 describe("where a run draws its places", () => {
   it("is nothing at all for a run the page draws none of, which is a zone no card is taken hold of in", () => {
-    expect(placesOf(null)).toBeNull();
+    expect(placesOf(null, true)).toBeNull();
   });
 });
 
-describe("the order letting a carried card go sends", () => {
+describe("the order letting the carried cards go sends", () => {
   it("is the run as it lies in front of the player, which is the reading the drawing of it stands by", () => {
-    expect(sent(RUN, { ...TAKEN, from: 0, to: 2 })).toEqual(["8♠", "4♦", "9♦", "K♣"]);
+    expect(sent(RUN, { ...TAKEN, from: [0], to: 2 })).toEqual(["8♠", "4♦", "9♦", "K♣"]);
     expect(sent(RUN, carriedFrom(TAKEN, { across: 400, down: 500 }))).toEqual(["9♦", "4♦", "K♣", "8♠"]);
   });
 
-  it("is that order however far from the run the card was let go, since the run is what was being read", () => {
-    expect(sent(RUN, carriedFrom(TAKEN, { across: 4000, down: 4000 }))).toEqual(["9♦", "4♦", "K♣", "8♠"]);
-  });
-
-  it("is nothing where the card was carried home again, which leaves the order the table already holds", () => {
+  it("is nothing where the cards were carried home again, which leaves the order the table already holds", () => {
     expect(sent(RUN, TAKEN)).toBeNull();
     expect(
       sent(RUN, carriedFrom(carriedFrom(TAKEN, { across: 400, down: 500 }), { across: 205, down: 500 })),
     ).toBeNull();
+  });
+
+  it("is nothing where the hand carried the cards clear of the run, which leaves them somewhere else to go", () => {
+    expect(sent(RUN, carriedFrom(TAKEN, { across: 4000, down: 4000 }))).toBeNull();
   });
 
   it("is nothing where no card was carried through the run at all", () => {
@@ -470,7 +590,7 @@ describe("the handling one place of a run states", () => {
     });
   });
 
-  it("gives it nothing where the run is one nobody orders, so the card is carried nowhere", () => {
+  it("gives it nothing where the run is one no card is taken hold of in, so the card is carried nowhere", () => {
     expect(handled(null)).toEqual({});
   });
 });
@@ -480,7 +600,7 @@ describe("a zone the table says this seat lays out", () => {
     const hand = drawn(sortable(POSITION, HAND), "own");
 
     expect(grippable(hand)).toBe(3);
-    expect([...hand.matchAll(/sortable/g)]).toHaveLength(3);
+    expect([...hand.matchAll(/carryable/g)]).toHaveLength(3);
   });
 
   it("draws the run in the order the player laid it, while the table has yet to hand that order back", () => {
@@ -505,13 +625,13 @@ describe("a zone the table says this seat lays out", () => {
 });
 
 describe("a zone whose order the table keeps", () => {
-  it("offers no card of the shared table to be taken hold of", () => {
+  it("offers no card of the shared table to be taken hold of, since no move of this seat picks in it", () => {
     expect(grippable(drawn(POSITION, "shared"))).toBe(0);
   });
 
   it("offers none of this seat's own where the table has said nothing of the order being its to set", () => {
     expect(grippable(drawn(POSITION, "own"))).toBe(0);
-    expect(drawn(POSITION, "own")).not.toContain("sortable");
+    expect(drawn(POSITION, "own")).not.toContain("carryable");
   });
 
   it("offers none of a heap read by the card on top of it, whatever the table says of its order", () => {

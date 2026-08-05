@@ -28,33 +28,45 @@ export interface Point {
 export type Shift = Point;
 
 /**
- * Where one run draws its places, read off the page as a card of it is taken hold of.
+ * One run as it stands at the moment a card of it is taken hold of: where it draws its places, and whether the
+ * order of it is this seat's own to set.
  *
- * A run holds as many places while a card of it is being carried as it held before, and each of them is drawn
- * where it was: what the carry changes is which card lies at which place. So the drawing read once as the card
- * comes up answers the whole gesture, and a pointer standing anywhere is read against it.
+ * A run holds as many places while cards of it are being carried as it held before, and each of them is drawn
+ * where it was: what a carry through the run changes is which card lies at which place. So the drawing read once
+ * as the cards come up answers the whole gesture, and a pointer standing anywhere is read against it.
  *
- * The reach of a card is the same at every place, since one run draws one size of card, and it is what says
- * which of those places a point stands over.
+ * The reach of a card is the same at every place, since one run draws one size of card, and it is what says which
+ * of those places a point stands over and how far off the run a card has been carried.
+ *
+ * A run the table keeps the order of is carried out of and never through: the cards of it are there to send
+ * somewhere, and they lie where the table lays them until they are sent.
  */
 export interface Places {
   middles: readonly number[];
   along: number;
   reach: Point;
+  orderable: boolean;
 }
 
 /**
- * A card in hand: where it came from, where it has reached, where along it the player took hold, how far it
- * stands from the place it is drawn at, and the point the hand on it set out from.
+ * The cards in hand: the places they came out of, which of them the hand pressed, where the block of them has
+ * reached, where along the pressed card the hand took hold, how far they stand from the places they are drawn at,
+ * and the point the hand set out from.
  *
- * The place reached is the run as it is about to lie, and the shift is the card as the player sees it: the two
- * come off one pointer, so a card under the hand and a run opening ahead of it are one reading of one gesture.
- * A card stands off its place by nothing at all while the hand holding it has yet to travel, which is what
- * leaves a click a click: the point the hand set out from is what that is read against.
+ * The cards travel together in the order the run reads them, so the place reached is where the first of them has
+ * come to lie and the pressed card lies its own rank along from there. The cards have reached nowhere in the run
+ * while the hand is carrying them clear of it, which leaves the run standing as the table holds it: the cards are
+ * drawn at the places they came out of, and what the hand is over is a place to send them to.
+ *
+ * The shift is the cards as the player sees them, measured from the place the pressed card is drawn at, so the
+ * block travels as the little fan it was picked up as with that card exactly under the hand. Nothing stands off
+ * its place while the hand holding it has yet to travel, which is what leaves a click a click: the point the hand
+ * set out from is what that is read against.
  */
 export interface Carry {
-  from: number;
-  to: number;
+  from: number[];
+  rank: number;
+  to: number | null;
   held: Shift;
   by: Shift | null;
   began: Point;
@@ -86,7 +98,7 @@ export interface Handling {
  *
  * A card follows the pointer that took hold of it, so the pointer is held to that card for as long as the press
  * lasts and every point it stands at reaches the card wherever the card has been carried to. A place of a run
- * nobody orders answers none of it, which leaves the card lying where the table holds it.
+ * nobody plays out of or orders answers none of it, which leaves the card lying where the table holds it.
  */
 export interface Grasped {
   style?: CSSProperties | undefined;
@@ -112,21 +124,40 @@ export function nearest(middles: readonly number[], across: number): number {
   return nearby;
 }
 
-/** The card at one place taken hold of at one point, which leaves the run lying as the table holds it. */
-export function grasped(place: number, places: Places, at: Point): Carry {
-  return { from: place, to: place, held: from(at, places, place), by: null, began: at };
+/**
+ * The cards one press takes hold of, out of the place pressed and the places already in hand.
+ *
+ * A press takes hold of the cards in hand where the card pressed is one of them, and of that card alone
+ * otherwise: a run gathered into a block travels as a block, and a card picked out of one travels by itself. The
+ * cards are held in the order the run reads them, wherever in it the player picked them up.
+ *
+ * The run stands as the table holds it until the hand carries the cards off, so a press changes nothing.
+ *
+ * @param place - the place of the run the hand pressed.
+ * @param inHand - the places of the run whose cards the player has already picked up.
+ * @param places - the run as it stands, read off the page.
+ * @param at - the point the hand pressed at.
+ */
+export function grasped(place: number, inHand: readonly number[], places: Places, at: Point): Carry {
+  const taken = inHand.includes(place) ? [...inHand].sort(ascending) : [place];
+  return { from: taken, rank: taken.indexOf(place), to: null, held: from(at, places, place), by: null, began: at };
 }
 
 /**
- * The card in hand as the pointer stands now: the place it has reached, and how far it stands from that place.
+ * The cards in hand as the pointer stands now: the place they have reached, and how far they stand from it.
  *
- * The place it has reached is the one the middle of the card lies nearest, which is where the player is holding
- * that card rather than where the pointer within it stands. So the run opens at the place the card has come to
- * cover, a card taken hold of by any part of itself lies where it lay, and the two readings of one gesture — the
- * card under the hand, the run about to lie — are read off the one figure.
+ * The place they have reached is the one the middle of the pressed card lies nearest, counted back by that card's
+ * rank among them, which is where the player is holding the block rather than where the pointer within it stands.
+ * So the run opens at the place the block has come to cover, cards taken hold of by any part of themselves lie
+ * where they lay, and the two readings of one gesture — the cards under the hand, the run about to lie — are read
+ * off the one figure. A block carried off either end of the run comes to lie along the end it reached.
  *
- * A hand that has yet to travel holds the card where the run draws it, and a hand that has travelled carries it
- * for the rest of the press, so an unsteady hand leaves a click a click and a carry stays a carry.
+ * Cards carried clear of the run reach nowhere in it: the run stands as the table holds it and the cards travel
+ * from the places they came out of, which is a hand taking them somewhere else on the table. A run whose order
+ * the table keeps is carried out of that way wherever the hand goes.
+ *
+ * A hand that has yet to travel holds the cards where the run draws them, and a hand that has travelled carries
+ * them for the rest of the press, so an unsteady hand leaves a click a click and a carry stays a carry.
  *
  * Nothing is carried where nothing was taken hold of.
  */
@@ -140,17 +171,44 @@ export function carriedTo(carrying: Carry | null, places: Places, at: Point): Ca
   }
 
   const middle = middleOf(carrying, at);
-  const to = nearest(places.middles, middle.across);
-  return { from: carrying.from, to, held: carrying.held, by: from(middle, places, to), began: carrying.began };
-}
-
-/** Whether the card has come to lie elsewhere than where it was taken from, which is what there is to lay down. */
-export function moved(carrying: Carry): boolean {
-  return carrying.from !== carrying.to;
+  const to = reaching(carrying, places, middle);
+  return { ...carrying, to, by: from(middle, places, pressedAt(carrying, to)) };
 }
 
 /**
- * Whether the hand on a card has carried it, which is what tells a card being sorted from a card being pressed.
+ * The places the run draws the cards in hand at, in the order it reads them.
+ *
+ * The run has opened for them where they have reached a place in it, and draws them where they came out of it
+ * where the hand is carrying them somewhere else, so what stands off its place is read the one way either way.
+ */
+export function heldAt(carrying: Carry): number[] {
+  const reached = carrying.to;
+  return reached === null ? carrying.from : [...carrying.from.keys()].map((rank) => reached + rank);
+}
+
+/**
+ * Whether the cards have come to lie elsewhere than where they were taken from, which is what there is to lay
+ * down.
+ *
+ * Cards picked up here and there in a run come together into a block where they are carried, so gathering three
+ * of a kind is an order to lay down even where the first of them stays where it lay.
+ */
+export function moved(carrying: Carry): boolean {
+  return heldAt(carrying).some((place, rank) => place !== carrying.from[rank]);
+}
+
+/**
+ * Whether the cards in hand are out over the table, which is what letting go of them there sends them from.
+ *
+ * A hand carrying cards clear of the run they came out of is taking them somewhere else, so what a release
+ * answers is the place they are over rather than the order of the run behind them.
+ */
+export function sending(carrying: Carry): boolean {
+  return carrying.by !== null && carrying.to === null;
+}
+
+/**
+ * Whether the hand on a card has carried it, which is what tells a card being carried from a card being pressed.
  *
  * The hand is read against the point it set out from rather than against the place the card is drawn at, since a
  * card carried a whole place along stands under the hand that took it and so lies barely off the place it reached.
@@ -159,6 +217,30 @@ export function moved(carrying: Carry): boolean {
  */
 export function travelled(carrying: Carry, at: Point): boolean {
   return Math.hypot(at.across - carrying.began.across, at.down - carrying.began.down) > A_PRESS;
+}
+
+/**
+ * Whether a card carried to one point lies over the run it came out of, which is what orders that run.
+ *
+ * The card is read rather than the pointer holding it: a hand lifts a card clear of the run to take it elsewhere,
+ * so what says the run is being ordered is the card still lying along it. Half a card past either end is the room
+ * a card is made first or last in, and half a card above or below is the lift that takes it out over the table.
+ *
+ * @param places - the run as it stands, read off the page.
+ * @param middle - where the middle of the card in hand stands.
+ */
+export function within(places: Places, middle: Point): boolean {
+  const first = places.middles.at(0);
+  const last = places.middles.at(LAST);
+  if (first === undefined || last === undefined) {
+    return false;
+  }
+
+  return (
+    middle.across >= first - places.reach.across / MIDWAY &&
+    middle.across <= last + places.reach.across / MIDWAY &&
+    Math.abs(middle.down - places.along) <= places.reach.down / MIDWAY
+  );
 }
 
 /**
@@ -177,28 +259,34 @@ export function over(places: Places, at: Point): number | null {
  * The place a hand rests on having just laid a card down at it, and none where it rests on nothing of the sort.
  *
  * A card let go under the hand that carried it is still a card in hand, so it stands where a card in hand stands
- * until the hand comes off it. A hand that came off the run, or let go over the card lying beside the one it
- * carried, rests on no card it laid; and a press that carried the card nowhere laid nothing down.
+ * until the hand comes off it. The card the hand holds is the one it pressed, wherever the rest of the block came
+ * to lie. A hand that came off the run, that let go over the card lying beside the one it carried, or that
+ * carried the cards out over the table rests on no card it laid; and a press that carried them nowhere laid
+ * nothing down.
  */
 export function restingOn(carrying: Carry, places: Places, at: Point): number | null {
-  if (carrying.by === null || over(places, at) !== carrying.to) {
+  const rested = carrying.to === null ? null : pressedAt(carrying, carrying.to);
+  if (carrying.by === null || rested === null || over(places, at) !== rested) {
     return null;
   }
 
-  return carrying.to;
+  return rested;
 }
 
 /**
  * Where a run draws each of its places, read off the page as a card of it is taken hold of.
  *
- * A run keeps the places it was drawn with for the whole of a carry, so reading them once as the card comes up
+ * A run keeps the places it was drawn with for the whole of a carry, so reading them once as the cards come up
  * answers every point the pointer goes on to stand at. They are read off the drawing itself, which is what lets a
- * fan of any size, closed up to whatever room its zone has, be carried through by the card the player can see.
+ * fan of any size, closed up to whatever room its zone has, be carried through by the cards the player can see.
+ *
+ * @param run - the drawing of the run, as the page holds it.
+ * @param orderable - whether the order of that run is this seat's own to set.
  *
  * Returns:
  *     Where the places lie, and nothing for a run drawing none.
  */
-export function placesOf(run: Element | null): Places | null {
+export function placesOf(run: Element | null, orderable: boolean): Places | null {
   const drawn = run === null ? [] : [...run.querySelectorAll(DRAWN)].map((place) => place.getBoundingClientRect());
   const first = drawn.at(0);
   if (first === undefined) {
@@ -209,36 +297,43 @@ export function placesOf(run: Element | null): Places | null {
     middles: drawn.map((place) => place.x + place.width / MIDWAY),
     along: first.y + first.height / MIDWAY,
     reach: { across: first.width, down: first.height },
+    orderable,
   };
 }
 
 /**
- * One run as a card carried through it lays it out, which is the order that run comes to lie in.
+ * One run as the cards carried through it lay it out, which is the order that run comes to lie in.
  *
- * The card is lifted out of the run and put back where it was carried to, so the cards it passed over close up
- * behind it and it comes to lie at the place it was let go at. This is the one reading of a carry: a player
- * carrying a card is reading the run this answers with, and letting it go sends the order they were reading.
+ * The cards are lifted out of the run and put back where they were carried to, so the cards they passed over
+ * close up behind them and they come to lie in a block at the place they were let go at. This is the one reading
+ * of a carry: a player carrying cards is reading the run this answers with, and letting them go sends the order
+ * they were reading.
  *
- * A run lying as it lies is the answer where no card is being carried, and where the place a card was taken from
- * is one the run holds none at.
+ * A run lying as it lies is the answer where no card is being carried through it, where the hand is carrying
+ * cards out over the table, and where the places taken from are places the run holds no card at.
  */
 export function laidOut<T>(run: readonly T[], carrying: Carry | null): T[] {
-  const held = carrying === null ? undefined : run[carrying.from];
-  if (carrying === null || held === undefined) {
+  const reached = carrying === null ? null : carrying.to;
+  if (carrying === null || reached === null) {
     return [...run];
   }
 
-  const rest = [...run.slice(0, carrying.from), ...run.slice(carrying.from + 1)];
-  return [...rest.slice(0, carrying.to), held, ...rest.slice(carrying.to)];
+  const held = run.filter((_, place) => carrying.from.includes(place));
+  const rest = run.filter((_, place) => !carrying.from.includes(place));
+  if (held.length !== carrying.from.length) {
+    return [...run];
+  }
+
+  return [...rest.slice(0, reached), ...held, ...rest.slice(reached)];
 }
 
 /**
- * The order letting a carried card go sends, and none where the run stands as the table already holds it.
+ * The order letting the carried cards go sends, and none where the run stands as the table already holds it.
  *
  * A player reads the run as it lies in front of them, so the order they send by letting go is the one they have
- * been reading: it is theirs to send from wherever on the page the card is let go, since the run they are
- * answering is the run they can see. A card carried home again lies at the place it was taken from, which leaves
- * the run the table's own and nothing to send.
+ * been reading: it is theirs to send from wherever on the page the cards are let go, since the run they are
+ * answering is the run they can see. Cards carried home again lie at the places they were taken from, which
+ * leaves the run the table's own and nothing to send.
  */
 export function sent<T>(run: readonly T[], carrying: Carry | null): T[] | null {
   return carrying !== null && moved(carrying) ? laidOut(run, carrying) : null;
@@ -276,7 +371,33 @@ function pointing(event: PointerEvent<HTMLElement>): Point {
   return { across: event.clientX, down: event.clientY };
 }
 
-/** Where the middle of the card in hand stands, which is the hold it was taken by carried to where the hand is. */
+/** The places of a run in the order it reads them, which is the order the cards of a block travel in. */
+function ascending(one: number, other: number): number {
+  return one - other;
+}
+
+/**
+ * Where the block of cards in hand has reached, and nowhere at all where the hand is carrying them elsewhere.
+ *
+ * The place is where the first of the cards comes to lie, so the pressed card lands where the player is holding
+ * it and the cards it was picked up with keep their order around it. A block reaching past either end of the run
+ * lies along that end, since a run holds as many cards as it held.
+ */
+function reaching(carrying: Carry, places: Places, middle: Point): number | null {
+  if (!places.orderable || !within(places, middle)) {
+    return null;
+  }
+
+  const reached = nearest(places.middles, middle.across) - carrying.rank;
+  return Math.min(Math.max(reached, 0), Math.max(places.middles.length - carrying.from.length, 0));
+}
+
+/** The place the run draws the pressed card at, which the cards it was taken with lie in order around. */
+function pressedAt(carrying: Carry, to: number | null): number {
+  return to === null ? (carrying.from.at(carrying.rank) ?? 0) : to + carrying.rank;
+}
+
+/** Where the middle of the pressed card stands, which is the hold it was taken by carried to where the hand is. */
 function middleOf(carrying: Carry, at: Point): Point {
   return { across: at.across - carrying.held.across, down: at.down - carrying.held.down };
 }
