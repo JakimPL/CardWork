@@ -6,7 +6,15 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from cardtable.games import GameName
-from cardtable.interface import TABLE_FIELD, TOKEN_FIELD, joining, serve_interface
+from cardtable.interface import (
+    A_YEAR,
+    AS_IT_STANDS,
+    KEEPING,
+    TABLE_FIELD,
+    TOKEN_FIELD,
+    joining,
+    serve_interface,
+)
 
 from .tables import BASE_URL, LAYOUT, TABLE, playing
 
@@ -17,6 +25,8 @@ ROOT: Final[str] = "/"
 ADDRESS: Final[str] = "http://127.0.0.1:8000"
 TOKEN: Final[str] = "a-token"
 SPACED: Final[str] = "green baize"
+HASHED: Final[str] = "assets/index-Dh5y98t5.js"
+DRAWING: Final[str] = "the page drawing a table"
 
 
 def a_build(root: Path) -> Path:
@@ -24,6 +34,9 @@ def a_build(root: Path) -> Path:
     built = root / BUILD
     built.mkdir()
     (built / "index.html").write_text(PAGE, encoding="utf-8")
+    hashed = built / HASHED
+    hashed.parent.mkdir()
+    hashed.write_text(DRAWING, encoding="utf-8")
     return built
 
 
@@ -37,6 +50,33 @@ async def test_a_built_interface_is_served_from_the_root(tmp_path: Path) -> None
 
     assert served == tmp_path / BUILD
     assert response.text == PAGE
+
+
+async def test_the_page_is_read_from_the_table_each_time_a_tab_opens_it(tmp_path: Path) -> None:
+    """The page keeps its name across every build, so a tab asks the table for it rather than keeping it.
+
+    A player who has the page of an earlier build reaches the table for the one standing there now, which is
+    what hands a rebuilt interface to a tab that was open while the build ran.
+    """
+    app = FastAPI()
+    serve_interface(app, a_build(tmp_path))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as client:
+        response = await client.get(ROOT)
+
+    assert response.headers[KEEPING] == AS_IT_STANDS
+
+
+async def test_a_file_named_for_what_is_written_in_it_is_kept_for_a_year(tmp_path: Path) -> None:
+    """A build names each file it writes for its contents, so that name stands for what it was handed out as."""
+    app = FastAPI()
+    serve_interface(app, a_build(tmp_path))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as client:
+        response = await client.get(f"{ROOT}{HASHED}")
+
+    assert response.text == DRAWING
+    assert response.headers[KEEPING] == A_YEAR
 
 
 def test_a_checkout_holding_no_build_serves_no_page(tmp_path: Path) -> None:

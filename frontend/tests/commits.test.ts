@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { advanced, applyCommit, reachedBy } from "../src/play/commits";
-import { aCommit, aView, card, HAND, PILE, SEATED, STACK } from "./tables";
+import { aCommit, aView, card, HAND, PILE, SEATED, sortable, STACK } from "./tables";
 
 describe("a commit applied to the view a client holds", () => {
   it("stands the client one commit further on than the number the commit took", () => {
@@ -35,6 +35,17 @@ describe("a commit applied to the view a client holds", () => {
     const after = applyCommit(held, aCommit(4, [{ zone: PILE, before: [], after: [null, null] }]));
 
     expect(after.zones[PILE]).toEqual({ id: PILE, owner: null, arrangeable: false, cards: [null, null] });
+  });
+
+  it("lays a hand out in the order the seat laid down, and leaves that order the seat's own to set again", () => {
+    const run = [card("J", "♠"), card("7", "♥"), card("10", "♦")];
+    const held = sortable(aView({ [HAND]: run }, 1), HAND);
+    const laid = [card("7", "♥"), card("10", "♦"), card("J", "♠")];
+
+    const after = applyCommit(held, aCommit(1, [{ zone: HAND, before: run, after: laid }]));
+
+    expect(after.zones[HAND]?.cards).toEqual(laid);
+    expect(after.zones[HAND]?.arrangeable).toBe(true);
   });
 
   it("reads the same either way round, so a commit met twice changes nothing the second time", () => {

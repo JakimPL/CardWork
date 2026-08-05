@@ -74,8 +74,12 @@ describe("a card drawn from a pack", () => {
   it("stands the picture of the card where the page draws marks of its own", () => {
     const place = drawn(card("9", "♦"), KARE);
 
-    expect(place).toContain('<img class="art" src="/artwork/9_of_diamonds.png" alt=""/>');
+    expect(place).toContain('<img class="art" src="/artwork/9_of_diamonds.png" alt="" draggable="false"/>');
     expect(place).not.toContain('class="index"');
+  });
+
+  it("leaves the carrying of a card to the card, so a run of pictures is laid out by moving them", () => {
+    expect(drawn(card("9", "♦"), KARE)).toContain('alt="" draggable="false"');
   });
 
   it("draws a card nobody reads as the back the table serves", () => {

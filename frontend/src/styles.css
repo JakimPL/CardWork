@@ -492,18 +492,25 @@ button.card {
  * A card of a run its owner orders, and the same card while it is being carried to another place in that run.
  *
  * The hand a player sets the order of says so by the grip it offers, which is the one mark a run being sortable
- * carries: the cards read as cards, and taking hold of one is a thing the pointer discovers where it lies. The
- * card in hand goes faint as it travels, so what stands out is the run closing up behind it and opening ahead of
- * it — which is the order the player is about to lay down.
+ * carries: the cards read as cards, and taking hold of one is a thing the pointer discovers where it lies. A run
+ * ordered by hand answers the hand alone, so a finger carrying a card across it moves that card.
+ *
+ * The card in hand travels with the pointer holding it and lies over the run it is being carried across, raised
+ * off the table by the shadow it casts, and it goes where the pointer goes rather than easing after it. The cards
+ * it passed over close up behind it and open ahead of it in their own time, which reads as the run making room —
+ * so what the player sees is the card in their hand and the order it is about to lie in.
  */
 
 .card.sortable {
   cursor: grab;
+  touch-action: none;
 }
 
 .card.carried {
+  z-index: 2;
   cursor: grabbing;
-  opacity: 0.55;
+  box-shadow: 0 12px 22px rgb(0 0 0 / 50%);
+  transition: none;
 }
 
 /*

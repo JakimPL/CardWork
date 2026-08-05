@@ -1,4 +1,4 @@
-.PHONY: install format lint typecheck imports test coverage check assets interface types play
+.PHONY: install format lint typecheck imports test coverage check assets build interface types play
 
 install:
 	uv sync --all-extras
@@ -35,6 +35,9 @@ check: lint typecheck imports coverage
 assets:
 	uv run python -m scripts.assets
 
+build:
+	npm --prefix frontend run build
+
 interface:
 	npm --prefix frontend install
 	npm --prefix frontend run test
@@ -54,5 +57,5 @@ TABLE_ARGUMENTS = \
 	$(if $(BACK),--back $(BACK)) \
 	$(if $(PORT),--port $(PORT))
 
-play:
+play: build
 	uv run cardtable $(TABLE_ARGUMENTS) $(ARGS)

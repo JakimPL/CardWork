@@ -10,6 +10,7 @@ from cardwork.combinations.detect import matches
 from cardwork.combinations.patterns.same_rank import SameRank
 from cardwork.combinations.policy import Duplicates, Evaluation
 from cardwork.decks.deck import Indices
+from cardwork.exceptions import LogicError
 from cardwork.rounds.game import NOTHING
 from cardwork.states.award import Award
 from cardwork.states.state import Points
@@ -37,12 +38,12 @@ def ranked(card: CardOrJoker) -> Rank:
     """The rank a card reads as, which every card of the deck this game is played with carries.
 
     Raises:
-        ValueError: when the card is a joker, which the one standard deck of this game holds none of.
+        LogicError: when the card is a joker, which the one standard deck of this game holds none of.
     """
     if isinstance(card, Card):
         return card.rank
 
-    raise ValueError(f"This game is played with suited cards alone, and read {card}")
+    raise LogicError(f"This game is played with suited cards alone, and read {card}")
 
 
 def reads_alike(cards: Sequence[CardOrJoker]) -> bool:

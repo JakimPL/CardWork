@@ -5,6 +5,7 @@ from cardwork.cards.card import Card
 from cardwork.cards.game import CardOrJoker, suited
 from cardwork.cards.orders import REGULAR_ORDER
 from cardwork.cards.points import REGULAR_POINTS, PointTable
+from cardwork.exceptions import LogicError
 from cardwork.ordering.preorder import Preorder
 from cardwork.rounds.game import NOTHING
 from cardwork.states.award import Award
@@ -32,10 +33,10 @@ def taken_by(revealed: Sequence[CardOrJoker]) -> int:
     `STRENGTH` is a total order, so one card of any run stands above the rest and a turn has exactly one winner.
 
     Raises:
-        ValueError: when nothing was revealed, which a turn every seat commits to always leaves something in.
+        LogicError: when nothing was revealed, which a turn every seat commits to always leaves something in.
     """
     if not revealed:
-        raise ValueError("A turn goes to the strongest of the cards revealed, and none were")
+        raise LogicError("A turn goes to the strongest of the cards revealed, and none were")
 
     return STRENGTH.argmaxima(tuple(suited(card) for card in revealed))[STRONGEST]
 

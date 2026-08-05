@@ -13,8 +13,16 @@ class IllegalMove(CardworkError):
         self.reason = reason
 
 
-class InvalidState(CardworkError):
+class LogicError(CardworkError):
     """Raised when a move is built on a position that the rules reject."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+class GameValidationError(CardworkError):
+    """Raised when a game is constructed with parameters the rules reject."""
 
     def __init__(self, reason: str) -> None:
         super().__init__(reason)

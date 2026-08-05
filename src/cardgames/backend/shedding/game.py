@@ -25,7 +25,7 @@ from cardwork.cards.game import CardsOrJokers
 from cardwork.decks.deck import Deck
 from cardwork.decks.standard import is_standard_deck
 from cardwork.effects.effects import Effects, MoveCards, SetState
-from cardwork.exceptions import IllegalMove
+from cardwork.exceptions import GameValidationError, IllegalMove
 from cardwork.games.intents import Intents
 from cardwork.moves.actions import Discard, Take
 from cardwork.moves.move import Move, Moves
@@ -69,11 +69,13 @@ class SheddingGame(RoundGame[SheddingState]):
 
     def _validate_players(self, players: int) -> None:
         if not SEATS_LEAST <= players <= SEATS_MOST:
-            raise ValueError(f"This game seats {SEATS_LEAST} to {SEATS_MOST} players, and {players} were asked for")
+            raise GameValidationError(
+                f"This game seats {SEATS_LEAST} to {SEATS_MOST} players, and {players} were asked for"
+            )
 
     def _validate_initial_deck(self, deck: Deck) -> None:
         if not is_standard_deck(deck):
-            raise ValueError("This game is played with one standard deck of suited cards")
+            raise GameValidationError("This game is played with one standard deck of suited cards")
 
     def initial_state(self, players: int) -> SheddingState:
         return SheddingState(
@@ -86,13 +88,15 @@ class SheddingGame(RoundGame[SheddingState]):
         """Confirm the deal left every seat the four cards it is dealt, which its draws then build on.
 
         Raises:
-            ValueError: when a hand holds a number of cards other than the deal gives it.
+            GameValidationError: when a hand holds a number of cards other than the deal gives it.
         """
         short = tuple(
             seat for seat in range(position.players) if len(position.board.zone(hand_of(seat)).cards) != HAND_SIZE
         )
         if short:
-            raise ValueError(f"Seats {short} hold a hand of a size other than the {HAND_SIZE} the deal gives them")
+            raise GameValidationError(
+                f"Seats {short} hold a hand of a size other than the {HAND_SIZE} the deal gives them"
+            )
 
     def deal_round(
         self,

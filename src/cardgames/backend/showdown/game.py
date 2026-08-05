@@ -29,7 +29,7 @@ from cardgames.backend.showdown.zones import (
 from cardwork.decks.deck import Deck
 from cardwork.decks.standard import is_standard_deck
 from cardwork.effects.effects import Effects, MoveCards, SetState
-from cardwork.exceptions import IllegalMove
+from cardwork.exceptions import GameValidationError, IllegalMove
 from cardwork.games.intents import Intents
 from cardwork.moves.actions import Play
 from cardwork.moves.move import Move, Moves
@@ -84,11 +84,13 @@ class ShowdownGame(RoundGame[ShowdownState]):
 
     def _validate_players(self, players: int) -> None:
         if not SEATS_LEAST <= players <= SEATS_MOST:
-            raise ValueError(f"This game seats {SEATS_LEAST} to {SEATS_MOST} players, and {players} were asked for")
+            raise GameValidationError(
+                f"This game seats {SEATS_LEAST} to {SEATS_MOST} players, and {players} were asked for"
+            )
 
     def _validate_initial_deck(self, deck: Deck) -> None:
         if not is_standard_deck(deck):
-            raise ValueError("This game is played with one standard deck of suited cards")
+            raise GameValidationError("This game is played with one standard deck of suited cards")
 
     def initial_state(self, players: int) -> ShowdownState:
         return ShowdownState(
@@ -101,7 +103,7 @@ class ShowdownGame(RoundGame[ShowdownState]):
         """Confirm the deal left every seat five cards to read and five it may not.
 
         Raises:
-            ValueError: when a seat holds either of them at a size other than the deal gives it.
+            GameValidationError: when a seat holds either of them at a size other than the deal gives it.
         """
         short = tuple(
             seat
@@ -113,7 +115,7 @@ class ShowdownGame(RoundGame[ShowdownState]):
             != (HAND_SIZE, BLIND_SIZE)
         )
         if short:
-            raise ValueError(f"Seats {short} hold other than {HAND_SIZE} cards to read and {BLIND_SIZE} blind")
+            raise GameValidationError(f"Seats {short} hold other than {HAND_SIZE} cards to read and {BLIND_SIZE} blind")
 
     def deal_round(
         self,

@@ -127,9 +127,12 @@ function drawnFrom(artwork: Artwork | null): (string | false)[] {
  *
  * The card is named by the label the element already carries, so the picture stands as the drawing of it and
  * a reader reaching the page by its words is told the card once.
+ *
+ * The card is what a player takes hold of, and the picture leaves the carrying to it: a run is laid out by
+ * moving the cards of it, so a table drawing from a pack is dragged the same way as one drawing its own glyphs.
  */
 function picture(artwork: Artwork, card: ProjectedCard): ReactElement {
-  return <img className="art" src={drawnAt(artwork, card)} alt="" />;
+  return <img className="art" src={drawnAt(artwork, card)} alt="" draggable={false} />;
 }
 
 /** The marks a page draws a card by on its own, where a card nobody reads draws as the back the sheet paints. */

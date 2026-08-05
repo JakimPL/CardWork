@@ -25,6 +25,7 @@ make install      # uv sync --all-extras, and the page's own dependencies
 make check        # lint, mypy --strict, import contracts, coverage, the page's tests
 make test         # pytest -n auto, and the page's tests
 make interface    # install, test and build the player interface
+make build        # draw the player interface the table serves, which play does for itself
 make play         # open the table config.yaml states; GAME=showdown PLAYERS=4 to depart from it
 ```
 
@@ -194,6 +195,8 @@ one:
 uv run cardtable                                  # the run config.yaml states
 uv run cardtable --game showdown --players 4      # or: make play GAME=showdown PLAYERS=4
 ```
+
+A table hands out the page as `make build` last drew it, which is what `make play` draws before opening one.
 
 `config.yaml` states the run: the game played, the table's name and seating, the seed and grace window it
 deals and settles with, the cards it is drawn with, and the address it answers at. Every option of the

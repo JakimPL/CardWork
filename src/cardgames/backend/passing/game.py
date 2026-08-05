@@ -19,7 +19,7 @@ from cardgames.backend.passing.zones import (
 from cardwork.decks.deck import Deck, Indices
 from cardwork.decks.standard import ONE_DECK, standard_multiplicity
 from cardwork.effects.effects import Effects, MoveCards, SetFace, SetState
-from cardwork.exceptions import IllegalMove
+from cardwork.exceptions import GameValidationError, IllegalMove
 from cardwork.games.intents import Intents
 from cardwork.moves.actions import Give, Take
 from cardwork.moves.move import Move, Moves
@@ -77,11 +77,13 @@ class PassingGame(RoundGame[PassingState]):
 
     def _validate_players(self, players: int) -> None:
         if not SEATS_LEAST <= players <= SEATS_MOST:
-            raise ValueError(f"This game seats {SEATS_LEAST} to {SEATS_MOST} players, and {players} were asked for")
+            raise GameValidationError(
+                f"This game seats {SEATS_LEAST} to {SEATS_MOST} players, and {players} were asked for"
+            )
 
     def _validate_initial_deck(self, deck: Deck) -> None:
         if standard_multiplicity(deck) < ONE_DECK:
-            raise ValueError("This game is played with whole standard decks, and any number of jokers besides")
+            raise GameValidationError("This game is played with whole standard decks, and any number of jokers besides")
 
     def initial_state(self, players: int) -> PassingState:
         return PassingState(
@@ -94,7 +96,7 @@ class PassingGame(RoundGame[PassingState]):
         """Confirm the deal left every seat its three cards and the seat leading the round its fourth.
 
         Raises:
-            ValueError: when a hand holds a number of cards other than the deal gives it.
+            GameValidationError: when a hand holds a number of cards other than the deal gives it.
         """
         leader = position.state.led_by
         short = tuple(
@@ -103,7 +105,9 @@ class PassingGame(RoundGame[PassingState]):
             if len(position.board.zone(hand_of(seat)).cards) != self._dealt(seat, leader)
         )
         if short:
-            raise ValueError(f"Seats {short} hold a hand of a size other than the {HAND_SIZE} the deal gives them")
+            raise GameValidationError(
+                f"Seats {short} hold a hand of a size other than the {HAND_SIZE} the deal gives them"
+            )
 
     def deal_round(
         self,

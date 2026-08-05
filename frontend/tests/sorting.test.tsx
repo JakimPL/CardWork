@@ -1,12 +1,12 @@
-import type { DragEvent } from "react";
+import type { PointerEvent } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { PositionView } from "../src/api/views";
 import { NOTHING_LANDED } from "../src/play/arrivals";
 import { prospect } from "../src/play/selection";
-import type { Handling } from "../src/table/dragging";
-import { allowing, carriedTo, grasped, grasping, handled, laidOut, moved, reaching } from "../src/table/dragging";
+import type { Carry, Handling, Places, Point } from "../src/table/dragging";
+import { carriedTo, grasped, handled, laidOut, moved, nearest, sent, travelled } from "../src/table/dragging";
 import type { Placement } from "../src/table/placing";
 import { own, shared } from "../src/table/placing";
 import { Zones } from "../src/table/Zones";
@@ -15,8 +15,18 @@ import { aLayout, aPlaying, aView, card, DEALT_FROM, HAND, HELD, LAID_ON, PILE, 
 /** The run these tests carry a card through, which is a hand of four read by its ranks. */
 const RUN = ["9♦", "8♠", "4♦", "K♣"];
 
-/** The name a card travels under, which is one place of one run and nothing another page could want. */
-const PLACE = "application/x-cardwork-place";
+/** Where that run is drawn: four places a hundred apart, all of them at the one height a run lies at. */
+const PLACES: Places = { middles: [100, 200, 300, 400], along: 500 };
+
+/** The press a pointer makes of itself, and one it makes of a button standing beside that. */
+const PRESSED = 0;
+const BESIDES = 2;
+
+/** The pointer these tests press with, which is the one a card takes hold of. */
+const POINTER = 7;
+
+/** How far a hand may wander and still read as a press, which is what a card carried a place along outruns. */
+const A_NUDGE = 4;
 
 const LAYOUT = aLayout({ slots: [HELD, DEALT_FROM, LAID_ON] });
 
@@ -35,34 +45,42 @@ const RESTING = aPlaying(prospect([], null));
 /** A place of a run answering nothing at all, for a test stating the one answer it is reading. */
 const IDLE = (): void => undefined;
 
+/** The card at the second place taken hold of a little right of the middle of it, as a hand on it would be. */
+const TAKEN = grasped(1, PLACES, { across: 210, down: 505 });
+
 /** How one place of a run is handled, which a test states the part of it that it means to read. */
 function handling(answers: Partial<Handling>): Handling {
-  return { place: 0, carried: false, grasp: IDLE, reach: IDLE, release: IDLE, ...answers };
+  return { carried: false, travel: null, grasp: IDLE, carry: IDLE, release: IDLE, abandon: IDLE, ...answers };
 }
 
-/** A drag as one place of a run receives it, which reports what the answer to it did with the event. */
-interface Carried {
-  prevented: boolean;
-  effect: string;
-  payload: Record<string, string>;
+/** What a card was told to do with the pointer pressing it, which is what holds that pointer to that card. */
+interface Holding {
+  pointer: number | null;
 }
 
-function carried(answer: ((event: DragEvent) => void) | undefined): Carried {
-  const drag: Carried = { prevented: false, effect: "", payload: {} };
-  answer?.({
-    preventDefault: () => {
-      drag.prevented = true;
-    },
-    dataTransfer: {
-      set effectAllowed(effect: string) {
-        drag.effect = effect;
-      },
-      setData: (name: string, value: string) => {
-        drag.payload[name] = value;
+/** One press on a card at one point, as the page delivers it and as a card takes hold of the pointer making it. */
+function aPress(button: number, at: Point, holding: Holding): PointerEvent<HTMLElement> {
+  return {
+    button,
+    pointerId: POINTER,
+    clientX: at.across,
+    clientY: at.down,
+    currentTarget: {
+      setPointerCapture: (pointer: number): void => {
+        holding.pointer = pointer;
       },
     },
-  } as unknown as DragEvent);
-  return drag;
+  } as unknown as PointerEvent<HTMLElement>;
+}
+
+/** The carry one point states of the card in hand, which every point states of a card taken hold of. */
+function carriedFrom(taken: Carry, at: Point): Carry {
+  const carried = carriedTo(taken, PLACES, at);
+  if (carried === null) {
+    throw new Error("a card taken hold of is carried by every point the pointer stands at");
+  }
+
+  return carried;
 }
 
 function drawn(view: PositionView, place: Placement): string {
@@ -74,37 +92,57 @@ function drawn(view: PositionView, place: Placement): string {
 
 /** How many cards of one drawing a player may take hold of. */
 function grippable(drawing: string): number {
-  return [...drawing.matchAll(/draggable="true"/g)].length;
+  return [...drawing.matchAll(/sortable/g)].length;
 }
 
+describe("the place of a run one point stands at", () => {
+  it("is the place whose middle it lies nearest, so a card passes the halfway mark to reach the next", () => {
+    expect(nearest(PLACES.middles, 240)).toBe(1);
+    expect(nearest(PLACES.middles, 260)).toBe(2);
+  });
+
+  it("is the middle of a place a point stands exactly at", () => {
+    expect(nearest(PLACES.middles, 300)).toBe(2);
+  });
+
+  it("is the nearer end of the run for a point standing beyond either end of it", () => {
+    expect(nearest(PLACES.middles, -400)).toBe(0);
+    expect(nearest(PLACES.middles, 4000)).toBe(3);
+  });
+
+  it("is the one place of a run drawn at a single place, wherever the point stands", () => {
+    expect(nearest([100], 4000)).toBe(0);
+  });
+});
+
 describe("a card carried to another place of the run it lies in", () => {
-  it("comes to lie at the place it was let go over, and the cards it passed over close up behind it", () => {
-    expect(laidOut(RUN, { from: 0, to: 2 })).toEqual(["8♠", "4♦", "9♦", "K♣"]);
+  it("comes to lie at the place it was let go at, and the cards it passed over close up behind it", () => {
+    expect(laidOut(RUN, { ...TAKEN, from: 0, to: 2 })).toEqual(["8♠", "4♦", "9♦", "K♣"]);
   });
 
   it("reads the same way carried back the other way, which is the run read from the far end", () => {
-    expect(laidOut(RUN, { from: 3, to: 1 })).toEqual(["9♦", "K♣", "8♠", "4♦"]);
+    expect(laidOut(RUN, { ...TAKEN, from: 3, to: 1 })).toEqual(["9♦", "K♣", "8♠", "4♦"]);
   });
 
   it("lies first or last where it was carried to either end of the run", () => {
-    expect(laidOut(RUN, { from: 2, to: 0 })).toEqual(["4♦", "9♦", "8♠", "K♣"]);
-    expect(laidOut(RUN, { from: 1, to: RUN.length - 1 })).toEqual(["9♦", "4♦", "K♣", "8♠"]);
+    expect(laidOut(RUN, { ...TAKEN, from: 2, to: 0 })).toEqual(["4♦", "9♦", "8♠", "K♣"]);
+    expect(laidOut(RUN, { ...TAKEN, from: 1, to: RUN.length - 1 })).toEqual(["9♦", "4♦", "K♣", "8♠"]);
   });
 
   it("holds every card of the run, whichever card was carried and wherever it came to lie", () => {
     for (const from of RUN.keys()) {
       for (const to of RUN.keys()) {
-        expect([...laidOut(RUN, { from, to })].sort()).toEqual([...RUN].sort());
+        expect([...laidOut(RUN, { ...TAKEN, from, to })].sort()).toEqual([...RUN].sort());
       }
     }
   });
 
   it("leaves the run as it lies where it was carried to the place it came from", () => {
-    expect(laidOut(RUN, { from: 2, to: 2 })).toEqual(RUN);
+    expect(laidOut(RUN, { ...TAKEN, from: 2, to: 2 })).toEqual(RUN);
   });
 
   it("leaves the run as it lies where the place taken from is one the run holds no card at", () => {
-    expect(laidOut(RUN, { from: RUN.length, to: 0 })).toEqual(RUN);
+    expect(laidOut(RUN, { ...TAKEN, from: RUN.length, to: 0 })).toEqual(RUN);
   });
 
   it("leaves the run as it lies while no card is being carried through it at all", () => {
@@ -114,80 +152,172 @@ describe("a card carried to another place of the run it lies in", () => {
 
 describe("a card taken hold of", () => {
   it("lies where it lay until it is carried off, which is a run standing as it stood", () => {
-    const taken = grasped(2);
-
-    expect(taken).toEqual({ from: 2, to: 2 });
-    expect(moved(taken)).toBe(false);
-    expect(laidOut(RUN, taken)).toEqual(RUN);
+    expect(TAKEN.from).toBe(1);
+    expect(TAKEN.to).toBe(1);
+    expect(TAKEN.by).toEqual({ across: 0, down: 0 });
+    expect(moved(TAKEN)).toBe(false);
+    expect(laidOut(RUN, TAKEN)).toEqual(RUN);
   });
 
-  it("says there is an order to lay down once it has reached another place", () => {
-    expect(carriedTo(grasped(2), 0)).toEqual({ from: 2, to: 0 });
-    expect(moved({ from: 2, to: 0 })).toBe(true);
+  it("is held where the hand took it, which is what it hangs from as it travels", () => {
+    expect(TAKEN.held).toEqual({ across: 10, down: 5 });
+  });
+
+  it("says there is an order to lay down once the pointer has carried it to another place", () => {
+    const carried = carriedFrom(TAKEN, { across: 320, down: 480 });
+
+    expect(carried.to).toBe(2);
+    expect(moved(carried)).toBe(true);
+  });
+
+  it("stands under the hand carrying it wherever the run has opened, which is the card the player moves", () => {
+    for (const across of [100, 155, 260, 380, 640]) {
+      const carried = carriedFrom(TAKEN, { across, down: 470 });
+      const middle = PLACES.middles.at(carried.to);
+
+      expect(middle).toBeDefined();
+      expect((middle ?? 0) + carried.held.across + carried.by.across).toBe(across);
+      expect(PLACES.along + carried.held.down + carried.by.down).toBe(470);
+    }
   });
 
   it("keeps the place it was taken from however far it is carried", () => {
-    expect(carriedTo(carriedTo(grasped(1), 3), 0)).toEqual({ from: 1, to: 0 });
+    expect(carriedFrom(TAKEN, { across: 4000, down: 500 }).from).toBe(1);
+    expect(carriedFrom(carriedFrom(TAKEN, { across: 400, down: 500 }), { across: 100, down: 500 }).from).toBe(1);
   });
 
   it("carries nothing where nothing was taken hold of", () => {
-    expect(carriedTo(null, 2)).toBeNull();
+    expect(carriedTo(null, PLACES, { across: 300, down: 500 })).toBeNull();
   });
 });
 
-describe("the drag a card answers", () => {
-  it("tells the browser the card is being moved, and names the place it came from", () => {
-    let taken = false;
-    const drag = carried(
-      grasping(2, () => {
-        taken = true;
-      }),
-    );
-
-    expect(taken).toBe(true);
-    expect(drag.effect).toBe("move");
-    expect(drag.payload).toEqual({ [PLACE]: "2" });
+describe("the hand on a card", () => {
+  it("reads as a press where it has gone as good as nowhere from the point it set out from", () => {
+    expect(travelled(TAKEN, { across: 210, down: 505 })).toBe(false);
+    expect(travelled(TAKEN, { across: 213, down: 503 })).toBe(false);
   });
 
-  it("takes a card reaching a place over from the browser, and carries the answer through", () => {
-    let reached = false;
-    const drag = carried(
-      reaching(() => {
-        reached = true;
-      }),
-    );
-
-    expect(drag.prevented).toBe(true);
-    expect(reached).toBe(true);
+  it("reads as carrying the card once it has taken it anywhere at all", () => {
+    expect(travelled(TAKEN, { across: 250, down: 505 })).toBe(true);
+    expect(travelled(TAKEN, { across: 210, down: 475 })).toBe(true);
   });
 
-  it("stands by that as the card is carried across the run, which is what lets it be let go there", () => {
-    expect(carried(allowing).prevented).toBe(true);
+  it("reads as carrying a card taken a whole place along, which stands barely off the place it reached", () => {
+    const carried = carriedFrom(TAKEN, { across: 310, down: 505 });
+
+    expect(carried.to).toBe(2);
+    expect(Math.abs(carried.by.across)).toBeLessThanOrEqual(A_NUDGE);
+    expect(travelled(carried, { across: 310, down: 505 })).toBe(true);
+  });
+});
+
+describe("the order letting a carried card go sends", () => {
+  it("is the run as it lies in front of the player, which is the reading the drawing of it stands by", () => {
+    expect(sent(RUN, { ...TAKEN, from: 0, to: 2 })).toEqual(["8♠", "4♦", "9♦", "K♣"]);
+    expect(sent(RUN, carriedFrom(TAKEN, { across: 400, down: 500 }))).toEqual(["9♦", "4♦", "K♣", "8♠"]);
+  });
+
+  it("is that order however far from the run the card was let go, since the run is what was being read", () => {
+    expect(sent(RUN, carriedFrom(TAKEN, { across: 4000, down: 4000 }))).toEqual(["9♦", "4♦", "K♣", "8♠"]);
+  });
+
+  it("is nothing where the card was carried home again, which leaves the order the table already holds", () => {
+    expect(sent(RUN, TAKEN)).toBeNull();
+    expect(
+      sent(RUN, carriedFrom(carriedFrom(TAKEN, { across: 400, down: 500 }), { across: 205, down: 500 })),
+    ).toBeNull();
+  });
+
+  it("is nothing where no card was carried through the run at all", () => {
+    expect(sent(RUN, null)).toBeNull();
   });
 });
 
 describe("the handling one place of a run states", () => {
-  it("gives the browser the whole of the gesture, under the place the card lies at", () => {
-    const answers = handled(handling({ place: 3 }));
-
-    expect(answers.draggable).toBe(true);
-    expect(carried(answers.onDragStart).payload).toEqual({ [PLACE]: "3" });
-    expect(carried(answers.onDragEnter).prevented).toBe(true);
-  });
-
-  it("lets a card go wherever it ended up, which is the answer a drag always reaches", () => {
-    let released = false;
+  it("takes hold of the card pressed and holds the pointer to it, so the card follows it from then on", () => {
+    const holding: Holding = { pointer: null };
+    let taken: Point | null = null;
     const answers = handled(
       handling({
-        release: () => {
-          released = true;
+        grasp: (at) => {
+          taken = at;
         },
       }),
     );
 
-    answers.onDragEnd?.();
+    answers.onPointerDown?.(aPress(PRESSED, { across: 210, down: 505 }, holding));
 
-    expect(released).toBe(true);
+    expect(holding.pointer).toBe(POINTER);
+    expect(taken).toEqual({ across: 210, down: 505 });
+  });
+
+  it("takes nothing hold of under a press made by a button standing beside the pointer's own", () => {
+    const holding: Holding = { pointer: null };
+    let taken: Point | null = null;
+    const answers = handled(
+      handling({
+        grasp: (at) => {
+          taken = at;
+        },
+      }),
+    );
+
+    answers.onPointerDown?.(aPress(BESIDES, { across: 210, down: 505 }, holding));
+
+    expect(holding.pointer).toBeNull();
+    expect(taken).toBeNull();
+  });
+
+  it("carries the card to every point the pointer stands at", () => {
+    let reached: Point | null = null;
+    const answers = handled(
+      handling({
+        carry: (at) => {
+          reached = at;
+        },
+      }),
+    );
+
+    answers.onPointerMove?.(aPress(PRESSED, { across: 340, down: 470 }, { pointer: null }));
+
+    expect(reached).toEqual({ across: 340, down: 470 });
+  });
+
+  it("lets the card go at the point the pointer let it go, which is the answer a carry always reaches", () => {
+    let released: Point | null = null;
+    const answers = handled(
+      handling({
+        release: (at) => {
+          released = at;
+        },
+      }),
+    );
+
+    answers.onPointerUp?.(aPress(PRESSED, { across: 380, down: 520 }, { pointer: null }));
+
+    expect(released).toEqual({ across: 380, down: 520 });
+  });
+
+  it("leaves the run as it stood where the carry is taken out of the player's hand", () => {
+    let abandoned = false;
+    const answers = handled(
+      handling({
+        abandon: () => {
+          abandoned = true;
+        },
+      }),
+    );
+
+    answers.onPointerCancel?.();
+
+    expect(abandoned).toBe(true);
+  });
+
+  it("draws a card where the run puts it, and a card in hand where the pointer has carried it", () => {
+    expect(handled(handling({ travel: null })).style).toBeUndefined();
+    expect(handled(handling({ travel: { across: 12, down: -30 } })).style).toEqual({
+      transform: "translate(12px, -30px)",
+    });
   });
 
   it("gives it nothing where the run is one nobody orders, so the card is carried nowhere", () => {

@@ -8,6 +8,7 @@ from cardwork.effects.effects import Effects, Reorder
 from cardwork.effects.fold import fold
 from cardwork.exceptions import (
     ArrangementRefused,
+    GameValidationError,
     NotYourTurn,
     StalePosition,
     UndoUnavailable,
@@ -400,23 +401,23 @@ class Game(ABC, Generic[StateT]):
 
     def _basic_initial_validation(self, players: int, deck: Deck) -> None:
         if players < 1:
-            raise ValueError(f"Expected at least 1 player, got {players}")
+            raise GameValidationError(f"Expected at least 1 player, got {players}")
 
         if not deck:
-            raise ValueError("Deck cannot be empty")
+            raise GameValidationError("Deck cannot be empty")
 
     def _basic_final_validation(self, position: Position[StateT]) -> None:
         """Confirm the dealt table holds every card it started with and scores the seats it seated.
 
         Raises:
-            ValueError: when the zones hold a multiset of cards apart from the starting deck, or when
+            GameValidationError: when the zones hold a multiset of cards apart from the starting deck, or when
                 the points table is sized for a different table.
         """
         position.board.validate_board()
 
         points = position.state.points
         if points is not None and len(points) != position.players:
-            raise ValueError(
+            raise GameValidationError(
                 f"Points table size {len(points)} does not match the number of players: {position.players}"
             )
 
