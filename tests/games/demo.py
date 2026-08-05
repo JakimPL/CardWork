@@ -103,7 +103,7 @@ class DiscardGame(Game[GameState]):
             return (SetState(state=state.with_changes(to_act=state.to_act - {move.player})),)
 
         if state.phase == "deal":
-            return (SetState(state=state.with_changes(phase="play", to_act=frozenset(range(position.players)))),)
+            return (SetState(state=state.with_changes(phase="play", to_act=range(position.players))),)
 
         if state.phase == "play" and not state.to_act:
             return (SetState(state=state.with_changes(phase="score", points=self._points(position))),)

@@ -112,7 +112,7 @@ class SheddingGame(RoundGame[SheddingState]):
         """The turn the round opens on, which the seat leading it always has its draw to take."""
         return position.state.with_changes(
             phase=SheddingPhase.SHEDDING,
-            to_act=frozenset({leader}),
+            to_act=leader,
             winner=None,
         )
 
@@ -300,7 +300,7 @@ class SheddingGame(RoundGame[SheddingState]):
         if not self._held_by(position, move.player):
             return self._decided(position)
 
-        return position.state.with_changes(to_act=frozenset({next_seat(move.player, position.players)}))
+        return position.state.with_changes(to_act=next_seat(move.player, position.players))
 
     def _standing(self, position: Position[SheddingState]) -> Effects[SheddingState]:
         """What the round owes with no move behind the question, which is a turn nobody there can take.
@@ -328,9 +328,7 @@ class SheddingGame(RoundGame[SheddingState]):
             ),
             None,
         )
-        standing = (
-            self._decided(position) if following is None else position.state.with_changes(to_act=frozenset({following}))
-        )
+        standing = self._decided(position) if following is None else position.state.with_changes(to_act=following)
         passed: Effects[SheddingState] = (SetState(state=standing),)
         return passed
 

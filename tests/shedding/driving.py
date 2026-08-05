@@ -126,7 +126,7 @@ def a_table_of(
             board.zone(STOCK).with_cards(to_game_cards(tuple(left[:stock]), face_down=True)),
             board.zone(DISCARD).with_cards(to_game_cards(tuple(left[stock:]), face_down=False)),
         ),
-        state=game.state.with_changes(to_act=frozenset({turn})),
+        state=game.state.with_changes(to_act=turn),
         players=game.players,
     )
 

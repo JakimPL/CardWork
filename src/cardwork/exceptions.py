@@ -13,6 +13,14 @@ class IllegalMove(CardworkError):
         self.reason = reason
 
 
+class InvalidState(CardworkError):
+    """Raised when a move is built on a position that the rules reject."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
 class NotYourTurn(CardworkError):
     """Raised when a player submits a move while the turn belongs to other seats."""
 

@@ -116,7 +116,7 @@ class TossGame(RoundGame[MatchState]):
         return Redeal(position, pile=STOCK, face_down=True).effects(counts, rng)
 
     def opening_state(self, position: Position[MatchState], leader: int) -> MatchState:
-        return position.state.with_changes(phase=TossPhase.TOSSING, to_act=frozenset({leader}))
+        return position.state.with_changes(phase=TossPhase.TOSSING, to_act=leader)
 
     def advance_round(
         self,

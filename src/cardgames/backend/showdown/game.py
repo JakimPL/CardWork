@@ -137,7 +137,7 @@ class ShowdownGame(RoundGame[ShowdownState]):
         """The first turn of the round, which every seat owes a commitment to at once."""
         return position.state.with_changes(
             phase=ShowdownPhase.COMMITTING,
-            to_act=frozenset(range(position.players)),
+            to_act=range(position.players),
             turn_number=FIRST_TURN,
         )
 

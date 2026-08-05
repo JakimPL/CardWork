@@ -1,6 +1,7 @@
 from typing import Self, TypeVar
 
 from cardwork.models.base import BaseFrozen
+from cardwork.states.seats import Seats
 
 type Points = tuple[int, ...]
 
@@ -11,10 +12,13 @@ class GameState(BaseFrozen):
     A game declares its own subclass with typed fields for anything else it tracks — a bid, the trump
     suit, the seat that led the trick — and parameterises the engine with that subclass, so those
     fields keep full type checking and exact serialization.
+
+    `to_act` holds the seats that owe an action, and takes the turn as a game states it: a single seat, or
+    any run of seats, reaches the field as the set of seats it names.
     """
 
     phase: str
-    to_act: frozenset[int] = frozenset()
+    to_act: Seats = frozenset()
     points: Points | None = None
 
     @property

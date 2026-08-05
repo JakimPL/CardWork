@@ -118,7 +118,16 @@ class PassingGame(RoundGame[PassingState]):
         who holds what, and the win is left for a seat to reach.
         """
         counts = {hand_of(seat): self._dealt(seat, leader) for seat in rotation(leader, position.players)}
-        return Redeal(position, pile=PILE, face_down=True).admitted(counts, rng, self._still_to_be_won(leader))
+        redeal = Redeal(
+            position,
+            pile=PILE,
+            face_down=True,
+        )
+        return redeal.admitted(
+            counts,
+            rng,
+            self._still_to_be_won(leader),
+        )
 
     def _still_to_be_won(self, leader: int) -> Admits[PassingState]:
         """The question every draw of a deal is put to: does it leave the leader a hand that has yet to win.
@@ -134,7 +143,7 @@ class PassingGame(RoundGame[PassingState]):
     def opening_state(self, position: Position[PassingState], leader: int) -> PassingState:
         return position.state.with_changes(
             phase=PassingPhase.PASSING,
-            to_act=frozenset({leader}),
+            to_act=leader,
             swapped=False,
             winner=None,
         )
@@ -195,7 +204,14 @@ class PassingGame(RoundGame[PassingState]):
         A hand that wins is awarded the round in the transaction that dealt or completed it, so a seat reading
         this list holds no win and has only these two to weigh.
         """
-        return tuple(move for seat in sorted(position.state.to_act) for move in self._turn_of(position, seat))
+        return tuple(
+            move
+            for seat in sorted(position.state.to_act)
+            for move in self._turn_of(
+                position,
+                seat,
+            )
+        )
 
     def _turn_of(self, position: Position[PassingState], seat: int) -> Moves:
         """The moves one seat may make from this position, in the order a turn takes them."""
@@ -376,13 +392,16 @@ class PassingGame(RoundGame[PassingState]):
             return self._drawn(position)
 
         return position.state.with_changes(
-            to_act=frozenset({next_seat(giver, position.players)}),
+            to_act=next_seat(giver, position.players),
             swapped=False,
         )
 
     def _drawn(self, position: Position[PassingState]) -> PassingState:
         """The round decided by an exhausted pile, which scores every seat the nothing its tally already reads."""
-        return position.state.with_changes(phase=PassingPhase.DECIDED, to_act=frozenset())
+        return position.state.with_changes(
+            phase=PassingPhase.DECIDED,
+            to_act=frozenset(),
+        )
 
     def _won_by(
         self,
