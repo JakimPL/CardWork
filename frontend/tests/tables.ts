@@ -98,6 +98,16 @@ export const DRAWING: Gesture = {
   caption: "Draw this card into your hand",
 };
 
+/** A gesture for a turn given up, which names no card and lands on no place, as a game allowing a pass states it. */
+export const PASSING: Gesture = {
+  kind: "pass",
+  group: null,
+  picked: null,
+  commit: "word",
+  target: null,
+  caption: "Pass",
+};
+
 /** A gesture sending several cards at once, which is the shape a game discarding a set of them takes. */
 export const DISCARDING: Gesture = {
   kind: "discard",
@@ -160,6 +170,11 @@ export function aDiscard(indices: number[]): Move {
   return { player: SEAT, action: { kind: "discard", group: HAND, indices } };
 }
 
+/** The turn given up, which names its seat and nothing besides. */
+export function aPass(): Move {
+  return { player: SEAT, action: { kind: "pass" } };
+}
+
 /** Cards seen to land in one zone, as the commit that laid them there leaves the table reading. */
 export function landing(zone: ZoneId, cards: number): Arrivals {
   return new Map([[zone, cards]]);
@@ -170,5 +185,5 @@ const IDLE = (): void => undefined;
 
 /** The table as it is played, for a test reading what a prospect comes to. */
 export function aPlaying(standing: Prospect): Playing {
-  return { standing, hint: "", sending: false, pick: IDLE, commit: IDLE, clear: IDLE };
+  return { standing, hint: "", sending: false, pick: IDLE, commit: IDLE, say: IDLE, clear: IDLE };
 }

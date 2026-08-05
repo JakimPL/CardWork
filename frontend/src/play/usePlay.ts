@@ -5,7 +5,7 @@ import { movedOn, reasonOf, Refused } from "../api/refusal";
 import type { Seat } from "../api/seat";
 import type { PositionView, ZoneId } from "../api/views";
 import { guidance } from "./guidance";
-import type { Prospect, Selection, Target } from "./selection";
+import type { Offered, Prospect, Selection, Target } from "./selection";
 import { offersOf, offerTo, pickedUp, prospect } from "./selection";
 import { commandFor, deliver, named } from "./sending";
 
@@ -15,13 +15,20 @@ interface Held {
   seq: number;
 }
 
-/** Playing a table from one seat: what the cards on screen may do, and the three ways of doing it. */
+/**
+ * Playing a table from one seat: what the cards on screen may do, and the four ways of doing it.
+ *
+ * A move landing on a place is sent by `commit`, which is given the place pointed at and finds the move that
+ * goes there. A move landing on none is sent by `say`, which is given the move itself, since the words drawn for
+ * it stand for that move and nothing else.
+ */
 export interface Playing {
   standing: Prospect;
   hint: string;
   sending: boolean;
   pick: (zone: ZoneId, index: number) => void;
   commit: (target: Target) => void;
+  say: (offer: Offered) => void;
   clear: () => void;
 }
 
@@ -31,7 +38,8 @@ export interface Playing {
  * The moves the table says are open are the whole of what this rests on, so nothing here knows one game from
  * another: a card reads plainly because some move names it, and a place lights up because the cards in hand
  * make a move that goes there. A move leaves for the table only on a click at such a place, which is what keeps
- * a hand of cards from committing itself.
+ * a hand of cards from committing itself. A move landing on no place leaves on a click at the words standing for
+ * it, which the empty hand it names arms.
  *
  * A selection is held against the position it was made in. The table moving on — by this seat's own move
  * landing or another's — leaves it behind rather than carrying it onto cards that have since shifted.
@@ -64,10 +72,9 @@ export function usePlay(seat: Seat, layout: Layout, view: PositionView, refresh:
     [standing, view.seq],
   );
 
-  const commit = useCallback(
-    (target: Target) => {
-      const offer = offerTo(standing, target);
-      if (offer === null || sending) {
+  const send = useCallback(
+    (offer: Offered) => {
+      if (sending) {
         return;
       }
 
@@ -87,8 +94,18 @@ export function usePlay(seat: Seat, layout: Layout, view: PositionView, refresh:
           setSending(false);
         });
     },
-    [seat, standing, view.seq, sending, refresh],
+    [seat, view.seq, sending, refresh],
   );
 
-  return { standing, hint: guidance(layout, view, standing, notice), sending, pick, commit, clear };
+  const commit = useCallback(
+    (target: Target) => {
+      const offer = offerTo(standing, target);
+      if (offer !== null) {
+        send(offer);
+      }
+    },
+    [standing, send],
+  );
+
+  return { standing, hint: guidance(layout, view, standing, notice), sending, pick, commit, say: send, clear };
 }

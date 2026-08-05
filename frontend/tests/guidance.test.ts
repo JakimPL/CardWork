@@ -9,6 +9,7 @@ import {
   aDiscard,
   aGive,
   aLayout,
+  aPass,
   aTake,
   atRest,
   aView,
@@ -18,6 +19,7 @@ import {
   HAND,
   MATCH_OVER,
   offering,
+  PASSING,
   SEATED,
   TAKING,
 } from "./tables";
@@ -30,10 +32,15 @@ const SEATS: Standing[] = [
 
 const TURN = aLayout({ gestures: [TAKING, GIVING], plaques: SEATS });
 const SETS = aLayout({ gestures: [DISCARDING], plaques: SEATS });
+const CHOICE = aLayout({ gestures: [TAKING, GIVING, PASSING], plaques: SEATS });
 
 const DEALT = aView({ [HAND]: [card("9", "♦"), card("9", "♠"), card("4", "♦")] }, 1);
 const A_TURN = offering(DEALT, [aTake([0]), aGive(2, [0])]);
 const A_SET = offering(DEALT, [aDiscard([0, 1])]);
+
+/** A turn a card answers or a word does, and a turn the word is the whole of. */
+const A_TURN_OR_A_WORD = offering(DEALT, [aTake([0]), aGive(2, [0]), aPass()]);
+const A_WORD_ALONE = offering(DEALT, [aPass()]);
 
 /** The same table with the turn standing elsewhere, and with it standing nowhere at all. */
 const ELSEWHERE = aView({ [HAND]: DEALT.zones[HAND]?.cards ?? [] }, 1, { ...SEATED, to_act: [2] });
@@ -100,6 +107,21 @@ const CASES: Case[] = [
     description: "one card two moves can send, which reads as both of them",
     said: said(TURN, A_TURN, { zone: HAND, indices: [0] }, null),
     expected: `${TAKING.caption} · ${GIVING.caption}`,
+  },
+  {
+    description: "a turn a word could give up as well as a card play out, which invites the card",
+    said: said(CHOICE, A_TURN_OR_A_WORD, null, null),
+    expected: "Pick a card to play",
+  },
+  {
+    description: "one card of such a turn picked up, which reads as the moves that card sends",
+    said: said(CHOICE, A_TURN_OR_A_WORD, { zone: HAND, indices: [0] }, null),
+    expected: `${TAKING.caption} · ${GIVING.caption}`,
+  },
+  {
+    description: "a turn a word is the whole of, which reads as the word since no card answers it",
+    said: said(CHOICE, A_WORD_ALONE, null, null),
+    expected: PASSING.caption,
   },
   {
     description: "a refusal the table answered with, which stands over anything else",

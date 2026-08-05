@@ -17,6 +17,7 @@ import {
   aDiscard,
   aGive,
   aLayout,
+  aPass,
   aTake,
   aView,
   card,
@@ -24,12 +25,16 @@ import {
   GIVING,
   HAND,
   offering,
+  PASSING,
   PILE,
   TAKING,
 } from "./tables";
 
 const TURN = aLayout({ gestures: [TAKING, GIVING] });
 const SETS = aLayout({ gestures: [DISCARDING] });
+
+/** A table whose turn a seat may give up, which lays out the gesture that says as much beside the others. */
+const CHOICE = aLayout({ gestures: [TAKING, GIVING, PASSING] });
 
 const DEALT = aView({ [HAND]: [card("9", "♦"), card("9", "♠"), card("9", "♥"), card("4", "♦")] }, 1);
 
@@ -38,6 +43,10 @@ const A_TURN = offering(DEALT, [aTake([0]), aTake([2]), aGive(2, [0]), aGive(2, 
 
 /** A hand three of whose cards read as one rank, which is a discard of two of them or all three. */
 const A_SET = offering(DEALT, [aDiscard([0, 1]), aDiscard([0, 2]), aDiscard([1, 2]), aDiscard([0, 1, 2])]);
+
+/** A turn a card answers or a word does, and a turn the word is the whole of. */
+const A_TURN_OR_A_WORD = offering(DEALT, [aTake([0]), aGive(2, [0]), aPass()]);
+const A_WORD_ALONE = offering(DEALT, [aPass()]);
 
 const standing = (layout: Layout, view: PositionView, selection: Selection | null): Prospect =>
   prospect(offersOf(layout, view), selection);
@@ -174,6 +183,51 @@ describe("a selection of several cards", () => {
 
     expect(held.armed).toHaveLength(0);
     expect(held.open.size).toBe(0);
+  });
+});
+
+describe("a move sent by its word", () => {
+  it("is made in no zone and lands on no place", () => {
+    const offers = offersOf(CHOICE, A_WORD_ALONE);
+
+    expect(offers).toHaveLength(1);
+    expect(offers[0]?.picked).toBeNull();
+    expect(offers[0]?.indices).toEqual([]);
+    expect(offers[0]?.target).toBeNull();
+    expect(offers[0]?.caption).toBe(PASSING.caption);
+  });
+
+  it("stands ready while the hand is empty, and no place sends it", () => {
+    const bare = standing(CHOICE, A_TURN_OR_A_WORD, null);
+
+    expect(bare.said.map((offer) => offer.move)).toEqual([aPass()]);
+    expect(bare.targets).toEqual([]);
+    expect(offerTo(bare, { commit: "zone", zone: PILE })).toBeNull();
+  });
+
+  it("is put out of reach by the first card picked up, which arms the moves naming it", () => {
+    const held = standing(CHOICE, A_TURN_OR_A_WORD, { zone: HAND, indices: [0] });
+
+    expect(held.said).toEqual([]);
+    expect(held.targets).toEqual([
+      { commit: "zone", zone: PILE },
+      { commit: "seat", seat: 2 },
+    ]);
+  });
+
+  it("holds no card open, since it is about none", () => {
+    const bare = standing(CHOICE, A_WORD_ALONE, null);
+
+    expect(bare.open.size).toBe(0);
+    expect(bare.said).toHaveLength(1);
+  });
+
+  it("leaves the cards of a turn it is the whole of reading as cards", () => {
+    const bare = standing(CHOICE, A_WORD_ALONE, null);
+
+    expect(picksIn(bare, HAND)).toBe(false);
+    expect(leadsNowhere(bare, HAND, 0)).toBe(false);
+    expect(pickedUp(bare, HAND, 0)).toBeNull();
   });
 });
 

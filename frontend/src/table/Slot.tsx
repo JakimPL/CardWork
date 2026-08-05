@@ -4,6 +4,7 @@ import type { Slot as Arrangement, Spread } from "../api/layout";
 import type { ProjectedCard, ZoneView } from "../api/views";
 import type { Arrivals } from "../play/arrivals";
 import { landedIn } from "../play/arrivals";
+import type { Target } from "../play/selection";
 import { isSelected, leadsNowhere, offerTo, picksIn } from "../play/selection";
 import type { Playing } from "../play/usePlay";
 import { CardFace } from "./CardFace";
@@ -44,7 +45,8 @@ interface SlotProps {
 export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement {
   const cards = zone?.cards ?? [];
   const shown = shownIn(slot.spread, cards, landedIn(arrivals, slot.zone));
-  const landing = offerTo(playing.standing, { commit: "zone", zone: slot.zone });
+  const onto: Target = { commit: "zone", zone: slot.zone };
+  const landing = offerTo(playing.standing, onto);
   const picking = picksIn(playing.standing, slot.zone);
   return (
     <section className={classes("slot", slot.spread, landing !== null && "live")}>
@@ -60,7 +62,7 @@ export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement
             title={landing.caption}
             aria-label={landing.caption}
             onClick={clicking(() => {
-              playing.commit(landing.target);
+              playing.commit(onto);
             })}
           />
         )}

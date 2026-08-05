@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import type { Layout, Plaque as Standing } from "../api/layout";
 import type { PositionView } from "../api/views";
 import { seatReadouts, seatValue } from "../play/readouts";
+import type { Target } from "../play/selection";
 import { offerTo } from "../play/selection";
 import type { Playing } from "../play/usePlay";
 import { classes } from "./classes";
@@ -30,9 +31,8 @@ interface PlaqueProps {
 export function Plaque({ plaque, layout, view, playing }: PlaqueProps): ReactElement {
   const acting = view.state.to_act.includes(plaque.seat);
   const seated = plaque.seat === layout.observer;
-  const landing = drawnAt(layout, plaque.seat)
-    ? null
-    : offerTo(playing.standing, { commit: "seat", seat: plaque.seat });
+  const onto: Target = { commit: "seat", seat: plaque.seat };
+  const landing = drawnAt(layout, plaque.seat) ? null : offerTo(playing.standing, onto);
   return (
     <div className={classes("plaque", acting && "acting", seated && "own", landing !== null && "live")}>
       {landing !== null && (
@@ -42,7 +42,7 @@ export function Plaque({ plaque, layout, view, playing }: PlaqueProps): ReactEle
           title={landing.caption}
           aria-label={`${landing.caption}: ${plaque.name}`}
           onClick={clicking(() => {
-            playing.commit(landing.target);
+            playing.commit(onto);
           })}
         />
       )}

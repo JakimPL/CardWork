@@ -2,7 +2,7 @@ import type { Interlude, Layout } from "../api/layout";
 import type { PositionView } from "../api/views";
 import { interludeIn, leading } from "./interludes";
 import { nameOf } from "./seats";
-import type { Prospect } from "./selection";
+import type { Offered, Prospect } from "./selection";
 
 /** What the line under the cards says while a player holds a turn, or a selection part of the way to a move. */
 const CHOOSING = "Pick a card to play";
@@ -33,8 +33,9 @@ const ALSO = ", ";
  * What to tell the player about the move in their hands, in the words a person reads.
  *
  * A refusal is what matters most, since it is the table answering something the player did. Beyond that the
- * line follows the selection: the captions of the moves it stands ready to send, the invitation to add a card
- * where a longer move is still open, and the standing invitation to pick one up.
+ * line follows the selection: the captions of the moves it stands ready to point somewhere, the invitation to
+ * add a card where a longer move is still open, and the standing invitation to pick one up. A turn no card
+ * answers reads as the words of the move that answers it, since there is no card to invite.
  *
  * A seat with no move to make is told whom the table stands on, so a turn belonging to somebody else reads as
  * that rather than as a table gone quiet. A match played out reads as the seat it belongs to, which is what the
@@ -45,8 +46,9 @@ export function guidance(layout: Layout, view: PositionView, standing: Prospect,
     return notice;
   }
 
-  if (standing.armed.length > 0) {
-    return [...new Set(standing.armed.map((offer) => offer.caption))].join(BESIDES);
+  const pointed = standing.armed.filter((offer) => offer.target !== null);
+  if (pointed.length > 0) {
+    return captions(pointed);
   }
 
   if (standing.selection !== null) {
@@ -57,7 +59,26 @@ export function guidance(layout: Layout, view: PositionView, standing: Prospect,
     return decided(layout, view);
   }
 
-  return standing.offers.length === 0 ? waitingOn(layout, view) : CHOOSING;
+  if (standing.offers.length === 0) {
+    return waitingOn(layout, view);
+  }
+
+  return inviting(standing);
+}
+
+/**
+ * What a turn opens with while nothing is picked up: a card to pick, or the words a whole turn is said in.
+ *
+ * A turn holding a move that names cards invites one to be picked up, which stands over the words of a move
+ * ready beside it. A turn whose every move is said names no card to pick, so the words themselves invite.
+ */
+function inviting(standing: Prospect): string {
+  return standing.offers.some((offer) => offer.picked !== null) ? CHOOSING : captions(standing.said);
+}
+
+/** What several moves ready at once read as, each caption said a single time. */
+function captions(offers: Offered[]): string {
+  return [...new Set(offers.map((offer) => offer.caption))].join(BESIDES);
 }
 
 /**

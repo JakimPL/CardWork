@@ -4,6 +4,7 @@ import type { Layout } from "../api/layout";
 import type { PositionView } from "../api/views";
 import type { Arrivals } from "../play/arrivals";
 import { nameOf } from "../play/seats";
+import type { Target } from "../play/selection";
 import { offerTo } from "../play/selection";
 import type { Playing } from "../play/usePlay";
 import { classes } from "./classes";
@@ -31,7 +32,8 @@ interface StationProps {
  */
 export function Station({ station, layout, view, arrivals, playing }: StationProps): ReactElement {
   const acting = view.state.to_act.includes(station.seat);
-  const landing = offerTo(playing.standing, { commit: "seat", seat: station.seat });
+  const onto: Target = { commit: "seat", seat: station.seat };
+  const landing = offerTo(playing.standing, onto);
   const name = nameOf(layout, station.seat);
   return (
     <div className={classes("station", acting && "acting", landing !== null && "live")}>
@@ -42,7 +44,7 @@ export function Station({ station, layout, view, arrivals, playing }: StationPro
           title={landing.caption}
           aria-label={`${landing.caption}: ${name}`}
           onClick={clicking(() => {
-            playing.commit(landing.target);
+            playing.commit(onto);
           })}
         />
       )}

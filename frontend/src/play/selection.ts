@@ -2,11 +2,17 @@ import type { Commit, Gesture, Layout } from "../api/layout";
 import type { AnyAction, Move } from "../api/moves";
 import type { PositionView, ZoneId } from "../api/views";
 
-/** The two places a move is sent onto, which mirror `cardwork.presentation.commit.Commit`. */
+/** The three ways a move is sent, which mirror `cardwork.presentation.commit.Commit`. */
 const ZONE = "zone" satisfies Commit;
 const SEAT = "seat" satisfies Commit;
+const WORD = "word" satisfies Commit;
 
-/** The place a player points at to send a move: a zone of the table, or the seat the move itself names. */
+/**
+ * The place a player points at to send a move: a zone of the table, or the seat the move itself names.
+ *
+ * A move said by its word is sent by pressing the one thing standing for it, so it stands beside these places
+ * rather than among them.
+ */
 export type Target = { commit: typeof ZONE; zone: ZoneId } | { commit: typeof SEAT; seat: number };
 
 /** The cards a player has picked up, which lie in one zone since one gesture picks in one. */
@@ -21,12 +27,15 @@ export interface Selection {
  * A served move names positions and a group; the gesture matching it says which zone those positions are in
  * and where the move is sent. Resolving the two here is what leaves the rest of the interface pointing at
  * cards and places rather than reading intents.
+ *
+ * A move about no card is made in no zone and sent by no place, so it reads as naming neither: what it takes to
+ * send is the caption it carries.
  */
 export interface Offered {
   move: Move;
   picked: ZoneId | null;
   indices: number[];
-  target: Target;
+  target: Target | null;
   caption: string;
 }
 
@@ -35,9 +44,9 @@ export interface Offered {
  *
  * `open` names, per zone, the positions a click would take up: with nothing picked it is every card any move
  * names, which is the standing hint that these are the cards in play, and with cards in hand it narrows to the
- * ones a move holding those could still name. `armed` are the moves the selection stands complete for, and
- * `targets` the places they are sent onto — so a selection alone commits nothing, and pointing at a place is
- * what sends it.
+ * ones a move holding those could still name. `armed` are the moves the selection stands complete for, `targets`
+ * the places those are pointed at, and `said` the ones a word sends — so a selection alone commits nothing, and
+ * what sends it is a point at a place or a press where the words are.
  */
 export interface Prospect {
   offers: Offered[];
@@ -45,6 +54,7 @@ export interface Prospect {
   open: Map<ZoneId, Set<number>>;
   armed: Offered[];
   targets: Target[];
+  said: Offered[];
 }
 
 /** The moves this seat may make, each read through its gesture, out of the position it was served. */
@@ -58,14 +68,20 @@ export function offersOf(layout: Layout, view: PositionView): Offered[] {
 /**
  * What the offered moves come to for one selection: what may be picked next, and what is ready to send.
  *
- * A move naming no card at all is armed by no selection, since a selection is how cards are named.
+ * A move is armed when the cards in hand are exactly the cards it names, so an empty hand arms a move naming
+ * none of them and the first card picked up disarms it.
  */
 export function prospect(offers: Offered[], selection: Selection | null): Prospect {
   const candidates = offers.filter((offer) => follows(offer, selection));
-  const armed = candidates.filter(
-    (offer) => selection !== null && offer.indices.length > 0 && sameCards(offer.indices, selection.indices),
-  );
-  return { offers, selection, open: openIn(candidates, selection), armed, targets: distinctTargets(armed) };
+  const armed = candidates.filter((offer) => sameCards(offer.indices, heldIn(selection)));
+  return {
+    offers,
+    selection,
+    open: openIn(candidates, selection),
+    armed,
+    targets: distinctTargets(armed),
+    said: saidOf(armed),
+  };
 }
 
 /** Whether the player has this card in hand. */
@@ -97,7 +113,7 @@ export function picksIn(standing: Prospect, zone: ZoneId): boolean {
 
 /** The move a place sends, and none where pointing at that place sends nothing yet. */
 export function offerTo(standing: Prospect, target: Target): Offered | null {
-  return standing.armed.find((offer) => keyOf(offer.target) === keyOf(target)) ?? null;
+  return standing.armed.find((offer) => offer.target !== null && keyOf(offer.target) === keyOf(target)) ?? null;
 }
 
 /**
@@ -122,7 +138,12 @@ export function pickedUp(standing: Prospect, zone: ZoneId, index: number): Selec
   return pickable(standing.offers, zone, index) ? { zone, indices: [index] } : null;
 }
 
-/** One move as the gesture matching it states it, and none where the layout states no gesture for it. */
+/**
+ * One move as the gesture matching it states it, and none where the two disagree about where it lands.
+ *
+ * A gesture stating a place stands for a move only once that place is named, so a commit onto a seat holds for a
+ * move naming one. A gesture said by its word lands on no place, and states the move naming none.
+ */
 function offered(layout: Layout, move: Move): Offered | null {
   const gesture = layout.gestures.find((candidate) => matches(candidate, move.action));
   if (gesture === undefined) {
@@ -130,15 +151,17 @@ function offered(layout: Layout, move: Move): Offered | null {
   }
 
   const target = targetOf(gesture, move.action);
-  return target === null
-    ? null
-    : {
-        move,
-        picked: gesture.picked,
-        indices: ordered(indicesOf(move.action)),
-        target,
-        caption: gesture.caption,
-      };
+  if (target === null && gesture.commit !== WORD) {
+    return null;
+  }
+
+  return {
+    move,
+    picked: gesture.picked,
+    indices: ordered(indicesOf(move.action)),
+    target,
+    caption: gesture.caption,
+  };
 }
 
 /** Whether a move carrying that action is the move a gesture makes, which mirrors `Gesture.matches`. */
@@ -171,16 +194,29 @@ function indicesOf(action: AnyAction): number[] {
   return action.kind === "pass" ? [] : action.indices;
 }
 
-/** The place a gesture sends a move onto, which a seat commit takes from the move itself. */
+/**
+ * The place a gesture sends a move onto, and none where the move lands on no place a player points at.
+ *
+ * Each way of sending a move is answered for in turn, so a fourth added to the vocabulary says here what it
+ * lands on: a zone commit names its zone, a seat commit takes the seat from a move naming one, and a move said
+ * by its word is pressed where its words are.
+ */
 function targetOf(gesture: Gesture, action: AnyAction): Target | null {
-  if (gesture.commit === ZONE) {
-    return gesture.target === null ? null : { commit: ZONE, zone: gesture.target };
+  switch (gesture.commit) {
+    case ZONE:
+      return gesture.target === null ? null : { commit: ZONE, zone: gesture.target };
+    case SEAT:
+      return action.kind === "give" ? { commit: SEAT, seat: action.target_player } : null;
+    case WORD:
+      return null;
   }
-
-  return action.kind === "give" ? { commit: SEAT, seat: action.target_player } : null;
 }
 
-/** Whether a move could still be the one being built, which every move is while nothing is picked up. */
+/**
+ * Whether a move could still be the one being built, which every move is while nothing is picked up.
+ *
+ * A move made in no zone stands only while the hand is empty, since a card picked up is a card it never names.
+ */
 function follows(offer: Offered, selection: Selection | null): boolean {
   if (selection === null) {
     return true;
@@ -217,14 +253,26 @@ function openIn(candidates: Offered[], selection: Selection | null): Map<ZoneId,
   return open;
 }
 
-/** The places the armed moves are sent onto, each named a single time. */
+/** The places the armed moves are pointed at, each named a single time, out of the ones a place sends. */
 function distinctTargets(armed: Offered[]): Target[] {
   const named = new Map<string, Target>();
   for (const offer of armed) {
-    named.set(keyOf(offer.target), offer.target);
+    if (offer.target !== null) {
+      named.set(keyOf(offer.target), offer.target);
+    }
   }
 
   return [...named.values()];
+}
+
+/** The armed moves a word sends, which reach the table by the caption they carry rather than by a place. */
+function saidOf(armed: Offered[]): Offered[] {
+  return armed.filter((offer) => offer.target === null);
+}
+
+/** The cards in hand, which reads as none of them while nothing is picked up. */
+function heldIn(selection: Selection | null): number[] {
+  return selection === null ? [] : selection.indices;
 }
 
 /** One name per place, which is how two moves are told to be sent onto the same one. */
