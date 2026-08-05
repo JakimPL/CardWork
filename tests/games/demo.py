@@ -16,8 +16,8 @@ from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.states.state import GameState, Points
 from cardwork.zones.presets import HAND, PILE
-from cardwork.zones.zone import Zone, ZoneId, Zones, hand_of
-from cardwork.zones.zones import discard, hands
+from cardwork.zones.zone import Zone, ZoneId, Zones
+from cardwork.zones.zones import discard, hand_of, hands
 
 SEATS: Final[int] = 3
 HAND_SIZE: Final[int] = 3

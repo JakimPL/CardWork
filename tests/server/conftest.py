@@ -17,7 +17,8 @@ from cardwork.decks.deck import Order
 from cardwork.moves.actions import Play, Take
 from cardwork.moves.move import Move
 from cardwork.states.state import GameState
-from cardwork.zones.zone import ZoneId, hand_of
+from cardwork.zones.zone import ZoneId
+from cardwork.zones.zones import hand_of
 
 from ..games.demo import DECK, HAND_SIZE, SEATS, SealedRoundGame
 from .layout import SEALED_SCENE

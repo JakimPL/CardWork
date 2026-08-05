@@ -15,8 +15,7 @@ from cardwork.presentation.scope import Scope
 from cardwork.presentation.slot import Slot
 from cardwork.presentation.tally import Tally
 from cardwork.rounds.state import MatchPhase
-from cardwork.zones.zone import hand_of
-from cardwork.zones.zones import DISCARD
+from cardwork.zones.zones import DISCARD, hand_of
 
 TITLE: Final[str] = "Shedding"
 

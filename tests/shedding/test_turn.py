@@ -26,8 +26,8 @@ from cardwork.exceptions import IllegalMove, NotYourTurn
 from cardwork.moves.actions import Discard, Play, Take
 from cardwork.moves.move import Move
 from cardwork.rounds.seating import next_seat
-from cardwork.zones.zone import cards_of, hand_of
-from cardwork.zones.zones import DISCARD
+from cardwork.zones.zone import cards_of
+from cardwork.zones.zones import DISCARD, hand_of
 
 from .driving import (
     SEATS,

@@ -20,8 +20,7 @@ from cardwork.cards.game import CardsOrJokers
 from cardwork.effects.fold import fold
 from cardwork.rounds.conclusion import ONE_ROUND
 from cardwork.rounds.state import MatchPhase
-from cardwork.zones.zone import hand_of
-from cardwork.zones.zones import DISCARD
+from cardwork.zones.zones import DISCARD, hand_of
 from tests.cases import Case, descriptions
 
 from .driving import (

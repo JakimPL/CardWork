@@ -23,8 +23,8 @@ from cardwork.rounds.state import MatchPhase, RoundState
 from cardwork.states.state import Points
 from cardwork.transactions.transaction import Transaction
 from cardwork.zones.presets import PILE
-from cardwork.zones.zone import Zone, ZoneId, Zones, hand_of
-from cardwork.zones.zones import DISCARD, discard, hands
+from cardwork.zones.zone import Zone, ZoneId, Zones
+from cardwork.zones.zones import DISCARD, discard, hand_of, hands
 
 SEATS: Final[int] = 3
 HAND_SIZE: Final[int] = 2

@@ -15,8 +15,7 @@ from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.game import NOTHING
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
-from cardwork.zones.zone import hand_of
-from cardwork.zones.zones import STACK
+from cardwork.zones.zones import STACK, hand_of
 from tests.cases import Case, descriptions
 
 from .driving import (

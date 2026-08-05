@@ -15,8 +15,8 @@ from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.transactions.transaction import Transaction
-from cardwork.zones.zone import ZoneId, cards_of, hand_of
-from cardwork.zones.zones import DISCARD
+from cardwork.zones.zone import ZoneId, cards_of
+from cardwork.zones.zones import DISCARD, hand_of
 
 SEATS: Final[int] = 3
 TWO_SEATS: Final[int] = 2

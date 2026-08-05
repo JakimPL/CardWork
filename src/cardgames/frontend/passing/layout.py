@@ -15,8 +15,7 @@ from cardwork.presentation.scope import Scope
 from cardwork.presentation.slot import Slot
 from cardwork.presentation.tally import Tally
 from cardwork.rounds.state import MatchPhase
-from cardwork.zones.zone import hand_of
-from cardwork.zones.zones import STACK
+from cardwork.zones.zones import STACK, hand_of
 
 TITLE: Final[str] = "Passing"
 

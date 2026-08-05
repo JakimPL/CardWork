@@ -9,7 +9,8 @@ from cardserver.identity import SEAT_HEADER
 from cardserver.sessions import TableSession
 from cardwork.decks.deck import Order
 from cardwork.states.state import GameState
-from cardwork.zones.zone import ZoneId, hand_of
+from cardwork.zones.zone import ZoneId
+from cardwork.zones.zones import hand_of
 
 from ..games.demo import HAND_SIZE, SEATS, tray_of
 from .conftest import (

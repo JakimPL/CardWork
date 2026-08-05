@@ -28,8 +28,8 @@ from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.game import NOTHING, RoundGame
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
-from cardwork.zones.zone import Zones, cards_of, hand_of
-from cardwork.zones.zones import DISCARD, STACK
+from cardwork.zones.zone import Zones, cards_of
+from cardwork.zones.zones import DISCARD, STACK, hand_of
 
 
 class ClimbingGame(RoundGame[ClimbingState]):

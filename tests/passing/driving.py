@@ -14,8 +14,8 @@ from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.seating import next_seat
 from cardwork.transactions.transaction import Transaction
-from cardwork.zones.zone import cards_of, hand_of
-from cardwork.zones.zones import STACK
+from cardwork.zones.zone import cards_of
+from cardwork.zones.zones import STACK, hand_of
 
 WINNING_LEAD: Final[int] = 2
 SEATS: Final[int] = 3

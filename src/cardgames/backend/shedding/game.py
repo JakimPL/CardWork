@@ -34,8 +34,8 @@ from cardwork.rounds.game import NOTHING, RoundGame
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import next_seat, rotation
 from cardwork.rounds.state import MatchPhase
-from cardwork.zones.zone import Zones, cards_of, hand_of
-from cardwork.zones.zones import DISCARD
+from cardwork.zones.zone import Zones, cards_of
+from cardwork.zones.zones import DISCARD, hand_of
 
 
 class SheddingGame(RoundGame[SheddingState]):

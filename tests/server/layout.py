@@ -14,7 +14,8 @@ from cardwork.presentation.spread import Spread
 from cardwork.presentation.tally import Tally
 from cardwork.states.award import Award
 from cardwork.states.state import GameState
-from cardwork.zones.zone import ZoneId, hand_of
+from cardwork.zones.zone import ZoneId
+from cardwork.zones.zones import hand_of
 from tests.games.demo import tray_of
 
 TITLE: Final[str] = "Sealed round"

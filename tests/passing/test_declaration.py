@@ -30,7 +30,7 @@ from cardwork.cards.cards import (
 from cardwork.cards.game import CardsOrJokers
 from cardwork.rounds.game import NOTHING
 from cardwork.rounds.state import BEFORE_THE_FIRST_ROUND
-from cardwork.zones.zone import hand_of
+from cardwork.zones.zones import hand_of
 from tests.cases import Case, descriptions
 
 from .driving import (
