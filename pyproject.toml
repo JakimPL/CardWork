@@ -154,22 +154,45 @@ containers = ["cardgames"]
 layers = ["frontend", "backend"]
 
 [[tool.importlinter.contracts]]
+name = "Rules read cards rather than tables"
+type = "forbidden"
+source_modules = ["cardgames.backend.*.rules"]
+forbidden_modules = [
+    "cardwork.presentation",
+    "cardwork.rounds",
+    "cardwork.games",
+    "cardwork.views",
+    "cardwork.transactions",
+    "cardwork.effects",
+    "cardwork.positions",
+    "cardwork.boards",
+    "cardwork.moves",
+    "cardwork.zones",
+]
+
+[[tool.importlinter.contracts]]
 name = "Passing stands apart"
 type = "forbidden"
 source_modules = ["cardgames.*.passing"]
-forbidden_modules = ["cardgames.*.showdown", "cardgames.*.shedding"]
+forbidden_modules = ["cardgames.*.showdown", "cardgames.*.shedding", "cardgames.*.climbing"]
 
 [[tool.importlinter.contracts]]
 name = "Showdown stands apart"
 type = "forbidden"
 source_modules = ["cardgames.*.showdown"]
-forbidden_modules = ["cardgames.*.passing", "cardgames.*.shedding"]
+forbidden_modules = ["cardgames.*.passing", "cardgames.*.shedding", "cardgames.*.climbing"]
 
 [[tool.importlinter.contracts]]
 name = "Shedding stands apart"
 type = "forbidden"
 source_modules = ["cardgames.*.shedding"]
-forbidden_modules = ["cardgames.*.passing", "cardgames.*.showdown"]
+forbidden_modules = ["cardgames.*.passing", "cardgames.*.showdown", "cardgames.*.climbing"]
+
+[[tool.importlinter.contracts]]
+name = "Climbing stands apart"
+type = "forbidden"
+source_modules = ["cardgames.*.climbing"]
+forbidden_modules = ["cardgames.*.passing", "cardgames.*.showdown", "cardgames.*.shedding"]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib --strict-markers"
