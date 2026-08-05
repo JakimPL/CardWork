@@ -5,6 +5,7 @@ from cardwork.combinations.assembly.assembly import Assembly
 from cardwork.combinations.combination import BY_STRENGTH, Combination
 from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.policy import Evaluation
+from cardwork.combinations.selection import Selecting, Selection
 from cardwork.combinations.tally import Tally
 
 
@@ -72,3 +73,25 @@ def find_all(
 ) -> tuple[Combination, ...]:
     """Every instance of the pattern the cards hold, from the strongest downwards."""
     return BY_STRENGTH.descending(instances(cards, pattern, evaluation))
+
+
+def selections(
+    cards: Iterable[CardOrJoker],
+    pattern: Pattern,
+    evaluation: Evaluation,
+) -> tuple[Selection, ...]:
+    """Every set of places in the run of cards whose cards are that pattern and are all of it.
+
+    `find_all` reads one instance per reading the pattern admits, so three kings hold the pair of kings once.
+    This reads the places instead, so those same three kings offer their pair three ways, and the cards each
+    of them leaves behind are what tells the three moves apart. The readings the pattern names first lead, and
+    each set of places comes out once.
+    """
+    held = tuple(cards)
+    return tuple(
+        dict.fromkeys(
+            selection
+            for shape in pattern.shapes(evaluation)
+            for selection in Selecting(held, shape, evaluation).selections
+        )
+    )

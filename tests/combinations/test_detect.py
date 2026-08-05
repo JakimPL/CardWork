@@ -40,7 +40,7 @@ from cardwork.cards.cards import (
     TWO_OF_SPADES,
 )
 from cardwork.cards.game import CardOrJoker
-from cardwork.combinations.detect import contains, find, find_all, matches
+from cardwork.combinations.detect import contains, find, find_all, matches, selections
 from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.patterns.any_cards import AnyCards
 from cardwork.combinations.patterns.beside import Beside
@@ -529,3 +529,118 @@ def test_a_joker_takes_the_place_the_reading_gives_it() -> None:
     assert found.cards == (TWO_OF_SPADES, THREE_OF_HEARTS, RED_JOKER)
     assert found.reading == (TWO_OF_SPADES, THREE_OF_HEARTS, FOUR_OF_SPADES)
     assert found.low_ace is False
+
+
+@dataclass(frozen=True)
+class SelectionCase(Case):
+    """One hand beside every set of its places that is the pattern and is all of it."""
+
+    cards: tuple[CardOrJoker, ...]
+    pattern: Pattern
+    offered: tuple[tuple[int, ...], ...]
+
+
+SELECTIONS: Final[tuple[SelectionCase, ...]] = (
+    SelectionCase(
+        description="a rank held three times offers its pair three ways",
+        cards=(KING_OF_SPADES, KING_OF_HEARTS, KING_OF_CLUBS),
+        pattern=PAIR,
+        offered=((0, 1), (0, 2), (1, 2)),
+    ),
+    SelectionCase(
+        description="a rank held twice offers its pair one way",
+        cards=(KING_OF_SPADES, KING_OF_HEARTS, TWO_OF_CLUBS),
+        pattern=PAIR,
+        offered=((0, 1),),
+    ),
+    SelectionCase(
+        description="every rank held twice offers a pair of its own",
+        cards=(KING_OF_SPADES, KING_OF_HEARTS, FIVE_OF_SPADES, FIVE_OF_HEARTS),
+        pattern=PAIR,
+        offered=((0, 1), (2, 3)),
+    ),
+    SelectionCase(
+        description="a hand falling short of a pattern offers it no way at all",
+        cards=(KING_OF_SPADES, KING_OF_HEARTS, TWO_OF_CLUBS),
+        pattern=TRIPLET,
+        offered=(),
+    ),
+    SelectionCase(
+        description="a suit deeper than a pattern offers every five of its cards",
+        cards=(
+            ACE_OF_SPADES,
+            KING_OF_SPADES,
+            QUEEN_OF_SPADES,
+            JACK_OF_SPADES,
+            NINE_OF_SPADES,
+            THREE_OF_SPADES,
+        ),
+        pattern=SameSuit(places=5),
+        offered=(
+            (0, 1, 2, 3, 4),
+            (0, 1, 2, 3, 5),
+            (0, 1, 2, 4, 5),
+            (0, 1, 3, 4, 5),
+            (0, 2, 3, 4, 5),
+            (1, 2, 3, 4, 5),
+        ),
+    ),
+    SelectionCase(
+        description="a run offers each card standing at a rank the stretch names",
+        cards=(TWO_OF_SPADES, THREE_OF_HEARTS, FOUR_OF_CLUBS, FOUR_OF_DIAMONDS),
+        pattern=THREE_IN_A_ROW,
+        offered=((0, 1, 2), (0, 1, 3)),
+    ),
+    SelectionCase(
+        description="a joker is offered wherever it stands in for a card the hand lacks",
+        cards=(KING_OF_SPADES, KING_OF_HEARTS, RED_JOKER),
+        pattern=TRIPLET,
+        offered=((0, 1, 2),),
+    ),
+    SelectionCase(
+        description="two pair are offered as the ranks that hold them",
+        cards=(KING_OF_SPADES, KING_OF_HEARTS, FIVE_OF_SPADES, FIVE_OF_HEARTS, TWO_OF_CLUBS),
+        pattern=TWO_PAIR,
+        offered=((0, 1, 2, 3),),
+    ),
+)
+
+
+@pytest.mark.parametrize("case", SELECTIONS, ids=descriptions(SELECTIONS))
+def test_a_pattern_offers_every_selection_of_it_a_hand_holds(case: SelectionCase) -> None:
+    offered = selections(case.cards, case.pattern, REGULAR_EVALUATION)
+
+    assert {tuple(sorted(selection)) for selection in offered} == set(case.offered)
+    assert len(offered) == len(case.offered)
+
+
+def test_a_tame_joker_is_offered_for_no_card_but_itself() -> None:
+    two_kings_and_a_joker = (KING_OF_SPADES, KING_OF_HEARTS, RED_JOKER)
+
+    assert selections(two_kings_and_a_joker, TRIPLET, TAME_JOKERS) == ()
+    assert len(selections(two_kings_and_a_joker, PAIR, TAME_JOKERS)) == 1
+
+
+def test_a_card_held_twice_answers_one_place_of_a_reading_that_collapses_it() -> None:
+    two_kings_of_spades = (KING_OF_SPADES, KING_OF_SPADES, KING_OF_HEARTS)
+
+    assert {tuple(sorted(selection)) for selection in selections(two_kings_of_spades, PAIR, COLLAPSING)} == {
+        (0, 2),
+        (1, 2),
+    }
+    assert len(selections(two_kings_of_spades, PAIR, REGULAR_EVALUATION)) == 3
+
+
+def test_a_rank_read_once_is_played_as_many_ways_as_its_cards_allow() -> None:
+    three_kings = (KING_OF_SPADES, KING_OF_HEARTS, KING_OF_CLUBS)
+
+    assert len(find_all(three_kings, PAIR, REGULAR_EVALUATION)) == 1
+    assert len(selections(three_kings, PAIR, REGULAR_EVALUATION)) == 3
+
+
+def test_the_selections_a_pattern_names_first_lead() -> None:
+    two_pairs = (FIVE_OF_HEARTS, KING_OF_SPADES, FIVE_OF_SPADES, KING_OF_HEARTS)
+
+    offered = selections(two_pairs, PAIR, REGULAR_EVALUATION)
+
+    assert tuple(tuple(sorted(selection)) for selection in offered) == ((1, 3), (0, 2))

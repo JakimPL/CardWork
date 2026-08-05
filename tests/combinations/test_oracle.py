@@ -13,7 +13,7 @@ from cardwork.cards.game import CardOrJoker
 from cardwork.cards.joker import Joker
 from cardwork.cards.orders import RANK_SEQUENCE
 from cardwork.cards.suit import Suit
-from cardwork.combinations.detect import contains, matches
+from cardwork.combinations.detect import contains, matches, selections
 from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.patterns.any_cards import AnyCards
 from cardwork.combinations.patterns.beside import Beside
@@ -31,6 +31,8 @@ from cardwork.combinations.poker import (
     WHEEL,
 )
 from cardwork.combinations.policy import REGULAR_EVALUATION
+from cardwork.combinations.ranking import Ranking
+from cardwork.combinations.selection import Selection
 from tests.cases import Case
 
 PAIR_CARDS: Final[int] = 2
@@ -172,6 +174,10 @@ RULES: Final[tuple[RuleCase, ...]] = (
     ),
 )
 SHORT_RULES: Final[tuple[RuleCase, ...]] = tuple(rule for rule in RULES if rule.pattern.size <= SHORT_HAND)
+EVERY_RULE: Final[Ranking] = Ranking(
+    patterns=tuple(rule.pattern for rule in RULES),
+    evaluation=REGULAR_EVALUATION,
+)
 
 
 @st.composite
@@ -223,3 +229,43 @@ def test_a_whole_hand_answers_a_rule_only_where_a_reading_of_it_does(
 @given(hand=_hands(cards=SHORT_HAND, wilds=2), rule=st.sampled_from(SHORT_RULES))
 def test_two_jokers_reach_exactly_as_far_as_trying_every_reading(hand: tuple[CardOrJoker, ...], rule: RuleCase) -> None:
     assert contains(hand, rule.pattern, REGULAR_EVALUATION) is _held(hand, rule)
+
+
+def _places(cards: Sequence[CardOrJoker], size: int) -> Iterator[Selection]:
+    """Every set of that many places of the run, whatever the cards standing at them read as."""
+    for chosen in combinations(range(len(cards)), size):
+        yield frozenset(chosen)
+
+
+def _standing(cards: Sequence[CardOrJoker], places: Selection) -> tuple[CardOrJoker, ...]:
+    """The cards standing at those places of the run."""
+    return tuple(card for place, card in enumerate(cards) if place in places)
+
+
+@settings(deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@given(hand=_hands(cards=6, wilds=1), rule=st.sampled_from(RULES))
+def test_the_selections_offered_are_the_ones_the_whole_search_answers(
+    hand: tuple[CardOrJoker, ...], rule: RuleCase
+) -> None:
+    offered = set(selections(hand, rule.pattern, REGULAR_EVALUATION))
+    answered = {
+        places
+        for places in _places(hand, rule.pattern.size)
+        if matches(_standing(hand, places), rule.pattern, REGULAR_EVALUATION)
+    }
+
+    assert offered == answered
+
+
+@settings(deadline=None, max_examples=50, suppress_health_check=[HealthCheck.too_slow])
+@given(hand=_hands(cards=6, wilds=1))
+def test_a_ranking_offers_every_selection_it_reads_as_a_combination(hand: tuple[CardOrJoker, ...]) -> None:
+    offered = set(EVERY_RULE.selections(hand))
+    answered = {
+        places
+        for size in EVERY_RULE.sizes()
+        for places in _places(hand, size)
+        if EVERY_RULE.exactly(_standing(hand, places)) is not None
+    }
+
+    assert offered == answered

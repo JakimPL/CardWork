@@ -1,4 +1,4 @@
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from enum import StrEnum
 from typing import Final, Self
 
@@ -9,9 +9,12 @@ from cardwork.cards.order import ByRank, BySuit
 from cardwork.cards.orders import RANK_SEQUENCE, SUIT_SEQUENCE
 from cardwork.cards.rank import Rank, Ranks
 from cardwork.cards.suit import Suit, Suits
+from cardwork.combinations.stretch import SHORTEST_STRETCH, Stretch
 from cardwork.models.base import BaseFrozen
 from cardwork.ordering.composite import Composite
 from cardwork.ordering.preorder import Preorder
+
+HIGHEST_RANK: Final[int] = -1
 
 
 class Duplicates(StrEnum):
@@ -54,6 +57,45 @@ class Evaluation(BaseFrozen):
     def card_order(self) -> Preorder[Card]:
         """Cards by rank and then by suit, which is the strength this reading gives a single card."""
         return Composite(ByRank(self.ranks), BySuit(self.suits))
+
+    def stretches(self, size: int) -> tuple[Stretch, ...]:
+        """Every run of that many consecutive ranks this reading admits, the highest-topped first.
+
+        The stretches follow the sequence this reading states, and where it admits the wheel one more follows
+        them: the highest rank leading the lowest ranks, which is A 2 3 4 5 over the regular sequence and is
+        topped by its five. A game enumerating the runs a hand can make reads them from here, and `Run` states
+        its places over them.
+
+        The ranks this reading places are how far a run reaches, so a count within them is answered by every
+        stretch of it and a longer one comes back empty.
+
+        Args:
+            size: how many ranks the run takes, which is two at the least.
+
+        Raises:
+            ValueError: when fewer than two ranks are asked for, which `ranks` states on its own.
+        """
+        if size < SHORTEST_STRETCH:
+            raise ValueError(f"A run stretches over {SHORTEST_STRETCH} ranks at the least, and {size} was asked for")
+
+        return tuple(self._stretching(size))
+
+    def _stretching(self, size: int) -> Iterator[Stretch]:
+        """The stretches from the highest-topped downwards, the wheel following the ones the sequence holds."""
+        if size > len(self.ranks):
+            return
+
+        for top in reversed(range(size - 1, len(self.ranks))):
+            yield Stretch(
+                ranks=self.ranks[top + 1 - size : top + 1],
+                low_ace=False,
+            )
+
+        if self.wheel:
+            yield Stretch(
+                ranks=(self.ranks[HIGHEST_RANK], *self.ranks[: size - 1]),
+                low_ace=True,
+            )
 
     @staticmethod
     def _placed[ValueT](

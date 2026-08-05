@@ -24,7 +24,9 @@ from cardwork.combinations.poker import (
 )
 from cardwork.combinations.policy import REGULAR_EVALUATION, Duplicates, Evaluation
 from cardwork.combinations.ranking import ByPattern, Ranking
+from cardwork.combinations.selection import Selecting, Selection
 from cardwork.combinations.shape import Shape
+from cardwork.combinations.stretch import Stretch
 from cardwork.combinations.tally import Tally
 
 __all__ = [
@@ -56,6 +58,9 @@ __all__ = [
     "Pattern",
     "Ranking",
     "Scoring",
+    "Selecting",
+    "Selection",
     "Shape",
+    "Stretch",
     "Tally",
 ]

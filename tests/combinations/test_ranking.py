@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from cardwork.cards.card import Card
 from cardwork.cards.cards import (
     ACE_OF_CLUBS,
+    ACE_OF_HEARTS,
     ACE_OF_SPADES,
     FIVE_OF_DIAMONDS,
     FIVE_OF_HEARTS,
@@ -24,6 +25,7 @@ from cardwork.cards.cards import (
     SEVEN_OF_HEARTS,
     SEVEN_OF_SPADES,
     SIX_OF_SPADES,
+    STANDARD_CARDS,
     TEN_OF_SPADES,
     THREE_OF_CLUBS,
     THREE_OF_HEARTS,
@@ -37,6 +39,7 @@ from cardwork.cards.rank import Rank
 from cardwork.cards.suit import Suit
 from cardwork.combinations.detect import find
 from cardwork.combinations.pattern import Pattern
+from cardwork.combinations.patterns.same_rank import SameRank
 from cardwork.combinations.patterns.same_suit import SameSuit
 from cardwork.combinations.poker import (
     FLUSH,
@@ -44,6 +47,7 @@ from cardwork.combinations.poker import (
     HIGH_CARD,
     PAIR,
     POKER,
+    POKER_HAND,
     POKER_ORDER,
     QUADRUPLET,
     STRAIGHT,
@@ -55,6 +59,15 @@ from cardwork.combinations.policy import REGULAR_EVALUATION
 from cardwork.combinations.ranking import Ranking
 
 THREE_OF_A_SUIT: Final[Pattern] = SameSuit(places=3)
+FIVE_OF_A_RANK: Final[Pattern] = SameRank(places=POKER_HAND)
+ALIKE_ALONE: Final[Ranking] = Ranking(patterns=(HIGH_CARD, PAIR, TRIPLET), evaluation=REGULAR_EVALUATION)
+FIVES_APART: Final[Ranking] = Ranking(patterns=(PAIR, FIVE_OF_A_RANK), evaluation=REGULAR_EVALUATION)
+
+SINGLE_CARD: Final[int] = 1
+PAIR_CARDS: Final[int] = 2
+TRIPLET_CARDS: Final[int] = 3
+TWO_PAIR_CARDS: Final[int] = 4
+PAST_THE_RANKING: Final[int] = 6
 
 from tests.cases import Case, descriptions
 
@@ -103,6 +116,13 @@ WHEEL: Final[tuple[CardOrJoker, ...]] = (
 KINGS: Final[tuple[CardOrJoker, ...]] = (KING_OF_SPADES, KING_OF_HEARTS, TWO_OF_CLUBS)
 OTHER_KINGS: Final[tuple[CardOrJoker, ...]] = (KING_OF_DIAMONDS, KING_OF_CLUBS, THREE_OF_CLUBS)
 FIVES: Final[tuple[CardOrJoker, ...]] = (FIVE_OF_SPADES, FIVE_OF_HEARTS, TWO_OF_CLUBS)
+THREE_KINGS: Final[tuple[CardOrJoker, ...]] = (KING_OF_SPADES, KING_OF_HEARTS, KING_OF_CLUBS)
+FOUR_KINGS_ALONE: Final[tuple[CardOrJoker, ...]] = (
+    KING_OF_SPADES,
+    KING_OF_HEARTS,
+    KING_OF_CLUBS,
+    KING_OF_DIAMONDS,
+)
 
 
 @dataclass(frozen=True)
@@ -356,3 +376,187 @@ def test_a_ranking_of_its_own_answers_only_the_combinations_it_names() -> None:
     assert found is not None
     assert found.pattern == THREE_OF_A_SUIT
     assert suits_alone.strongest((KING_OF_SPADES, NINE_OF_SPADES, ACE_OF_CLUBS)) is None
+
+
+def test_a_ranking_names_the_counts_its_combinations_take() -> None:
+    assert POKER.sizes() == (SINGLE_CARD, PAIR_CARDS, TRIPLET_CARDS, TWO_PAIR_CARDS, POKER_HAND)
+    assert ALIKE_ALONE.sizes() == (SINGLE_CARD, PAIR_CARDS, TRIPLET_CARDS)
+
+
+def test_a_ranking_narrows_to_the_patterns_taking_one_count() -> None:
+    of_five = POKER.sized(POKER_HAND)
+
+    assert of_five.patterns == (STRAIGHT, FLUSH, FULL_HOUSE, STRAIGHT_FLUSH)
+    assert of_five.evaluation == POKER.evaluation
+    assert of_five.sizes() == (POKER_HAND,)
+
+
+def test_a_ranking_narrowed_to_a_count_reads_that_count_alone() -> None:
+    of_two = POKER.sized(PAIR_CARDS)
+
+    assert of_two.strongest(THREE_KINGS) is not None
+    assert of_two.strongest((KING_OF_SPADES,)) is None
+
+
+def test_a_count_no_combination_takes_is_refused_naming_the_counts_that_are() -> None:
+    with pytest.raises(KeyError, match="No combination of this ranking takes 6 cards; it takes 1, 2, 3, 4, 5"):
+        POKER.sized(PAST_THE_RANKING)
+
+
+@dataclass(frozen=True)
+class WholeCase(Case):
+    """One hand beside the combination it is and the combination it holds, which part twice over."""
+
+    cards: tuple[CardOrJoker, ...]
+    whole: Pattern | None
+    best: Pattern | None
+
+
+WHOLE: Final[tuple[WholeCase, ...]] = (
+    WholeCase(
+        description="five spades in a row are a straight flush and hold one",
+        cards=ROYAL_FLUSH,
+        whole=STRAIGHT_FLUSH,
+        best=STRAIGHT_FLUSH,
+    ),
+    WholeCase(
+        description="three kings are a triplet and hold one",
+        cards=THREE_KINGS,
+        whole=TRIPLET,
+        best=TRIPLET,
+    ),
+    WholeCase(
+        description="four kings are a quadruplet and hold one",
+        cards=FOUR_KINGS_ALONE,
+        whole=QUADRUPLET,
+        best=QUADRUPLET,
+    ),
+    WholeCase(
+        description="two kings beside a spare card hold a pair and are none",
+        cards=KINGS,
+        whole=None,
+        best=PAIR,
+    ),
+    WholeCase(
+        description="four kings beside a spare card hold a quadruplet and are none",
+        cards=FOUR_KINGS,
+        whole=None,
+        best=QUADRUPLET,
+    ),
+    WholeCase(description="no cards are none and hold none", cards=(), whole=None, best=None),
+)
+
+
+@pytest.mark.parametrize("case", WHOLE, ids=descriptions(WHOLE))
+def test_a_ranking_reads_a_hand_as_the_combination_it_is_and_as_the_one_it_holds(case: WholeCase) -> None:
+    whole = POKER.exactly(case.cards)
+    best = POKER.strongest(case.cards)
+
+    assert (whole.pattern if whole is not None else None) == case.whole
+    assert (best.pattern if best is not None else None) == case.best
+
+
+def test_a_hand_reaching_past_every_pattern_of_its_count_is_no_combination() -> None:
+    best = ALIKE_ALONE.strongest(FOUR_KINGS_ALONE)
+
+    assert ALIKE_ALONE.exactly(FOUR_KINGS_ALONE) is None
+    assert best is not None
+    assert best.pattern == TRIPLET
+
+
+@dataclass(frozen=True)
+class ClimbCase(Case):
+    challenger: tuple[CardOrJoker, ...]
+    held: tuple[CardOrJoker, ...]
+    climbs: bool
+
+
+CLIMBS: Final[tuple[ClimbCase, ...]] = (
+    ClimbCase(description="the higher pair climbs over the lower", challenger=KINGS, held=FIVES, climbs=True),
+    ClimbCase(description="the lower pair stands below the higher", challenger=FIVES, held=KINGS, climbs=False),
+    ClimbCase(
+        description="the higher suit climbs over a pair of the same rank",
+        challenger=KINGS,
+        held=OTHER_KINGS,
+        climbs=True,
+    ),
+    ClimbCase(description="a pair climbs over none reading its own cards", challenger=KINGS, held=KINGS, climbs=False),
+    ClimbCase(
+        description="a stronger combination of another count stands beside rather than over",
+        challenger=ROYAL_FLUSH,
+        held=KINGS,
+        climbs=False,
+    ),
+    ClimbCase(
+        description="a weaker combination of another count stands beside it as well",
+        challenger=KINGS,
+        held=ROYAL_FLUSH,
+        climbs=False,
+    ),
+)
+
+
+@pytest.mark.parametrize("case", CLIMBS, ids=descriptions(CLIMBS))
+def test_a_ranking_states_which_combination_climbs_over_another(case: ClimbCase) -> None:
+    challenger = POKER.strongest(case.challenger)
+    held = POKER.strongest(case.held)
+
+    assert challenger is not None
+    assert held is not None
+    assert POKER.climbs(challenger, held) is case.climbs
+
+
+def test_a_ranking_reads_the_best_of_every_count_a_deck_reaches() -> None:
+    ceilings = POKER.ceilings(STANDARD_CARDS)
+
+    assert tuple(ceilings) == POKER.sizes()
+    assert ceilings[SINGLE_CARD].reading == (ACE_OF_SPADES,)
+    assert ceilings[PAIR_CARDS].reading == (ACE_OF_SPADES, ACE_OF_HEARTS)
+    assert ceilings[POKER_HAND].pattern == STRAIGHT_FLUSH
+    assert ceilings[POKER_HAND].reading == (
+        TEN_OF_SPADES,
+        JACK_OF_SPADES,
+        QUEEN_OF_SPADES,
+        KING_OF_SPADES,
+        ACE_OF_SPADES,
+    )
+
+
+def test_a_ceiling_stands_over_every_combination_of_its_count_a_hand_forms() -> None:
+    ceilings = POKER.ceilings(STANDARD_CARDS)
+    kings = POKER.strongest(KINGS)
+
+    assert kings is not None
+    assert POKER.climbs(ceilings[PAIR_CARDS], kings)
+    assert not POKER.climbs(kings, ceilings[PAIR_CARDS])
+
+
+def test_a_ranking_names_the_counts_a_deck_reaches() -> None:
+    ceilings = FIVES_APART.ceilings(STANDARD_CARDS)
+
+    assert tuple(ceilings) == (PAIR_CARDS,)
+    assert FIVES_APART.sizes() == (PAIR_CARDS, POKER_HAND)
+
+
+def test_a_ranking_offers_every_selection_a_hand_reads_as_a_combination() -> None:
+    offered = ALIKE_ALONE.selections(THREE_KINGS)
+
+    assert {tuple(sorted(selection)) for selection in offered} == {
+        (0,),
+        (1,),
+        (2,),
+        (0, 1),
+        (0, 2),
+        (1, 2),
+        (0, 1, 2),
+    }
+    assert len(offered) == len(set(offered))
+
+
+def test_every_selection_a_ranking_offers_reads_as_a_combination_of_it() -> None:
+    hand = (*ROYAL_FLUSH, *THREE_KINGS)
+
+    offered = POKER.selections(hand)
+
+    assert offered
+    assert all(POKER.exactly(tuple(hand[place] for place in selection)) is not None for selection in offered)

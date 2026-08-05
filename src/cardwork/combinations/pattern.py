@@ -122,9 +122,12 @@ def _as_pattern(value: object) -> object:
 
     kind = value.get(KIND)
     if not isinstance(kind, str):
-        raise TypeError(f"A pattern names the rule it is by a word, and this one carries {kind!r}")
+        raise ValueError(f"A pattern names the rule it is by a word, and this one carries {kind!r}")
 
     return Pattern.named(kind).model_validate(value)
 
 
-type AnyPattern = Annotated[SerializeAsAny[Pattern], BeforeValidator(_as_pattern)]
+type AnyPattern = Annotated[
+    SerializeAsAny[Pattern],
+    BeforeValidator(_as_pattern),
+]
