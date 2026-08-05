@@ -1,6 +1,7 @@
 from typing import Final
 
 from cardwork.cards.orders import GERMAN_SUIT_SEQUENCE, RANK_SEQUENCE
+from cardwork.cards.points import REGULAR_POINTS, PointTable
 from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.poker import (
     FLUSH,
@@ -17,7 +18,8 @@ from cardwork.states.award import Award
 
 SEATS_LEAST: Final[int] = 2
 SEATS_MOST: Final[int] = 5
-AWARD: Final[Award] = Award.HIGHEST
+POINTS: Final[PointTable] = REGULAR_POINTS
+AWARD: Final[Award] = Award.LOWEST
 
 CLIMBING_PATTERNS: Final[tuple[Pattern, ...]] = (
     HIGH_CARD,

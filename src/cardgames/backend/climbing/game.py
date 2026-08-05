@@ -5,6 +5,7 @@ from typing import ClassVar, Final
 from cardgames.backend.climbing.rules import (
     AWARD,
     CLIMBING_RANKING,
+    POINTS,
     SEATS_LEAST,
     SEATS_MOST,
 )
@@ -30,7 +31,7 @@ from cardwork.rounds.game import RoundGame
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import followed, rotation
 from cardwork.rounds.state import MatchPhase
-from cardwork.states.state import NOTHING
+from cardwork.states.state import NOTHING, Points
 from cardwork.zones.zone import Zones
 from cardwork.zones.zones import DISCARD, HANDS, STACK
 
@@ -46,14 +47,16 @@ class ClimbingGame(RoundGame[ClimbingState]):
     gives its turn up. `rules.CLIMBING_RANKING` holds that vocabulary whole, and `climbs` is the contest itself:
     as many cards, standing higher.
 
-    The round goes to the first seat to play its last card, and the match runs to the conclusion its table was
-    opened with.
+    The round closes on the first seat to play its last card, and every seat is caught with what its hand still
+    holds: pips at face value and every court card and ace at ten, added into a standing won at the low end. So
+    the match goes to the seat caught with the least over the rounds its table was opened to run.
 
         game = ClimbingGame(players=4, deck=standard_deck(), conclusion=Conclusion(rounds=3), rng=Random(7))
 
-    **What a round still owes is its turn.** A play moves its cards onto the stack and a pass hands the turn to
-    the next seat still answering; the cursor a landed combination leaves behind — the seat that answers it, and
-    the lead the passes settle — is the work left to write.
+    **A turn is one of two moves.** A combination played lands face up on the stack and stands there for the next
+    seat still answering to climb over. A pass gives that turn up for as long as the combination on the table
+    keeps changing hands, and a pass by every seat but one leaves that seat's combination unanswered, which hands
+    it the lead again over an empty table.
     """
 
     capacity: ClassVar[Capacity] = Capacity(least=SEATS_LEAST, most=SEATS_MOST)
@@ -143,7 +146,14 @@ class ClimbingGame(RoundGame[ClimbingState]):
         move: Move | None,
         rng: Random,
     ) -> Effects[ClimbingState]:
-        """The round closed on the seat that has played its last card, which is what a landed play may leave."""
+        """The round closed on the seat that has played its last card, and nothing once it stands closed.
+
+        A round comes to rest at the boundary that scores it, so the close is owed once: the phase a decided
+        round stands in is the answer that it has been written.
+        """
+        if self.round_over(position):
+            return ()
+
         return self._decided(position)
 
     def round_over(self, position: Position[ClimbingState]) -> bool:
@@ -174,7 +184,7 @@ class ClimbingGame(RoundGame[ClimbingState]):
                 return self._passed(position, move.player)
 
             case Play() as playing:
-                return self._played(move.player, playing)
+                return self._played(position, move.player, playing)
 
     def moves_of(self, position: Position[ClimbingState], seat: int) -> Moves:
         """Every combination one seat may put down, and the pass a seat answering one gives its turn up with.
@@ -308,8 +318,13 @@ class ClimbingGame(RoundGame[ClimbingState]):
 
         return position.board.taken(HANDS.of(seat), places)
 
-    def _played(self, seat: int, play: Play) -> Effects[ClimbingState]:
-        """The combination laid face up on the stack, where the whole table reads what it stands to climb over."""
+    def _played(
+        self,
+        position: Position[ClimbingState],
+        seat: int,
+        play: Play,
+    ) -> Effects[ClimbingState]:
+        """The combination laid face up on the stack, and the cursor it leaves the round standing on."""
         return (
             MoveCards(
                 source=HANDS.of(seat),
@@ -317,6 +332,43 @@ class ClimbingGame(RoundGame[ClimbingState]):
                 target=STACK,
                 face_down=False,
             ),
+            SetState(state=self._landed(position, seat, play)),
+        )
+
+    def _landed(
+        self,
+        position: Position[ClimbingState],
+        seat: int,
+        play: Play,
+    ) -> ClimbingState:
+        """The cursor a landed combination leaves: itself on the table, and the next seat answering it to act.
+
+        The combination is carried as the ranking read it, which is what holds the seat answering to the count
+        on the table and to climbing over what stands there. The seats that gave their turn up stay out of the
+        contest, which runs on while the combination on the table changes hands.
+        """
+        return position.state.with_changes(
+            phase=ClimbingPhase.FOLLOW,
+            to_act=self._next_answering(position, seat, position.state.passed),
+            on_table=self._combination(position, seat, play),
+        )
+
+    def _combination(
+        self,
+        position: Position[ClimbingState],
+        seat: int,
+        play: Play,
+    ) -> Combination:
+        """The combination a play puts down, as the ranking reads the cards it names.
+
+        Raises:
+            LogicError: when the cards read as no combination this game is played by, which every play landing
+                here has been held to.
+        """
+        cards = self._chosen(position, seat, play.indices)
+        return held(
+            CLIMBING_RANKING.exactly(cards),
+            f"combination stands in the cards seat {seat} played",
         )
 
     def _passed(
@@ -326,44 +378,63 @@ class ClimbingGame(RoundGame[ClimbingState]):
     ) -> Effects[ClimbingState]:
         """The cursor a pass leaves the round on: the turn handed to the next seat still answering, or a fresh lead.
 
-        A pass by the last seat still answering leaves the combination on the table unanswered, which opens the
-        lead again with every pass cleared.
+        The turn goes to the next seat round the table yet to pass either way, and where this pass is the last
+        one owed, that seat is the one whose combination the rest of the table gave up on. So a contest every
+        seat but one has passed over hands its winner the lead, and the table it leads onto stands empty.
         """
-        if len(position.state.passed) == position.players - ONE_SEAT:
-            return (
-                SetState(
-                    state=position.state.with_changes(
-                        phase=ClimbingPhase.LEAD,
-                        to_act=seat,
-                        passed=frozenset(),
-                    )
-                ),
-            )
+        passed = position.state.passed | {seat}
+        onwards = self._next_answering(position, seat, passed)
+        if len(passed) == position.players - ONE_SEAT:
+            return (SetState(state=self._reopened(position, onwards)),)
 
         return (
             SetState(
                 state=position.state.with_changes(
                     phase=ClimbingPhase.FOLLOW,
-                    to_act=self._next_answering(position, seat),
-                    passed=position.state.passed | {seat},
+                    to_act=onwards,
+                    passed=passed,
                 )
             ),
+        )
+
+    def _reopened(
+        self,
+        position: Position[ClimbingState],
+        leader: int,
+    ) -> ClimbingState:
+        """The lead the passes settle, which stands on nothing as the lead a round opens on does.
+
+        Args:
+            position: the table as the pass closing the contest leaves it.
+            leader: the seat whose combination the rest of the table passed over, which leads afresh.
+        """
+        return position.state.with_changes(
+            phase=ClimbingPhase.LEAD,
+            to_act=leader,
+            on_table=None,
+            passed=frozenset(),
         )
 
     def _next_answering(
         self,
         position: Position[ClimbingState],
         seat: int,
+        passed: frozenset[int],
     ) -> int:
-        """The next seat round the table still answering the combination on the table.
+        """The next seat round the table with a turn to take, which is the first one yet to give its turn up.
+
+        Args:
+            position: the table as the turn just taken leaves it.
+            seat: the seat that took that turn, which the walk round the table sets out from.
+            passed: the seats out of the contest, a seat that has just passed among them.
 
         Raises:
-            LogicError: when every seat has passed, which a pass leaving one seat to answer never reaches.
+            LogicError: when every seat has passed, which one contest stops one pass short of.
         """
         return followed(
             seat,
             position.players,
-            lambda other: other not in position.state.passed,
+            lambda other: other not in passed,
             including=False,
         )
 
@@ -389,9 +460,18 @@ class ClimbingGame(RoundGame[ClimbingState]):
         position: Position[ClimbingState],
         winner: int,
     ) -> ClimbingState:
-        """The round decided by the seat that played its last card, which leaves nobody to act and no pass standing."""
+        """The round decided by the seat that played its last card, every other seat caught with what it holds.
+
+        Nobody is left to act and no pass stands, and the round scores the hands as they lie: the seat that went
+        out is caught with nothing, and a seat holding cards takes the worth of every one of them.
+        """
         return position.state.at_rest(
             ClimbingPhase.DECIDED,
             winner=winner,
             passed=frozenset(),
+            round_points=self._caught(position),
         )
+
+    def _caught(self, position: Position[ClimbingState]) -> Points:
+        """What each seat is caught holding: the worth of the cards left in its hand, at `POINTS` for every one."""
+        return tuple(POINTS.total(position.board.cards(HANDS.of(seat))) for seat in position.seats)

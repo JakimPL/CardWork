@@ -25,9 +25,10 @@ class ClimbingState(RoundState):
     cards, and the whole contest is one reading the cursor already holds. It reads None on a lead, which is the
     turn a seat puts down a combination of its own choosing.
 
-    `passed` holds the seats that have given their turn up over the combination on the table, and `winner` names
-    the seat that played its last card. The standing, the round in play and the clauses the match ends on stand on
-    `RoundState`, which is where every match played in rounds keeps them.
+    `passed` holds the seats out of the contest the table stands in, which they stay out of while the combination
+    on the table changes hands and take a turn in again once a lead reopens. `winner` names the seat that played
+    its last card. The standing, the round in play and the clauses the match ends on stand on `RoundState`, which
+    is where every match played in rounds keeps them.
     """
 
     on_table: Combination | None = None
