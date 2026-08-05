@@ -3,7 +3,7 @@ from random import Random
 from typing import ClassVar, Final, Generic
 
 from cardwork.boards.board import Board
-from cardwork.decks.deck import Deck
+from cardwork.decks.deck import Deck, Order
 from cardwork.effects.effects import Effects, Reorder
 from cardwork.effects.fold import fold
 from cardwork.exceptions import (
@@ -216,7 +216,7 @@ class Game(ABC, Generic[StateT]):
     def arrange(
         self,
         zone: ZoneId,
-        order: tuple[int, ...],
+        order: Order,
         seat: int,
         base_seq: int,
     ) -> Transaction[StateT]:
@@ -377,7 +377,7 @@ class Game(ABC, Generic[StateT]):
     def _confirm_arrangement(
         self,
         zone: ZoneId,
-        order: tuple[int, ...],
+        order: Order,
         seat: int,
     ) -> None:
         """Confirm a seat holds a zone it may lay out, and that the order names each of its positions once.

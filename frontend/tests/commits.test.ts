@@ -29,12 +29,12 @@ describe("a commit applied to the view a client holds", () => {
     expect(after.observer).toBe(held.observer);
   });
 
-  it("holds a zone the client had not seen where a change names one", () => {
+  it("holds a zone the client had not seen where a change names one, as a zone it may not lay out", () => {
     const held = aView({ [HAND]: [] }, 4);
 
     const after = applyCommit(held, aCommit(4, [{ zone: PILE, before: [], after: [null, null] }]));
 
-    expect(after.zones[PILE]).toEqual({ id: PILE, owner: null, cards: [null, null] });
+    expect(after.zones[PILE]).toEqual({ id: PILE, owner: null, arrangeable: false, cards: [null, null] });
   });
 
   it("reads the same either way round, so a commit met twice changes nothing the second time", () => {

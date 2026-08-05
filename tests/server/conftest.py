@@ -11,13 +11,15 @@ from cardserver.app import create_app
 from cardserver.identity import SEAT_HEADER, TokenSeats
 from cardserver.protocol import Presentation, Table
 from cardserver.registry import TableRegistry
-from cardserver.schemas import MoveRequest
+from cardserver.schemas import ArrangementRequest, MoveRequest
 from cardserver.sessions import TableSession
+from cardwork.decks.deck import Order
 from cardwork.moves.actions import Play, Take
 from cardwork.moves.move import Move
 from cardwork.states.state import GameState
+from cardwork.zones.zone import ZoneId, hand_of
 
-from ..games.demo import DECK, SEATS, SealedRoundGame
+from ..games.demo import DECK, HAND_SIZE, SEATS, SealedRoundGame
 from .layout import SEALED_SCENE
 
 TABLE: Final[str] = "green-baize"
@@ -29,7 +31,10 @@ FIRST_CARD: Final[frozenset[int]] = frozenset({0})
 DEAL: Final[int] = 1
 BASE_URL: Final[str] = "http://cardwork"
 
+BACKWARDS: Final[Order] = tuple(reversed(range(HAND_SIZE)))
+
 MOVES: Final[str] = f"/tables/{TABLE}/moves"
+ARRANGEMENTS: Final[str] = f"/tables/{TABLE}/arrangements"
 LAYOUT: Final[str] = f"/tables/{TABLE}/layout"
 VIEW: Final[str] = f"/tables/{TABLE}/view"
 EVENTS: Final[str] = f"/tables/{TABLE}/events"
@@ -57,6 +62,20 @@ def sealing(seat: int, base_seq: int, key: str) -> dict[str, object]:
 def reclaiming(seat: int, base_seq: int, key: str) -> dict[str, object]:
     """A command lifting a seat's sealed card back into its hand."""
     return command(Move(player=seat, action=Take(group="sealed", indices=FIRST_CARD)), base_seq, key)
+
+
+def arranging(zone: ZoneId, order: Order, base_seq: int, key: str) -> dict[str, object]:
+    """A command laying one zone out in an order, built through the schema the server validates it with.
+
+    The seat is absent as it is absent from the wire: the server reads it off the credential the request
+    carries, so a client states the zone alone and the token settles whose zone that is.
+    """
+    return ArrangementRequest(zone=zone, order=order, base_seq=base_seq, idempotency_key=key).model_dump(mode="json")
+
+
+def sorting(seat: int, base_seq: int, key: str) -> dict[str, object]:
+    """A command laying a seat's own hand out back to front, which is the order a full hand reverses into."""
+    return arranging(hand_of(seat), BACKWARDS, base_seq, key)
 
 
 @asynccontextmanager

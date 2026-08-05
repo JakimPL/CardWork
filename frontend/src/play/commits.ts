@@ -46,7 +46,12 @@ function rearranged(zones: Record<ZoneId, ZoneView>, event: EventView): Record<Z
   return rearrangement;
 }
 
-/** The zone a change speaks about, and an empty one of that name where the view holds none. */
+/**
+ * The zone a change speaks about, and an empty one of that name where the view holds none.
+ *
+ * A zone a client has read in no view has been told nothing of its standing, so the one it stands in for reads
+ * as a zone the table lays out: what a seat may sort is a thing the table says, and this says it of nothing.
+ */
 function zoneOf(zones: Record<ZoneId, ZoneView>, zone: ZoneId): ZoneView {
-  return zones[zone] ?? { id: zone, owner: null, cards: [] };
+  return zones[zone] ?? { id: zone, owner: null, arrangeable: false, cards: [] };
 }

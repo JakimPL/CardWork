@@ -773,36 +773,45 @@ is what makes a take-back possible (§4.4). The engine stays synchronous and kno
 ### Arrangement — the commit a seat asks for outside the turn
 
 A player sorting the hand it holds is the third thing that reaches the journal, and `arrange(zone, order, seat,
-base_seq)` is the entry point for it. It runs a pipeline of its own, three steps to `submit`'s six:
+base_seq)` is the entry point for it. It runs a pipeline of its own, whose engine half is four steps to
+`submit`'s seven:
 
 ```
-Arrangement(table, zone, order, base_seq)
+Arrangement(table, zone, order, base_seq, idempotency_key)
    │
    ├─ 1. identity      adapter maps credential -> seat                 401 Unauthenticated
    ├─ 2. standing      a seat, rather than a spectator, is asking      403 WrongSeat
-   ├─ 3. lock          the same single writer per table
-   │      ── engine below this line ──
-   ├─ 4. concurrency   base_seq == journal.head                        409 StalePosition
-   ├─ 5. entitlement   arrangeable_by(zone, seat) (§3.4)               422 ArrangementRefused
-   ├─ 6. permutation   the order names each position of the zone once  422 ArrangementRefused
-   ├─ 7. commit        journal.append(Transaction(head, None, (Reorder(zone, order),)))
-   └─ 8. publish       mark published; wake every stream watching
+   ├─ 3. lock          the same single writer per table (§10)
+   ├─ 4. idempotency   key already applied? -> return its seq          200 (replayed)
+   │      ── engine below this line; everything above is the adapter ──
+   ├─ 5. concurrency   base_seq == journal.head                        409 StalePosition
+   ├─ 6. entitlement   arrangeable_by(zone, seat) (§3.4)               422 ArrangementRefused
+   ├─ 7. permutation   the order names each position of the zone once  422 ArrangementRefused
+   ├─ 8. commit        journal.append(Transaction(head, None, (Reorder(zone, order),)))
+   │      ── adapter again ──
+   └─ 9. publish       mark published; wake every stream watching
 ```
 
-**No `authorize`, no `validate`, no `advance`.** The steps `submit` runs are the ones that ask what the rules make
-of an intent, and a seat sorting a zone whose run no rule reads states no intent to ask about. So the table stands
-as it stood across the commit: the same cards at the same faces under the same cursor, and every other seat reads
-the zone exactly as before — a run of placeholders reads the same however it is permuted, so `zone_changes` (§7)
-carries nothing at all for them. That is what admits an arrangement at any moment of a round whoever holds the
-turn, and step 13 is absent for the same reason: sorting a hand restarts no grace window, since nothing was
-committed for a seat to take back.
+**No `authorize`, no `validate`, no `advance`.** The steps `submit` runs between those are the ones that ask what
+the rules make of an intent, and a seat sorting a zone whose run no rule reads states no intent to ask about. So
+the table stands as it stood across the commit: the same cards at the same faces under the same cursor, and every
+other seat reads the zone exactly as before — a run of placeholders reads the same however it is permuted, so
+`zone_changes` (§7) carries nothing at all for them. That is what admits an arrangement at any moment of a round
+whoever holds the turn, and what leaves the grace window out of the last step: sorting a hand starts no window,
+since nothing was committed for a seat to take back, and the changes a closed round owes fall due at the moment
+the last move left them due.
+
+**Step 2 asks less than `submit`'s does, and the seat is the answer to it.** A move states the seat it is made for
+and the adapter confirms the credential holds it; an arrangement states no seat at all, so the credential is not
+checked against a claim but read as one. That is the whole of why the body carries no seat: a request naming one
+would be a request to be refused, and the shape a client cannot get wrong is the shape that leaves it out.
 
 **It is a commit rather than a client-side display order** for two reasons, both about the one thing indices
 mean here. Positions name cards against one version of the position (§5.3, and *Why `base_seq` matters* above),
 so a client keeping an order of its own would hold a second coordinate system that every index crossing the wire
 would have to be read through; and an order kept locally has no stable key — an index dies when a card leaves the
 zone, and a card's identity is no key at all where a deck is doubled or where a seat owns a zone it cannot read.
-Held on the server there is one coordinate system, nothing to rebase, and the order survives a reload. Step 4
+Held on the server there is one coordinate system, nothing to rebase, and the order survives a reload. Step 5
 earns its place here as much as in `submit`: sorting a hand moves the card each position names, so a move
 already in flight against the old run is turned away rather than landing on the wrong card.
 
@@ -1195,6 +1204,7 @@ class Table(Protocol[StateT]):
     def journal(self) -> Journal[StateT]: ...
 
     def submit(self, move: Move, base_seq: int) -> Transaction[StateT]: ...
+    def arrange(self, zone: ZoneId, order: Order, seat: int, base_seq: int) -> Transaction[StateT]: ...
     def settle(self) -> Transactions[StateT]: ...
     def view(self, observer: int | None) -> PositionView[StateT]: ...
     def events(self, observer: int | None, since: int) -> tuple[EventView[StateT], ...]: ...
@@ -1204,7 +1214,9 @@ class Table(Protocol[StateT]):
 Everything above it — HTTP, JSON, auth, sockets — is an adapter; everything below is a pure function.
 `head` is on it because the streams need to know when there is more; `journal` because the post-game
 reveal serves it; `mark_published` because publication is the adapter's act; `settle` because the grace
-window is the adapter's clock; `players` because a layout is built for a table of a size.
+window is the adapter's clock; `players` because a layout is built for a table of a size; `arrange`
+because a player sorting its own cards is a command a client sends, and the engine is where a commit is
+made (§6).
 
 **A table is served with the arrangement it is read through, which is a port of its own.** A client asks for
 two things and they are answered from different halves of the design: the cards its seat is entitled to,
@@ -1233,6 +1245,7 @@ declared field intact.
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/tables/{id}/moves` | Submit a command. Body: `{move, base_seq, idempotency_key}`. Answers `{seq}`, or a refusal from the table below. |
+| `POST` | `/tables/{id}/arrangements` | Lay out a zone of this seat's own. Body: `{zone, order, base_seq, idempotency_key}`. Answers `{seq}`. The seat comes off the credential, so the body names none. |
 | `GET` | `/tables/{id}/layout` | How this observer lays the table out: its own zones and gestures, and the shared table. Asked for once on join. |
 | `GET` | `/tables/{id}/view` | Full projection for this observer, stamped with `seq`. Used on join and reconnect. |
 | `GET` | `/tables/{id}/events` | SSE stream of projected events, resuming from `Last-Event-ID` or `?since=`. |
@@ -1251,16 +1264,23 @@ Refusals are mapped kind by kind, one handler each:
 |---|---|---|
 | `Unauthenticated` | `401` | the credential holds no seat at this table |
 | `UnknownTable` | `404` | this server holds no such table |
-| `WrongSeat` | `403` | the credential holds a seat other than the one the move was made for |
+| `WrongSeat` | `403` | the credential holds a seat other than the one the command was made for, or holds none at all |
 | `JournalSealed` | `403` | the record opens once the game is over |
 | `NotYourTurn` | `403` | the rules withhold the turn from this seat |
 | `StalePosition` | `409` | commits have landed since `base_seq` |
 | `IllegalMove` | `422` | the rules reject what the move asks for |
+| `ArrangementRefused` | `422` | the seat arranges no such zone, or the order is no permutation of it |
 
 One handler per kind rather than one over a root exception is what keeps the mapping open at the edges:
 Starlette walks an exception's MRO, so a game raising its own subclass of `IllegalMove` is answered `422`
 without the adapter knowing that subclass exists. Anything outside the list reaches the server as the
 defect it is.
+
+**Both commands are answered alike, and both take a key.** `CommandAccepted` is one shape for the sequence a
+commit took, since what either command leaves behind is one commit in the record every seat reads; and an
+arrangement is deduped by its key for the reason a move is, so the retry a flaky network prompts lands the
+order once rather than reading back as a table that has moved on. What the two do not share is the window:
+`submit` restarts it and `arrange` leaves it standing (§6).
 
 ### Why SSE
 
@@ -1355,6 +1375,10 @@ credential is all the server knows about who is asking. Without it, `move.player
 than a fact, and every rules check downstream would be enforcing the turn order of whoever asked most
 recently.
 
+An arrangement makes no such claim to check, so the same reading answers a shorter question — *is a seat
+asking at all* — and the seat it reads is handed to the engine. The spectator half is one answer for both
+commands, which is what keeps a client holding no seat from reaching either.
+
 ### Publication
 
 The publication mark advances **as a commit lands**, inside the lock, rather than after the frames have
@@ -1364,11 +1388,15 @@ the head and undo is mechanically unavailable there (§8).
 
 ### The grace window
 
-Settlement is held back by a configurable delay, and each command restarts the wait. This is the whole of
+Settlement is held back by a configurable delay, and each move restarts the wait. This is the whole of
 §4.4's "too late", and it lives here because P1 keeps clocks out of the core.
 
-Restarting on every command is what gives each seat its moment: the last seat to act does not close the
+Restarting on every move is what gives each seat its moment: the last seat to act does not close the
 round on the seat before it, which under simultaneous play would make the window a race between clients.
+An arrangement restarts nothing and opens nothing, since a seat sorting its own cards commits nothing for
+anyone to ask back — a table where the seats have only sorted their hands holds no timer at all, and one
+sorting inside an open window leaves the moment the last move opened where it stood. Sorting a hand
+therefore cannot hold a round open, which a restart would let it do for as long as a player kept dragging.
 A window that passes over a round still in play settles nothing, since `advance` owes nothing until the
 last seat has acted — so the timer is free to fire whenever, and correctness rests on the rules rather
 than on the clock. A grace of zero still yields to the event loop before settling, which lets a test wait
@@ -1760,7 +1788,9 @@ stands in for a class of bug rather than a case:
 The adapter's suite drives the real routes in-process — through an HTTP transport for the
 request/response endpoints and through a direct-ASGI harness for the streams (§10, *Why FastAPI*) — and
 covers the refusal table case by case, the idempotent retry, the take-back accepted inside the window, and
-the same take-back refused after the round has settled.
+the same take-back refused after the round has settled. An arrangement is held to the pair of facts that
+make it the commit it is: the other seats read the same run of placeholders they read before, and the
+window stands where the last move left it.
 
 Each game in `cardgames` carries a suite of its own, which plays full matches in-process and holds every
 position they pass through to card conservation and to `history[n] == journal.replay(n)`. Each is also put

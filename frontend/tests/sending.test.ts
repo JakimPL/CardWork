@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import type { MoveRequest } from "../src/api/moves";
+import type { ArrangementRequest, MoveRequest } from "../src/api/moves";
 import { movedOn, Refused } from "../src/api/refusal";
 import { type Seat, SEAT_HEADER } from "../src/api/seat";
-import { commandFor, deliver, named } from "../src/play/sending";
+import { commandFor, deliver, lay, named, orderFor } from "../src/play/sending";
 import { aTake } from "./tables";
 
 const PLAYING: Seat = { table: "green-baize", token: "qWLW5p-0BYc" };
 const MOVES = "/tables/green-baize/moves";
+const ARRANGEMENTS = "/tables/green-baize/arrangements";
 
 const ACCEPTED = 200;
 const MOVED_ON = 409;
@@ -17,7 +18,7 @@ const AGAINST_THE_RULES = 422;
 interface Sent {
   address: string;
   token: string | null;
-  command: MoveRequest;
+  command: MoveRequest | ArrangementRequest;
 }
 
 /** An answer a table gives one attempt: a response of its own, or nothing at all. */
@@ -50,7 +51,7 @@ function serving(answers: Answer[]): void {
     sent.push({
       address: addressOf(address),
       token: new Headers(options.headers).get(SEAT_HEADER),
-      command: JSON.parse(typeof options.body === "string" ? options.body : "") as MoveRequest,
+      command: JSON.parse(typeof options.body === "string" ? options.body : "") as MoveRequest | ArrangementRequest,
     });
     const answer = answers[Math.min(attempts, answers.length - 1)] ?? nothing;
     attempts += 1;
@@ -113,6 +114,63 @@ describe("a move sent up to a table", () => {
     expect(refusal).toBeInstanceOf(Refused);
     expect(refusal instanceof Refused && movedOn(refusal)).toBe(true);
     expect(refusal instanceof Refused && refusal.kind).toBe("StalePosition");
+  });
+});
+
+describe("the order a player laid its own cards out in", () => {
+  it("carries the zone and the run, and names the seat nowhere at all", async () => {
+    serving([answering(ACCEPTED, { seq: 5 })]);
+
+    const accepted = await lay(PLAYING, orderFor("hand:1", [2, 0, 1], 4, "sorted"));
+
+    expect(accepted.seq).toBe(5);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.address).toBe(ARRANGEMENTS);
+    expect(sent[0]?.token).toBe(PLAYING.token);
+    expect(sent[0]?.command).toEqual({
+      zone: "hand:1",
+      order: [2, 0, 1],
+      base_seq: 4,
+      idempotency_key: "sorted",
+    });
+  });
+
+  it("goes up a second time under the same name where the first attempt reached no answer", async () => {
+    serving([nothing, answering(ACCEPTED, { seq: 6 })]);
+
+    const accepted = await lay(PLAYING, orderFor("hand:1", [1, 0], 5, "one-name-throughout"));
+
+    expect(accepted.seq).toBe(6);
+    expect(sent.map((attempt) => attempt.command.idempotency_key)).toEqual([
+      "one-name-throughout",
+      "one-name-throughout",
+    ]);
+  });
+
+  it("stands on a refusal, since a table that refused an order has answered it", async () => {
+    serving([
+      answering(AGAINST_THE_RULES, {
+        error: "ArrangementRefused",
+        detail: "Seat 1 holds no zone 'stock' of this table to arrange",
+      }),
+    ]);
+
+    await expect(lay(PLAYING, orderFor("stock", [1, 0], 4, "reaching"))).rejects.toThrow(
+      "Seat 1 holds no zone 'stock' of this table to arrange",
+    );
+    expect(sent).toHaveLength(1);
+  });
+
+  it("says of a refused position that the table has moved on, so a client reads it afresh", async () => {
+    serving([
+      answering(MOVED_ON, { error: "StalePosition", detail: "built on sequence 3 while the table stands at 4" }),
+    ]);
+
+    const refusal: unknown = await lay(PLAYING, orderFor("hand:1", [1, 0], 3, "one-too-late")).catch(
+      (trouble: unknown) => trouble,
+    );
+
+    expect(refusal instanceof Refused && movedOn(refusal)).toBe(true);
   });
 });
 

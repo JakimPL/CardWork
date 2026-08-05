@@ -4,7 +4,17 @@ from fastapi import FastAPI
 
 SCHEMAS: Final[str] = "schemas"
 LAYOUT: Final[str] = "Layout"
-GENERATED: Final[tuple[str, ...]] = ("Layout", "Slot", "Gesture", "Plaque", "Readout", "Tally", "Move", "MoveRequest")
+GENERATED: Final[tuple[str, ...]] = (
+    "Layout",
+    "Slot",
+    "Gesture",
+    "Plaque",
+    "Readout",
+    "Tally",
+    "Move",
+    "MoveRequest",
+    "ArrangementRequest",
+)
 PROJECTIONS: Final[tuple[str, ...]] = ("PositionView", "EventView")
 
 

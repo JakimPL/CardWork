@@ -3,12 +3,14 @@ from typing import Generic
 
 from cardserver.errors import JournalSealed
 from cardserver.protocol import Presentation, Table, TableId
+from cardwork.decks.deck import Order
 from cardwork.moves.move import Move
 from cardwork.presentation.layout import Layout
 from cardwork.states.state import StateT
 from cardwork.transactions.journal import Journal
 from cardwork.views.event import EventView
 from cardwork.views.position import PositionView
+from cardwork.zones.zone import ZoneId
 
 
 class TableSession(Generic[StateT]):
@@ -47,6 +49,16 @@ class TableSession(Generic[StateT]):
     def head(self) -> int:
         """How many commits the table holds, which is the sequence the next one takes."""
         return self._table.head
+
+    @property
+    def settling(self) -> bool:
+        """Whether the changes the rules owe stand held back on a window just now.
+
+        A move a seat lands opens one and starts it afresh, which is the moment every seat is given to take a
+        commitment back. An arrangement opens none, so a table where the seats have only sorted their cards
+        holds the rules back not at all.
+        """
+        return self._settlement is not None and not self._settlement.done()
 
     @property
     def record(self) -> Journal[StateT]:
@@ -107,6 +119,36 @@ class TableSession(Generic[StateT]):
             self._applied[key] = transaction.seq
             self._publish()
             self._restart_grace()
+            return transaction.seq
+
+    async def arrange(self, zone: ZoneId, order: Order, seat: int, base_seq: int, key: str) -> int:
+        """Lay one of a seat's own zones out and answer with the sequence the order was committed at.
+
+        This runs under the lock and answers a repeated key as `submit` does, since an arrangement is a commit
+        the record holds like any other and a retried request is to land once. The window a seat has to take a
+        commitment back stands where it stood: a seat sorting a zone commits nothing for anyone to take back,
+        so the rules fall due at the moment the last move left them due.
+
+        Args:
+            zone: the zone to lay out, which is one this seat arranges.
+            order: the positions the zone holds, in the order they come to lie.
+            seat: the seat asking, which the server reads off the credential.
+            base_seq: the sequence the seat read the zone at.
+            key: the client's name for this attempt, which every retry of it repeats.
+
+        Raises:
+            StalePosition: when further commits have landed since `base_seq`.
+            ArrangementRefused: when the seat arranges no such zone, or when the order names any run of
+                positions other than the ones that zone holds.
+        """
+        async with self._commits:
+            applied = self._applied.get(key)
+            if applied is not None:
+                return applied
+
+            transaction = self._table.arrange(zone, order, seat, base_seq)
+            self._applied[key] = transaction.seq
+            self._publish()
             return transaction.seq
 
     async def watch(self, cursor: int) -> None:

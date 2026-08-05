@@ -137,7 +137,9 @@ export function aView(zones: Record<string, ProjectedCard[]>, seq: number, state
   return {
     observer: SEAT,
     seq,
-    zones: Object.fromEntries(Object.entries(zones).map(([zone, cards]) => [zone, { id: zone, owner: null, cards }])),
+    zones: Object.fromEntries(
+      Object.entries(zones).map(([zone, cards]) => [zone, { id: zone, owner: null, arrangeable: false, cards }]),
+    ),
     state,
     legal: [],
   };

@@ -6,9 +6,9 @@ from fastapi import Depends, FastAPI, Header, Query
 from fastapi.responses import StreamingResponse
 
 from cardserver.errors import install_error_handlers
-from cardserver.identity import SEAT_HEADER, SeatPolicy, confirm_actor
+from cardserver.identity import SEAT_HEADER, SeatPolicy, confirm_actor, seated
 from cardserver.registry import TableRegistry
-from cardserver.schemas import MoveAccepted, MoveRequest
+from cardserver.schemas import ArrangementRequest, CommandAccepted, MoveRequest
 from cardserver.streams import STREAM_START, commits, resume_point
 from cardwork.presentation.layout import Layout
 from cardwork.states.state import StateT
@@ -22,10 +22,11 @@ STREAM_HEADERS: Final[dict[str, str]] = {"Cache-Control": "no-store", "X-Accel-B
 def create_app(registry: TableRegistry[StateT], seats: SeatPolicy) -> FastAPI:
     """An application serving the tables of one registry to the clients one seat policy admits.
 
-    The five endpoints are the whole of the protocol: a command goes up over `POST`, and everything
-    coming down is read for one observer — the arrangement a client draws the table in, the view it joins
-    on, the stream it follows, and the record it reads once the game is over. Both directions pass through
-    the seat the credential holds, so what a client may do and what it may know come from the same answer.
+    The six endpoints are the whole of the protocol: a command goes up over `POST`, which is the move a seat
+    plays or the order it lays its own cards in, and everything coming down is read for one observer — the
+    layout a client draws the table in, the view it joins on, the stream it follows, and the record it reads
+    once the game is over. Both directions pass through the seat the credential holds, so what a client may do
+    and what it may know come from the same answer.
 
     Args:
         registry: the tables in service, which the host opens before or during service.
@@ -52,12 +53,28 @@ def create_app(registry: TableRegistry[StateT], seats: SeatPolicy) -> FastAPI:
         table_id: str,
         command: MoveRequest,
         observer: Annotated[int | None, Depends(observer_of)],
-    ) -> MoveAccepted:
+    ) -> CommandAccepted:
         """Commit a seat's move to a table, answering with the sequence it landed at."""
         confirm_actor(observer, command.move.player)
         session = registry.session(table_id)
         seq = await session.submit(command.move, command.base_seq, command.idempotency_key)
-        return MoveAccepted(seq=seq)
+        return CommandAccepted(seq=seq)
+
+    @app.post("/tables/{table_id}/arrangements")
+    async def arrange_zone(
+        table_id: str,
+        command: ArrangementRequest,
+        observer: Annotated[int | None, Depends(observer_of)],
+    ) -> CommandAccepted:
+        """Lay a zone of this seat's own out in the order it asks for, answering with the sequence it landed at.
+
+        The seat comes off the credential rather than out of the request, so a client sorts the zones its own
+        token holds and names no seat at all.
+        """
+        seat = seated(observer)
+        session = registry.session(table_id)
+        seq = await session.arrange(command.zone, command.order, seat, command.base_seq, command.idempotency_key)
+        return CommandAccepted(seq=seq)
 
     @app.get("/tables/{table_id}/layout")
     async def read_layout(

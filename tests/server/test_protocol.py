@@ -9,6 +9,10 @@ def test_a_game_commits_a_move_the_way_the_port_asks_for_it() -> None:
     assert signature(Game.submit) == signature(Table.submit)
 
 
+def test_a_game_arranges_a_zone_the_way_the_port_asks_for_it() -> None:
+    assert signature(Game.arrange) == signature(Table.arrange)
+
+
 def test_a_game_settles_the_way_the_port_asks_for_it() -> None:
     assert signature(Game.settle) == signature(Table.settle)
 

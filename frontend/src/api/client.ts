@@ -1,7 +1,7 @@
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 
 import type { Layout } from "./layout";
-import type { MoveAccepted, MoveRequest } from "./moves";
+import type { ArrangementRequest, CommandAccepted, MoveRequest } from "./moves";
 import { bodyOf, parsed } from "./parsing";
 import { reasonOf, refusalOf, Refused } from "./refusal";
 import { credentials, type Seat } from "./seat";
@@ -12,6 +12,7 @@ const LAYOUT = "layout";
 const VIEW = "view";
 const EVENTS = "events";
 const MOVES = "moves";
+const ARRANGEMENTS = "arrangements";
 const SINCE = "since";
 
 const SENDING = "POST";
@@ -60,12 +61,13 @@ export function readView(seat: Seat): Promise<PositionView> {
  * Send one command up to a table, answering with the sequence the commit took.
  *
  * The command carries the position it was weighed against and a name for the attempt, so a table that has
- * moved on refuses it and a request sent twice under one name lands once.
+ * moved on refuses it and a request sent twice under one name lands once. That much holds of both commands a
+ * client sends, which is why they are answered alike.
  *
  * @throws Refused when the table turns the command down, which the status tells the kind of.
  */
-export async function sendMove(seat: Seat, command: MoveRequest): Promise<MoveAccepted> {
-  const response = await fetch(endpoint(seat, MOVES), {
+async function send(seat: Seat, answer: string, command: MoveRequest | ArrangementRequest): Promise<CommandAccepted> {
+  const response = await fetch(endpoint(seat, answer), {
     method: SENDING,
     headers: { ...credentials(seat), [CONTENT_TYPE]: JSON_BODY },
     body: JSON.stringify(command),
@@ -74,7 +76,22 @@ export async function sendMove(seat: Seat, command: MoveRequest): Promise<MoveAc
     throw await refusalOf(response);
   }
 
-  return bodyOf<MoveAccepted>(response);
+  return bodyOf<CommandAccepted>(response);
+}
+
+/** Send the move a player armed, which reaches the table as the intent its seat states. */
+export function sendMove(seat: Seat, command: MoveRequest): Promise<CommandAccepted> {
+  return send(seat, MOVES, command);
+}
+
+/**
+ * Send the order a player laid one of its own zones out in.
+ *
+ * The seat is absent from the command: the token the request carries is what says whose zone is being sorted,
+ * so a client states the zone and the run it comes to lie in and names no seat at all.
+ */
+export function sendArrangement(seat: Seat, command: ArrangementRequest): Promise<CommandAccepted> {
+  return send(seat, ARRANGEMENTS, command);
 }
 
 /**

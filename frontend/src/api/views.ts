@@ -49,10 +49,17 @@ export interface Cursor {
   [field: string]: unknown;
 }
 
-/** One zone as an observer reads it, at the true position of every card in it. */
+/**
+ * One zone as an observer reads it, at the true position of every card in it.
+ *
+ * `arrangeable` is this observer's own answer to whether it may lay the zone out as it pleases, which the table
+ * resolves for the same reason it narrows the cards: what a client may do arrives from the table rather than
+ * being worked out from what it was served.
+ */
 export interface ZoneView {
   id: ZoneId;
   owner: number | null;
+  arrangeable: boolean;
   cards: ProjectedCard[];
 }
 

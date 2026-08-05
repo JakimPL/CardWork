@@ -4,6 +4,29 @@
  */
 
 export interface paths {
+    "/tables/{table_id}/arrangements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Arrange Zone
+         * @description Lay a zone of this seat's own out in the order it asks for, answering with the sequence it landed at.
+         *
+         *     The seat comes off the credential rather than out of the request, so a client sorts the zones its own
+         *     token holds and names no seat at all.
+         */
+        post: operations["arrange_zone_tables__table_id__arrangements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tables/{table_id}/events": {
         parameters: {
             query?: never;
@@ -126,6 +149,26 @@ export interface components {
         ActionKind: "pass" | "play" | "take" | "give" | "reject" | "discard" | "declare";
         AnyAction: components["schemas"]["Pass"] | components["schemas"]["Play"] | components["schemas"]["Take"] | components["schemas"]["Give"] | components["schemas"]["Reject"] | components["schemas"]["Discard"] | components["schemas"]["Declare"];
         /**
+         * ArrangementRequest
+         * @description A seat laying a zone of its own out: the zone, the run it comes to lie in, and the position it was read at.
+         *
+         *     The seat asking is the one thing this leaves out, since the server reads it off the credential: a client
+         *     states which of its zones it is sorting and never whose zone that is.
+         *
+         *     `order` names the positions the zone holds in the order they come to lie, so the first of them is the card
+         *     that comes to lie first. Repeating the key names the same attempt, so a client that retries a request it
+         *     never saw answered lands its order once.
+         */
+        ArrangementRequest: {
+            /** Base Seq */
+            base_seq: number;
+            /** Idempotency Key */
+            idempotency_key: string;
+            order: components["schemas"]["Order"];
+            /** Zone */
+            zone: string;
+        };
+        /**
          * Award
          * @description Which end of a standing a match is won at.
          *
@@ -137,6 +180,18 @@ export interface components {
          */
         Award: "highest" | "lowest";
         CardIndex: number;
+        /**
+         * CommandAccepted
+         * @description The sequence a command was committed at, which the table stands one commit past.
+         *
+         *     A client holding this commit stands at `seq + 1` commits, and that count is what its next command quotes
+         *     as `base_seq`. A move and an arrangement are answered alike, since what either of them leaves behind is
+         *     one commit in the record every seat reads.
+         */
+        CommandAccepted: {
+            /** Seq */
+            seq: number;
+        };
         /**
          * Commit
          * @description How a player sends the move a selection has armed.
@@ -296,17 +351,6 @@ export interface components {
             player: number;
         };
         /**
-         * MoveAccepted
-         * @description The sequence a command was committed at, which the table stands one commit past.
-         *
-         *     A client holding this commit stands at `seq + 1` commits, and that count is what its next command quotes
-         *     as `base_seq`.
-         */
-        MoveAccepted: {
-            /** Seq */
-            seq: number;
-        };
-        /**
          * MoveRequest
          * @description A command as a client sends it: the intent, the position it was built on, and a name for the try.
          *
@@ -321,6 +365,7 @@ export interface components {
             move: components["schemas"]["Move"];
         };
         NonEmptyIndices: components["schemas"]["CardIndex"][];
+        Order: components["schemas"]["CardIndex"][];
         /**
          * Pass
          * @description A turn given up, which is the one intent naming no card at all.
@@ -488,6 +533,43 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    arrange_zone_tables__table_id__arrangements_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Seat-Token"?: string | null;
+            };
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArrangementRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAccepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_events_tables__table_id__events_get: {
         parameters: {
             query?: {
@@ -611,7 +693,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MoveAccepted"];
+                    "application/json": components["schemas"]["CommandAccepted"];
                 };
             };
             /** @description Validation Error */

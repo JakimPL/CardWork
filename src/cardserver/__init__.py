@@ -9,15 +9,21 @@ from cardserver.errors import (
 from cardserver.identity import SEAT_HEADER, SeatPolicy, TokenSeats
 from cardserver.protocol import Presentation, Table, TableId
 from cardserver.registry import TableRegistry
-from cardserver.schemas import ErrorBody, MoveAccepted, MoveRequest
+from cardserver.schemas import (
+    ArrangementRequest,
+    CommandAccepted,
+    ErrorBody,
+    MoveRequest,
+)
 from cardserver.sessions import TableSession
 
 __all__ = [
     "SEAT_HEADER",
+    "ArrangementRequest",
     "CardserverError",
+    "CommandAccepted",
     "ErrorBody",
     "JournalSealed",
-    "MoveAccepted",
     "MoveRequest",
     "Presentation",
     "SeatPolicy",

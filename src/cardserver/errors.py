@@ -9,7 +9,7 @@ from starlette.responses import Response
 
 from cardserver.protocol import TableId
 from cardserver.schemas import ErrorBody
-from cardwork.exceptions import IllegalMove, NotYourTurn, StalePosition
+from cardwork.exceptions import ArrangementRefused, IllegalMove, NotYourTurn, StalePosition
 
 
 class CardserverError(Exception):
@@ -56,6 +56,7 @@ REFUSALS: Final[tuple[tuple[type[Exception], HTTPStatus], ...]] = (
     (NotYourTurn, HTTPStatus.FORBIDDEN),
     (StalePosition, HTTPStatus.CONFLICT),
     (IllegalMove, HTTPStatus.UNPROCESSABLE_ENTITY),
+    (ArrangementRefused, HTTPStatus.UNPROCESSABLE_ENTITY),
 )
 
 

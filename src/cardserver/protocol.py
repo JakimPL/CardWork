@@ -1,5 +1,6 @@
 from typing import Protocol
 
+from cardwork.decks.deck import Order
 from cardwork.moves.move import Move
 from cardwork.presentation.layout import Layout
 from cardwork.states.state import StateT
@@ -7,6 +8,7 @@ from cardwork.transactions.journal import Journal
 from cardwork.transactions.transaction import Transaction, Transactions
 from cardwork.views.event import EventView
 from cardwork.views.position import PositionView
+from cardwork.zones.zone import ZoneId
 
 TableId = str
 
@@ -40,6 +42,15 @@ class Table(Protocol[StateT]):
         base_seq: int,
     ) -> Transaction[StateT]:
         """Commit one seat's move against the position it names, and hand back the record of it."""
+
+    def arrange(
+        self,
+        zone: ZoneId,
+        order: Order,
+        seat: int,
+        base_seq: int,
+    ) -> Transaction[StateT]:
+        """Lay one of a seat's own zones out in the order it asks for, and hand back the record of it."""
 
     def settle(self) -> Transactions[StateT]:
         """Commit whatever the rules still owe, until the table comes to rest."""
