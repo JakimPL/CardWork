@@ -5,6 +5,7 @@ import type { Seat } from "../api/seat";
 import type { PositionView } from "../api/views";
 import type { Arrivals } from "../play/arrivals";
 import type { Report } from "../play/interludes";
+import { saidAlone } from "../play/selection";
 import { useArtwork } from "../play/useArtwork";
 import { usePlay } from "../play/usePlay";
 import type { Connection } from "../play/useTable";
@@ -12,7 +13,7 @@ import { classes } from "./classes";
 import { answering } from "./clicks";
 import { Curtain } from "./Curtain";
 import { Header } from "./Header";
-import { clears } from "./keys";
+import { clears, says } from "./keys";
 import { own, ringOf, shared, SIDES } from "./placing";
 import { Sitting } from "./Sitting";
 import { crowding, shaping } from "./sizing";
@@ -48,6 +49,13 @@ interface PlayfieldProps {
  * on the page away from the cards, a press of the other button wherever it lands, and `Escape`. The first is the
  * one a touch screen has, and the other two are what a hand already resting on a mouse or a keyboard reaches for.
  *
+ * The space bar says the move a turn stands ready to say, where a turn stands ready to say one move and one
+ * alone: a stroke arriving at the page is that move, and a stroke arriving at a control is the browser pressing
+ * the control it arrived at, so a move said either way is said a single time.
+ *
+ * The line under the cards is read out as it changes, so a move sent, a refusal the game phrased and a turn
+ * coming round reach a player reading the page by ear as well as by eye.
+ *
  * A round closed or a match decided stands over the whole of it as a report to be read, so a boundary the player
  * was looking at is a boundary they get to keep looking at.
  */
@@ -63,7 +71,8 @@ export function Playfield({
   dismiss,
 }: PlayfieldProps): ReactElement {
   const playing = usePlay(seat, layout, view, refresh);
-  const { clear } = playing;
+  const { clear, say } = playing;
+  const spoken = saidAlone(playing.standing);
   const ring = ringOf(layout);
   const artwork = useArtwork();
 
@@ -71,6 +80,12 @@ export function Playfield({
     const pressed = (event: KeyboardEvent): void => {
       if (clears(event.key)) {
         clear();
+        return;
+      }
+
+      if (spoken !== null && says(event.key, document.activeElement?.tagName ?? null)) {
+        event.preventDefault();
+        say(spoken);
       }
     };
 
@@ -78,7 +93,7 @@ export function Playfield({
     return () => {
       window.removeEventListener("keydown", pressed);
     };
-  }, [clear]);
+  }, [clear, say, spoken]);
 
   return (
     <div
@@ -105,7 +120,9 @@ export function Playfield({
       </main>
       <footer className="controls">
         <Zones place="own" slots={own(layout)} view={view} arrivals={arrivals} playing={playing} />
-        <p className="guidance">{playing.hint}</p>
+        <p className="guidance" role="status">
+          {playing.hint}
+        </p>
         <StatusLine layout={layout} view={view} connection={connection} trouble={trouble} />
       </footer>
       {report !== null && <Curtain layout={layout} report={report} dismiss={dismiss} />}

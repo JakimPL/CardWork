@@ -4,6 +4,7 @@ import type { Layout } from "../src/api/layout";
 import type { PositionView } from "../src/api/views";
 import type { Prospect, Selection } from "../src/play/selection";
 import {
+  isArmed,
   isOpen,
   isSelected,
   leadsNowhere,
@@ -12,8 +13,11 @@ import {
   pickedUp,
   picksIn,
   prospect,
+  saidAlone,
+  wordsOf,
 } from "../src/play/selection";
 import {
+  aClaim,
   aDiscard,
   aGive,
   aLayout,
@@ -21,6 +25,7 @@ import {
   aTake,
   aView,
   card,
+  CLAIMING,
   DISCARDING,
   GIVING,
   HAND,
@@ -47,6 +52,10 @@ const A_SET = offering(DEALT, [aDiscard([0, 1]), aDiscard([0, 2]), aDiscard([1, 
 /** A turn a card answers or a word does, and a turn the word is the whole of. */
 const A_TURN_OR_A_WORD = offering(DEALT, [aTake([0]), aGive(2, [0]), aPass()]);
 const A_WORD_ALONE = offering(DEALT, [aPass()]);
+
+/** A turn two words could give up, which a game stating a claim beside a pass leaves a seat holding. */
+const EITHER_WORD = aLayout({ gestures: [TAKING, PASSING, CLAIMING] });
+const TWO_WORDS = offering(DEALT, [aTake([0]), aPass(), aClaim()]);
 
 const standing = (layout: Layout, view: PositionView, selection: Selection | null): Prospect =>
   prospect(offersOf(layout, view), selection);
@@ -228,6 +237,43 @@ describe("a move sent by its word", () => {
     expect(picksIn(bare, HAND)).toBe(false);
     expect(leadsNowhere(bare, HAND, 0)).toBe(false);
     expect(pickedUp(bare, HAND, 0)).toBeNull();
+  });
+});
+
+describe("the words a turn is said in", () => {
+  it("are drawn for as long as the table offers the move, whether the cards in hand arm it or not", () => {
+    const bare = standing(CHOICE, A_TURN_OR_A_WORD, null);
+    const held = standing(CHOICE, A_TURN_OR_A_WORD, { zone: HAND, indices: [0] });
+
+    expect(wordsOf(bare).map((offer) => offer.move)).toEqual([aPass()]);
+    expect(wordsOf(held).map((offer) => offer.move)).toEqual([aPass()]);
+    expect(wordsOf(bare).filter((offer) => isArmed(bare, offer))).toHaveLength(1);
+    expect(wordsOf(held).filter((offer) => isArmed(held, offer))).toHaveLength(0);
+  });
+
+  it("are none where every move the table offers lands on a place", () => {
+    const bare = standing(TURN, A_TURN, null);
+
+    expect(wordsOf(bare)).toEqual([]);
+  });
+
+  it("say the move a keystroke says while one of them stands ready alone", () => {
+    const bare = standing(CHOICE, A_TURN_OR_A_WORD, null);
+
+    expect(saidAlone(bare)?.move).toEqual(aPass());
+  });
+
+  it("leave a turn ready to say two of them to the words themselves, since a stroke names neither", () => {
+    const bare = standing(EITHER_WORD, TWO_WORDS, null);
+
+    expect(bare.said.map((offer) => offer.move)).toEqual([aPass(), aClaim()]);
+    expect(saidAlone(bare)).toBeNull();
+  });
+
+  it("say nothing by keystroke once a card is picked up, which arms neither of them", () => {
+    const held = standing(EITHER_WORD, TWO_WORDS, { zone: HAND, indices: [0] });
+
+    expect(saidAlone(held)).toBeNull();
   });
 });
 

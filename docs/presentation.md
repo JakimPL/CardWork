@@ -200,7 +200,9 @@ gesture does.
 point at either. What an interface draws for one is a place to press, captioned by the gesture, and what arms
 it is the same rule that arms every other move: the cards in hand are exactly the cards the move names, which
 for this one is none of them. So a pass stands ready the moment a turn arrives and stands down as soon as a
-card is picked up, and the two states need no rule of their own.
+card is picked up, and the two states need no rule of their own. The caption of such a gesture is lettered on
+the place a player presses rather than read as a title over one, so a game states it in words that carry at the
+size of a card.
 
 That is the whole of the contract. Which cards light up as a selection grows, when a heap collapses to its top
 card, how a highlight looks and how large a card is drawn: all of it is the interface's, and none of it is a

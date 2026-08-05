@@ -4,24 +4,31 @@ import { describe, expect, it } from "vitest";
 import type { Layout, Readout } from "../src/api/layout";
 import type { Cursor, PositionView } from "../src/api/views";
 import { NOTHING_LANDED } from "../src/play/arrivals";
-import { prospect } from "../src/play/selection";
+import type { Selection } from "../src/play/selection";
+import { offersOf, prospect } from "../src/play/selection";
+import type { Playing } from "../src/play/usePlay";
 import { Header } from "../src/table/Header";
 import { own, shared } from "../src/table/placing";
 import { StatusLine } from "../src/table/StatusLine";
 import { Zones } from "../src/table/Zones";
 import {
   aLayout,
+  aPass,
   aPlaying,
   AROUND,
+  aTake,
   aView,
   card,
   DEALT_FROM,
   HAND,
   HELD,
   LAID_ON,
+  offering,
+  PASSING,
   PILE,
   PLAQUES,
   STACK,
+  TAKING,
 } from "./tables";
 
 const POINTS: Readout = { field: "points", label: "Points", scope: "seat" };
@@ -46,6 +53,13 @@ const DEALT: PositionView = aView(
   1,
 );
 
+/** The same table on a turn a word could give up as well as a card play out. */
+const SPEAKING: Layout = aLayout({
+  slots: [HELD, DEALT_FROM, LAID_ON],
+  gestures: [TAKING, PASSING],
+  plaques: PLAQUES,
+});
+
 /** A table nothing is being played on, since what these tests read is the drawing of it. */
 const RESTING = aPlaying(prospect([], null));
 
@@ -57,6 +71,16 @@ const held = (): string =>
 
 const middle = (): string =>
   drawn(<Zones place="shared" slots={shared(LAYOUT)} view={DEALT} arrivals={NOTHING_LANDED} playing={RESTING} />);
+
+/** That turn as it stands for one selection of the cards in it, which is what the two ways of sending it read off. */
+const A_TURN: PositionView = offering(DEALT, [aTake([0]), aPass()]);
+
+const speaking = (selection: Selection | null): Playing => aPlaying(prospect(offersOf(SPEAKING, A_TURN), selection));
+
+const panel = (selection: Selection | null): string =>
+  drawn(
+    <Zones place="own" slots={own(SPEAKING)} view={A_TURN} arrivals={NOTHING_LANDED} playing={speaking(selection)} />,
+  );
 
 describe("the table one seat reads", () => {
   it("draws every card of its own hand, whichever way up the cards lie", () => {
@@ -95,6 +119,51 @@ describe("the table one seat reads", () => {
 
     expect(cards).toContain("Your hand");
     expect([...cards.matchAll(/class="slot [a-z]/g)]).toHaveLength(1);
+  });
+});
+
+describe("the place a turn is said in", () => {
+  it("draws the words of a move landing on no place, at the end of the panel and the size of a card", () => {
+    const drawing = panel(null);
+
+    expect(drawing).toContain("Instead of playing");
+    expect(drawing).toContain('class="word"');
+    expect(drawing).toContain(PASSING.caption);
+    expect(drawing).toContain('aria-keyshortcuts="Space"');
+    expect(drawing).not.toContain("disabled");
+  });
+
+  it("counts it in the width the cards are drawn to, which is the room of one card", () => {
+    expect(panel(null)).toContain("--widths:3.16");
+    expect(held()).toContain("--widths:2.16");
+  });
+
+  it("leaves it quiet where it stands once a card is picked up, which arms it no longer", () => {
+    const drawing = panel({ zone: HAND, indices: [0] });
+
+    expect(drawing).toContain('class="word"');
+    expect(drawing).toContain("disabled");
+    expect(drawing).toContain("--widths:3.16");
+    expect(drawing).not.toContain("aria-keyshortcuts");
+  });
+
+  it("draws nothing at all where every move the table offers lands on a place", () => {
+    expect(held()).not.toContain("Instead of playing");
+  });
+
+  it("stands in the panel a player plays from and nowhere else on the table", () => {
+    const table = drawn(
+      <Zones
+        place="shared"
+        slots={shared(SPEAKING)}
+        view={A_TURN}
+        arrivals={NOTHING_LANDED}
+        playing={speaking(null)}
+      />,
+    );
+
+    expect(table).not.toContain("Instead of playing");
+    expect(table).toContain("--widths:2");
   });
 });
 

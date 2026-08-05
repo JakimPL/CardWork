@@ -1506,6 +1506,16 @@ clicking a card no move names puts the selection down, and clicking the page cle
 count and no rank in any of it: multi-card selection is the general case and a one-card move is where it
 happens to stop.
 
+**A move landing on no place is said where its words are drawn.** A pass names no card and no destination (§9),
+and the arming rule reads it by itself: the cards in hand are exactly the cards it names, which is none of them,
+so it stands ready the moment a turn arrives and stands down the moment a card is picked up. What the panel
+draws for one is a card-sized place at the end of the hand, lettered with the caption the gesture carries and
+labelled as the zones beside it are: it takes the room of a card in the width the cards are drawn to and keeps
+that room while the cards in hand stand against it, going quiet where it stands. So the hand lies where it lay
+through a turn played out instead, and the move a player makes rather than playing a card reads as somewhere on
+the table. A turn standing ready to say one such move and one alone carries the space bar as well, which a
+stroke resting on a control leaves to the browser, so a move said either way is sent a single time.
+
 **A command is pinned to the position it was weighed against, and named so it lands once.** A commit sends
 `base_seq = view.seq` with a name of its own, so a table that has moved on refuses it under `409` and one
 request arriving twice commits a single time. A refusal a table answered stands, and a request that reached no
@@ -1724,7 +1734,7 @@ play was good **given what the player knew**.
 | A mechanism vs. the choice of game | the `Nothing names the host` contract; `cardtable.catalogue` is the only module naming `cardgames` | a registry, a handler or a scene is reached for by a game's name outside the catalogue |
 | A shape stated once vs. a shape restated | the layout vocabulary is generated from the published document; only the projections carrying a game's own state are written by hand | a field of a slot, a gesture or a move is typed in TypeScript by hand |
 | A credential vs. an address | the table and the token ride in the fragment; the token reaches the endpoints in a header | a seat token appears in a path, a query string or a log line |
-| Cards in hand vs. a move sent | a selection resolves through the gestures; only a click on an armed place submits | a card click sends a move, or a selection is read as a command |
+| Cards in hand vs. a move sent | a selection resolves through the gestures; a press at an armed place or on the words of an armed move is what submits | a card click sends a move, or a selection is read as a command |
 | What the table offers vs. what the page knows | `selection.ts` reads `view.legal` through `layout.gestures` and nothing else | the page counts cards, reads a rank, or names a zone to decide what may be picked |
 | A position vs. what has just happened to it | a view is the cards as they lie; `arrivals.ts` reads a commit for what it laid down | a heap is animated from a difference between two views, or a zone is drawn from a move's intent |
 | A value a person turns vs. one the code settles | `config.yaml` states a run; `Configuration` asks for each field outright | a default sits in a flag, a Makefile and a file at once, and a run reads whichever was edited last |

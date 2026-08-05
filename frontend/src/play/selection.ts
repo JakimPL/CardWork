@@ -117,6 +117,33 @@ export function offerTo(standing: Prospect, target: Target): Offered | null {
 }
 
 /**
+ * The moves a word sends, out of every move the table offers, whichever of them the cards in hand arm.
+ *
+ * A move landing on no place is one said by its word, since a gesture stating a place states where it lands. So
+ * these are the moves an interface draws the words of, and `armed` says which of the words drawn may be pressed:
+ * a turn holding one of these has somewhere to say it for as long as the table offers it.
+ */
+export function wordsOf(standing: Prospect): Offered[] {
+  return standing.offers.filter((offer) => offer.target === null);
+}
+
+/** Whether the cards in hand are the cards a move names, which is what leaves that move ready to send. */
+export function isArmed(standing: Prospect, offer: Offered): boolean {
+  return standing.armed.includes(offer);
+}
+
+/**
+ * The one move a word sends where a turn stands ready to say a single move, and none where it stands ready to
+ * say two.
+ *
+ * A keystroke says a move where a turn leaves no question which move it means. Where two stand ready at once,
+ * which of them is said belongs to the player, so each is said by pressing the words drawn for it.
+ */
+export function saidAlone(standing: Prospect): Offered | null {
+  return standing.said.length === 1 ? (standing.said[0] ?? null) : null;
+}
+
+/**
  * What the selection becomes when a player clicks one card, which is the whole of picking cards up.
  *
  * A card already in hand is put back down, and the last one down leaves nothing selected. A card a move could

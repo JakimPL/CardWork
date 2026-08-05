@@ -2,7 +2,7 @@ import type { MouseEvent } from "react";
 import { describe, expect, it } from "vitest";
 
 import { answering, clicking } from "../src/table/clicks";
-import { clears } from "../src/table/keys";
+import { clears, says } from "../src/table/keys";
 
 /** A press as the page receives one, which reports what the answer to it did with the event. */
 interface Press {
@@ -61,6 +61,24 @@ describe("the key a selection is put down with", () => {
   it("leaves every other keystroke to the page", () => {
     for (const key of ["Enter", " ", "Esc", "escape", "a"]) {
       expect(clears(key)).toBe(false);
+    }
+  });
+});
+
+describe("the key a move is said with", () => {
+  it("reads the space bar, wherever on the page the keyboard is resting", () => {
+    expect(says(" ", null)).toBe(true);
+    expect(says(" ", "BODY")).toBe(true);
+    expect(says(" ", "DIV")).toBe(true);
+  });
+
+  it("leaves a stroke resting on a control to the browser, which presses that control with it", () => {
+    expect(says(" ", "BUTTON")).toBe(false);
+  });
+
+  it("leaves every other keystroke to the page", () => {
+    for (const key of ["Enter", "Escape", "Space", "s"]) {
+      expect(says(key, null)).toBe(false);
     }
   });
 });

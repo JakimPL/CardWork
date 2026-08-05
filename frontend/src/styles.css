@@ -28,6 +28,7 @@
   --paper-edge: #cfc9b8;
   --chalk: #e7efe9;
   --chalk-dim: #9fb3a7;
+  --chalk-lit: #fff;
   --red: #b3243b;
   --black: #1a1a1a;
   --acting: #f0c040;
@@ -65,6 +66,13 @@ body {
   font-family: ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
   font-size: var(--caption);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Where the keyboard stands, which every control on the page draws the same way. */
+
+:focus-visible {
+  outline: 2px solid var(--hint);
+  outline-offset: 2px;
 }
 
 #table {
@@ -516,7 +524,8 @@ button.card {
 /* A reader who asks for stillness gets the same table, arrived at in one step. */
 
 @media (prefers-reduced-motion: reduce) {
-  .cards .card {
+  .cards .card,
+  .word {
     transition: none;
     animation: none;
   }
@@ -533,6 +542,78 @@ button.card {
 
 .plaque.live {
   border-color: var(--live);
+}
+
+/*
+ * The place beside a hand where a turn is said rather than played, drawn at the size of a card.
+ *
+ * A move that names no card is made nowhere among them, so what a player presses for one stands at the end of the
+ * panel as a place of its own: card-shaped, lettered in chalk, and labelled as the zones beside it are. It lies
+ * where the cards lie and takes the room of one, which leaves a move made instead of playing a card reading as
+ * somewhere on the table rather than as furniture along the edge of it.
+ *
+ * A place the cards in hand stand against goes quiet where it stands, so a hand picked up over one keeps its size
+ * and its place, and the words a turn could have been given up in stay legible while it is played out instead.
+ */
+
+.words {
+  display: flex;
+  align-items: flex-end;
+  gap: calc(var(--gap) / 2);
+}
+
+.word {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--gap) / 3);
+  width: var(--card-width);
+  height: var(--card-height);
+  padding: calc(var(--gap) / 2);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius);
+  background: var(--chalk);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+  color: var(--ink);
+  font: inherit;
+  font-size: calc(var(--caption) * 1.15);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  overflow: hidden;
+  text-align: center;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    transform 120ms ease;
+}
+
+.word .stroke {
+  font-size: calc(var(--caption) * 0.85);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  opacity: 0.72;
+}
+
+.word:hover {
+  background: var(--chalk-lit);
+  transform: translateY(calc(var(--card-height) * -0.06));
+}
+
+.word:disabled {
+  border-color: rgb(159 179 167 / 35%);
+  background: none;
+  box-shadow: none;
+  color: var(--chalk-dim);
+  opacity: var(--quieted);
+  cursor: default;
+  transform: none;
+}
+
+.page.sending .word {
+  cursor: progress;
 }
 
 .guidance {

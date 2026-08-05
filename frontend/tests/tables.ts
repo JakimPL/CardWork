@@ -108,6 +108,16 @@ export const PASSING: Gesture = {
   caption: "Pass",
 };
 
+/** A second gesture a word sends, which is the shape a claim a seat makes about its whole holding takes. */
+export const CLAIMING: Gesture = {
+  kind: "declare",
+  group: null,
+  picked: null,
+  commit: "word",
+  target: null,
+  caption: "Claim the rest",
+};
+
 /** A gesture sending several cards at once, which is the shape a game discarding a set of them takes. */
 export const DISCARDING: Gesture = {
   kind: "discard",
@@ -173,6 +183,11 @@ export function aDiscard(indices: number[]): Move {
 /** The turn given up, which names its seat and nothing besides. */
 export function aPass(): Move {
   return { player: SEAT, action: { kind: "pass" } };
+}
+
+/** A claim made about a whole zone, which names its cards by naming none of them. */
+export function aClaim(): Move {
+  return { player: SEAT, action: { kind: "declare", claim: "the rest", indices: [] } };
 }
 
 /** Cards seen to land in one zone, as the commit that laid them there leaves the table reading. */
