@@ -5,13 +5,14 @@ a suit, whether a seven-card hand holds a full house, which of two hands wins, a
 worth in points. It works on cards alone — no zones, no seats, no turn — so a game consults it wherever it
 needs to know, and two games with different rules consult it with different readings.
 
-The package is the answer to one question asked four ways:
+The package is the answer to one question asked five ways:
 
 ```python
 matches(cards, pattern, evaluation)  # are these cards that combination, all of them?
 contains(cards, pattern, evaluation)  # do these cards hold it somewhere?
 find(cards, pattern, evaluation)  # the strongest instance of it they hold
 find_all(cards, pattern, evaluation)  # every instance, strongest first
+selections(cards, pattern, evaluation)  # every set of places among them that reads as it
 ```
 
 ---
@@ -27,6 +28,8 @@ writing a pattern rather than by teaching the search a new word.
 
 ```python
 class Pattern(BaseFrozen, ABC):
+    kind: str
+
     @property
     @abstractmethod
     def size(self) -> int: ...
@@ -54,9 +57,17 @@ reading of the deck.
 The search below these statements — the tally, the filling, `detect`, `Ranking`, `Scoring` — reads shapes
 and strength keys, and knows no rule by name.
 
-Because a pattern is a rule and not a record, a dump of one carries the parts it is made of, and reading a
-pattern back out of a dump is the affair of whatever names the rules it uses. Game state holds the cards and
-the score; a pattern is what a game consults about them.
+**A rule travels under a word, and the word reads it back.** `kind` is that word: a concrete pattern states
+it as the default of the field, and writing the class is what puts it in play. `AnyPattern` is the annotation
+every field holding a pattern carries, and it reads a word back to the class that stated it, so a rule
+arrives off the wire as itself — the parts a compound is made of included, each read back by its own word. A
+game's own pattern travels the way the ones stated here do, since a word is claimed by writing the class
+rather than by joining a list in this package.
+
+What that buys is a rule in a cursor. A game may carry a `Combination` in its own state — the combination a
+trick stands on, held as its pattern, its cards and its place, rather than as a count of cards to be read
+off the table again — and a `Ranking` settled at the table, a bid contract or a rank named wild mid-hand,
+travels and replays as the ranking it was.
 
 **Models where a value is validated or sent, records where it is working material.** `Pattern`, `Combination`,
 `Evaluation`, `Ranking` and `Scoring` are Pydantic models: each holds an invariant to check or travels in game
@@ -105,6 +116,25 @@ STRAIGHT_FLUSH = Together(parts=(STRAIGHT, FLUSH))
 A pattern says itself in words, so `str(FULL_HOUSE)` reads `3 of a rank beside 2 of a rank`. Several decks
 in play let a rule reach further, and `SameRank(places=5)` is five of a rank.
 
+### A rule read back by its word
+
+Six words are in play — `any_cards`, `beside`, `run`, `same_rank`, `same_suit`, `together` — one per
+concrete pattern above, and a game writing a seventh puts its own word in play by writing the class:
+
+```python
+FULL_HOUSE.model_dump()
+# {"kind": "beside", "parts": ({"kind": "same_rank", "places": 3}, {"kind": "same_rank", "places": 2})}
+
+Ranking.model_validate_json(POKER.model_dump_json()) == POKER  # True
+```
+
+Three refusals hold a word to one rule. A concrete pattern stating no word of its own is refused as the
+class is written, and so is one claiming a word another pattern already travels under — both as a
+`TypeError`, since a rule that cannot be read back is a mistake in the code rather than in the data. A wire
+form naming a word no pattern in play states is refused where it arrives, saying which words are known.
+
+`Pattern.named(kind)` is the same lookup, for a game that reads a word a client sent.
+
 ### Shape and Demand
 
 A `Shape` is one reading a pattern admits, stated as what each of its places asks for. A `Demand` is that
@@ -133,6 +163,11 @@ wild, and copies counted.
 three of diamonds are three diamonds. `Duplicates.COLLAPSE` reads a repeated card once, so the same three
 cards are two diamonds. A repeated rank lengthens no run either way, since a run asks each of its places
 for a rank of its own.
+
+**The runs a reading admits.** `stretches(size)` lists every run of that many consecutive ranks, the
+highest-topped first, and the wheel stands among them where the reading turns — ten of them at five cards
+over the regular deck. A game enumerating runs of its own reads them from there, so the wheel and the rank
+order stay one statement.
 
 ### Combination
 
@@ -294,6 +329,64 @@ and stand alongside each other.
 Being a refinement, it settles ties and leaves the ranking's own rule standing: a pair of fives still beats
 the ace of spades alone, and a full house of twos over aces still stands below one of threes over kings.
 
+### The questions a table asks
+
+A ranking is what a game holds up against the table in front of it, so the questions a round asks of the
+cards are asked of the ranking:
+
+| asked | answers |
+|---|---|
+| `sizes()` | the counts a combination of this ranking takes, fewest first |
+| `sized(size)` | the ranking made of the patterns taking that many cards |
+| `strongest(cards)` | the best combination the cards form, cards to spare admitted |
+| `exactly(cards)` | the combination the cards *are*, every one of them taking a place |
+| `climbs(challenger, held)` | whether the challenger takes as many cards and stands above |
+| `ceilings(deck)` | the strongest combination each count reaches out of a deck |
+| `selections(cards)` | every set of places among the cards that reads as a combination |
+
+**`exactly` holds the cards to being the whole of it.** `strongest` welcomes cards to spare, so four kings
+read there as the triplet of a ranking that lists one, and a game admitting the combination a seat played and
+nothing besides would take four of a kind for three. `exactly` asks only the patterns of the count it was
+handed, and answers `None` where the run is a combination with a card left over.
+
+**A count is a contest of its own.** `climbs` carries that clause: a combination of another count stands
+beside the one held rather than over it, and standing above means above in `total_order`, so every contest
+between two of a count is settled. `sized(size)` is the ranking a seat answering that count is held to, and
+`sizes()` is what a count arriving from a client is read against — `sized` refuses a count no pattern takes,
+saying which counts are taken.
+
+**`ceilings` answers what cannot be climbed over.** The strongest combination each count reaches out of a
+whole deck. A game asking whether the best of a count has already been played reads it from here:
+
+```python
+POKER.ceilings(standard_deck())
+# 1: any card: A♠
+# 2: 2 of a rank: A♠ A♥
+# 3: 3 of a rank: A♠ A♥ A♦
+# 4: 4 of a rank: A♠ A♥ A♦ A♣
+# 5: a run of 5 together with 5 of a suit: 10♠ J♠ Q♠ K♠ A♠
+```
+
+### Every combination a hand can play
+
+`selections` is the question a list of legal moves is made of. A move names its cards by where they stand in
+the hand the seat was shown, so what a game enumerating moves needs is sets of *places*:
+
+```python
+POKER.selections((KING_OF_SPADES, KING_OF_HEARTS, KING_OF_CLUBS))
+# {0, 1, 2}, {0, 1}, {0, 2}, {1, 2}, {0}, {1}, {2}
+# the triplet, then its three pairs, then its three high cards
+```
+
+This is the one question in the package that counts a hand's subsets rather than a pattern's readings, and
+the cards left behind are the reason. `find_all` reads three kings as *the pair of kings*, once, because one
+instance per reading is what a person wants to read; three pairs are three moves, since each leaves a
+different king in hand and that is the whole of the decision. The strongest patterns lead, and each set of
+places comes out once however many patterns it answers.
+
+What a game gets by asking is that its move list and its rules are one statement: a pattern added to the
+ranking is offered from the next move onwards, with no enumerator of its own to keep in step.
+
 ---
 
 ## 5. Points
@@ -344,6 +437,22 @@ A pattern built per question is what lets one line stand for a pair, a triplet a
 `matches` is the reading that holds the cards to being the whole of it — a selection with a card of another rank
 in it answers to no size at all. Its evaluation leaves jokers unwild, since the one standard deck it is played
 with holds none.
+
+**A game of climbing combinations** (`cardgames.backend.climbing`) recognises eight patterns across five
+counts, and a seat answering the table is held to the count standing on it. Four of the questions above are
+the whole of its card rules:
+
+```python
+CLIMBING_RANKING.selections(hand)  # every combination a seat on lead can put down
+CLIMBING_RANKING.sized(on_table.pattern.size).selections(hand)  # the answers to what stands there
+CLIMBING_RANKING.exactly(played)  # the combination those cards are, or none
+CLIMBING_RANKING.climbs(played, on_table)  # whether it stands above what it answers
+```
+
+Its ranking lists no quadruplet, so four cards are contested as two pair and `ceilings` reads `A♦ A♥ K♦ K♥`
+at that count — a ranking answers for the patterns it names and for no others, at every count. It reads the
+deck by the German suit order with the wheel admitted, jokers unwild since its one deck holds none, and
+copies collapsed.
 
 A game states its own evaluation, its own patterns and its own ranking. What it inherits is the reading:
 one tally per question, one instance per shape, and a strength it can compare, order and score.

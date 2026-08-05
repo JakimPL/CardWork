@@ -185,7 +185,7 @@ transaction that opened a round and settling again deals that round afresh, as `
 
 ```python
 def deal_round(self, position: Position[MatchState], leader: int, rng: Random) -> Effects[MatchState]:
-    counts = {hand_of(seat): HAND_SIZE for seat in rotation(leader, position.players)}
+    counts = HANDS.dealt(HAND_SIZE, rotation(leader, position.players))
     return Redeal(position, pile=STOCK, face_down=True).effects(counts, rng)
 ```
 
@@ -193,7 +193,15 @@ The leader arrives with the deal because the round's seat is drawn before its ca
 lets a game deal from the seat it opens on and give that seat a card the others do not get.
 
 `rounds/seating.py` names the seats a game counts round the table: `rotation(leader, players)` is the order a
-round deals, plays and reveals in, and `next_seat(seat, players)` is the seat a turn hands on to.
+round deals, plays and reveals in, and `next_seat(seat, players)` is the seat a turn hands on to. Where the
+turn travels past the seats it finds nothing for — one that has passed, one that has gone out —
+`following(seat, players, admits, including=...)` is the first seat round the table the condition admits, and
+answers None for a table where no seat does, which a rule carrying the turn on reads as the round it closes.
+`followed` is the same search for a rule that has already settled a seat stands there.
+
+The zones a round deals into come from the family standing at every seat: `HANDS.dealt(size, seats)` states one
+count for every seat or a count apiece, and it names them in the order the seats are given, which is the order
+`Redeal` deals them out in.
 
 Three steps, separately available for a game that keeps part of the table standing between rounds:
 

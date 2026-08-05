@@ -104,32 +104,53 @@ the server enforces.
 
 ## 2. The package contract
 
-`cardwork` is a stack of layers, each importing downward only. The order, high to low:
+`cardwork` is a stack of layers, each importing downward only. Sixteen of them, which read in six bands,
+each band a run of the order rather than a grouping laid over it:
+
+| Band | Layers |
+|---|---|
+| how a game is shown | `presentation` |
+| how a table and a match run | `rounds`, `games` |
+| what happened, and who is told of it | `views`, `transactions` |
+| the table, and what changes it | `effects`, `positions`, `boards`, `states`, `moves`, `zones` |
+| cards, and what a run of them reads as | `decks`, `combinations`, `cards`, `ordering` |
+| what every model stands on | `models` |
+
+The bands are a way to read the stack; the order is the contract. High to low:
 
 | Layer | Holds | Answers |
 |---|---|---|
 | `presentation` | `Scene`, `Layout`, `Slot`, `Gesture`, `Plaque`, `Readout` | how a game is laid out for a player |
 | `rounds` | `RoundGame`, `RoundState`, `Redeal`, seating | how a match of rounds runs |
-| `games` | `Game`: setup hooks, rules hooks, and the concrete engine; `Intents` | how a table plays |
+| `games` | `Game`: setup hooks, rules hooks, and the concrete engine; `Capacity`, `Intents` | how a table plays |
 | `views` | `PositionView`, `EventView`, per-observer projection | what an observer is told |
 | `transactions` | `Transaction`, `Journal`, `replay` | what happened |
 | `effects` | the four primitives and `fold` | what changes a position |
-| `positions` | `Position` = board, state, seat count | what is true now |
-| `boards` | `Board`, a container of zones | where cards sit |
-| `states` | `GameState` and a game's own subclass | phase, turn, score |
+| `positions` | `Position` = board, state, seat count, and the readings addressed by seat | what is true now |
+| `boards` | `Board`, a container of zones, and the readings addressed by zone | where cards sit, and what lies there |
+| `states` | `GameState` and a game's own subclass, `Award` | phase, turn, score |
 | `moves` | `Action`, `Move` | what a client asks for |
-| `zones` | `Zone`, `Visibility`, `Audience`, resolution | who sees what |
-| `decks` | `Deck`, index aliases, permutation draws | which cards exist |
+| `zones` | `Zone`, `Family`, `Visibility`, `Audience`, resolution | who sees what, and which zone is whose |
+| `decks` | `Deck`, index aliases, `named`, permutation draws | which cards exist |
 | `combinations` | `Pattern`, `Evaluation`, `Combination`, the search, `Ranking` | what a run of cards reads as |
 | `cards` | `Card`, `Joker`, `GameCard`, the card orders and point tables | one card, and what it is worth |
 | `ordering` | `Preorder`, `Tiers`, `Composite` | which of two values stands higher |
-| `models` | `BaseFrozen` | how every model behaves |
+| `models` | `BaseFrozen`, `held` | how every model behaves |
 
 Two placements are worth explaining. `views` sits **above** `transactions` because projection applies to
 transactions as well as positions (§7) — an `EventView` is a projected `Transaction` — and `transactions`
 works without knowing that views exist. `moves` is a leaf of pure data: actions are client intents that
 the rules translate into effects, and effects are what reach the board (P3), so nothing below `moves`
 points into it.
+
+**A question about a table is answered at the height its answer is knowable.** A question about one zone needs
+no seat count, so `Board` answers it: the cards lying there as the rules read them, how many, whether any, the
+top of an ordered run, and the cards a set of places names. A question about the seats needs the seat count,
+which `Position` carries and nothing below it does, so `Position` answers those: the seats, what each holds of
+a zone family, which of them hold anything, which hold fewest. A `Family` answers neither — `zones` stands
+below both and may name neither — and states instead the one name every seat's zone is reached by, so
+`HANDS.of(seat)` is where a zone id comes from and `zone.owner` is where a seat is read back. A game asks
+`position.board.count(STACK)` and `position.holding(HANDS)`, and reaches into a zone's own cards for neither.
 
 Three of the layers are the ones the first two games asked for, and each sits where what it knows puts it.
 `ordering` is at the bottom because an order is a vocabulary about values of any kind: `Preorder[T]` names
@@ -175,7 +196,7 @@ different heights — journal truncation, the engine's concurrency check, a game
 
 ### The contract is checked
 
-import-linter holds nine contracts over the four packages, so the boundaries are mechanical rather than
+import-linter holds twelve contracts over the four packages, so the boundaries are mechanical rather than
 aspirational:
 
 1. **Layered architecture** — the core order above.
@@ -190,15 +211,32 @@ aspirational:
    `registry`, `sessions`, `identity`, `errors`, `schemas`, `protocol`.
 5. **Rules know no presentation** — within `cardgames`, `frontend` stands above `backend`, so a game's rules
    are playable with no layout in sight and a layout is free to name the rules it lays out.
-6. **Passing stands apart** and 7. **Showdown stands apart** — neither game names the other at either
-   height, so whatever two games share lives in `cardwork` where the third will find it. Two contracts state
-   what one used to, because the modules of a game are no longer independent of each other: a layout names
-   its own rules, and only its own.
-8. **Nothing names the host** — none of `cardwork`, `cardserver` or `cardgames` names `cardtable`, so the
+6. **Rules read cards rather than tables** — a game's `rules` module names none of `presentation`, `rounds`,
+   `games`, `views`, `transactions`, `effects`, `positions`, `boards`, `moves` or `zones`. What it may name is
+   the bottom of the stack, the cursor's own vocabulary in `states`, and the index aliases in `decks`: cards,
+   counts and places inside a run of them. So a rules module states a rule and a `game` module states where
+   the cards for it sit, and the boundary between the two halves of a game is checkable rather than habitual
+   (§9, *Writing a game*).
+7. **Passing stands apart** — a game names no other game at either height, so whatever two games share lives
+   in `cardwork` where the third will find it.
+8. **Showdown stands apart** — the same claim over showdown's rules and its layout.
+9. **Shedding stands apart** — and over shedding's.
+10. **Climbing stands apart** — and over climbing's, which is rules alone until it is given a layout.
+11. **Nothing names the host** — none of `cardwork`, `cardserver` or `cardgames` names `cardtable`, so the
    composition root stays a leaf nothing depends on and a second host costs no change below it.
-9. **Host layers** — `cardtable` layers in its own right, high to low: `cli`, `catalogue`, `hosting`,
+12. **Host layers** — `cardtable` layers in its own right, high to low: `cli`, `catalogue`, `hosting`,
    `config`, then `settings`, `service`, `interface` and `seats` standing independent of one another, and
    `games` beside `paths` at the foot.
+
+**Four of those contracts state one claim, because a game is stated across two packages.**
+`cardgames.*.passing` is the expression meaning everything that belongs to passing, and an `independence`
+contract may not be given it: it expands a wildcard into one flat set of siblings and holds all of them
+against each other, so it would refuse `frontend.passing` importing `backend.passing` — the one cross-height
+import the design asks for. Handed the two heights separately instead, it holds each of them and lets a
+layout reach into another game's rules unremarked, which is the likeliest of these mistakes to make, since a
+layout is written by reading the last one. So the contracts are pairwise, one per game, and a fifth game
+brings a fifth. One would cover them all where a game were a package of its own with its two heights inside
+it, which is the structural change the growing count points at.
 
 ---
 
@@ -1099,7 +1137,7 @@ A game that overrides any of them has found a missing hook.
 | `capacity` | declaration | the tables the game is played at, which the engine holds every table it opens to. Stated by every game |
 | `intents` | declaration | the actions the rules answer to, which the engine holds a move to at step 7 of §6. Default: `None`, which is every intent |
 
-Four rules for reading that surface:
+Five rules for reading that surface:
 
 - **Every hook takes its subject as a parameter.** No hook reads the engine's cursor. That is P6, and it
   is why each one works on a speculative position, a replayed position, and the table's own.
@@ -1108,15 +1146,19 @@ Four rules for reading that surface:
   `advance` holds one because the rules draw where no seat has acted: the shuffle that opens the next round
   and the seat that leads it are settled during settlement, and each draw reaches the journal inside the
   effect it decided, so replay consults no generator (P2).
-- **Two hooks ship with a body**, because most games want the default and the ones that do not want to
-  change a policy rather than supply a missing one. `authorize` admits the seats the cursor names;
-  `legal_moves` enumerates nothing, which suits a game whose move space is wide or awkward to list and
-  leaves clients to propose a move for `validate` to answer.
-- **`intents` is a declaration rather than a hook**, and the one line of the surface a game states in place
-  of writing: it names the actions of §5.3 the rules answer to, and the engine both refuses the rest and
-  hands the game its own move back at the type it stated. A game annotating it — `ClassVar[Intents[Take |
-  Give]]` — has those actions reach its signatures, so a `match` over an intent is covered by the cases it
-  named. Left at None it states a condition on nothing, and every intent there is reaches the rules.
+- **Three hooks ship with a body**, because most games want the default and the ones that do not want to
+  change a policy rather than supply a missing one. `authorize` admits the seats the cursor names; `moves_of`
+  enumerates nothing, which suits a game whose move space is wide or awkward to list and leaves clients to
+  propose a move for `validate` to answer; and `legal_moves` gathers `moves_of` over the seats `to_act` names,
+  which is a body a game changes only to answer for a whole position at once rather than seat by seat.
+- **Two of that surface are declarations rather than hooks**, stated once in place of being written.
+  `capacity` names the tables the game is played at and the engine holds every table it opens to it, so a
+  seating range is a value rather than a check written four times over; a game stating none stands no table up
+  at all, which is what keeps the range from being left out. `intents` names the actions of §5.3 the rules
+  answer to, and the engine both refuses the rest and hands the game its own move back at the type it stated.
+  A game annotating it — `ClassVar[Intents[Take | Give]]` — has those actions reach its signatures, so a
+  `match` over an intent is covered by the cases it named. Left at None it states a condition on nothing, and
+  every intent there is reaches the rules.
 - **`advance` is a total function of its arguments.** It cannot remember having run, so `phase` carries
   that. Settlement leans on the same property: it calls `advance` until the answer is empty, which means
   something only while the answer depends on the position rather than on how many times it has been asked.
@@ -1126,6 +1168,14 @@ sequential one, and a position records who is *to* act rather than who just did.
 `advance` pure in its arguments; the alternative is every game carrying a `last_actor` in its own state,
 where it would be journaled, projected, and stale the moment settlement ran. `None` says the rules are
 being asked what they owe with no seat behind the question.
+
+**Two of the setup hooks state a condition rather than build anything, and the conditions games keep asking
+for are stated below them.** `confirm_standard_deck(deck)` is the whole of `_validate_initial_deck` for a game
+played with standard decks and the jokers it names; `confirm_dealt(position, family, sizes)` is the whole of
+`_final_validation` for a game whose deal owes each seat a count, and it names the seats holding another. Both
+refuse with `GameValidationError`, as `Capacity.confirm` does for the seating the engine checks on the game's
+behalf — so a table refused while standing up is refused in the vocabulary of §6, and a game writes the
+condition rather than the sentence.
 
 ### The origin is the components; transaction 0 is the deal
 
@@ -1177,13 +1227,19 @@ to be, and `Readout` reaches it by the one route every figure of a cursor reache
 standing *wins* is the game's own rule rather than the table's, so it stands beside the clauses as `award` and
 its vocabulary, `Award`, sits in `cardwork.states` beside the `points` tuple it reads.
 
-The two games in `cardgames` are the worked examples, and between them they exercise both shapes of turn:
+The games in `cardgames` are the worked examples, and between them they exercise both shapes of turn:
 
 | the game | plays | reads for |
 |---|---|---|
 | `cardgames.backend.passing` | a sequential turn: one exchange with the pile, then a pass round the table | an outcome a rules question over `combinations` decides, and a match ending on a lead rather than a count |
 | `cardgames.backend.showdown` | a simultaneous turn: every seat commits one sealed card, and they turn over together | `to_act` holding every seat, `HIDDEN` zones, and a turn settled behind no move at all |
 | `cardgames.backend.shedding` | a turn of two minds: shed a set of one rank, or draw a card and pass it on | a move naming several cards, a hand that grows, and a game that added no primitive below it |
+| `cardgames.backend.climbing` | a combination put down on lead, and the seats after it climbing over what stands there or passing | a `Ranking` asked for every move a hand can make, a `Combination` carried in the cursor, and a round closing on the seat that empties its hand |
+
+**Climbing is stated as far as its cards reach.** It stands a table up, deals, and answers for every move a
+seat may make; the turn a landed combination hands on is rules work still to write, and it has no layout and
+no entry in the host catalogue, so it is read here rather than played. The other three are played end to end
+over the endpoints in the suite (§13).
 
 ---
 
@@ -1821,12 +1877,15 @@ play was good **given what the player knew**.
 | Boundary | Enforced by | Violated when |
 |---|---|---|
 | Rules vs. mechanism | `boards` sits below `effects`; `Board` has no game methods | a `Board` method cannot be written without knowing which game it is |
+| Reading a table vs. changing one | `Board` and `Position` answer; the four effects write, and neither reader raises a refusal | a game reaches into `board.zones` or a zone's own cards for an answer, or a reader words a rule |
+| A seat's zone vs. its name | `Family.of(seat)` states the name; `Zone.owner` carries the seat | a game writes `f"hand:{seat}"`, or a seat is parsed back out of a zone id |
 | Domain vs. transport | the `Rules are transport-free` contract; the `Table` protocol lives in `cardserver` | `cardserver`, `fastapi` or `asyncio` appears under `cardwork/` or `cardgames/` |
 | Truth vs. knowledge | `project_position` and `project_transaction` are the only paths from a position to the wire | a handler serializes a `Position`, a `Board`, or a `Transaction` |
 | Truth vs. knowledge, in a game's own state | `GameState.project` narrows the cursor by the game's own rule | a game declares a private field and leaves `project` inherited |
 | Identity vs. seats | the adapter maps a credential to a seat and binds it to `move.player` | a handler passes a client's `move.player` through unchecked |
 | Determinism vs. randomness | `rng` is a parameter of `_deal_cards`, `expand` and `advance` only | an `Effect.apply` consults an RNG or a clock |
 | Data vs. code | `kind`-discriminated unions on effects and actions | a wire-facing field is typed as an abstract base and loses every subclass field |
+| A word on the wire vs. the rule it names | `Pattern.kind` claimed by writing the class; `AnyPattern` reads a word back to it | a pattern travels as the parts it is made of and no rule can be read back, so a ranking may not sit in a cursor |
 | Validation vs. assignment | `with_changes` and `revalidate_instances`; effects construct rather than `model_copy` | a `model_copy(update=...)` writes a value nothing has checked |
 | Physical vs. derived | `_deal_cards` moves cards; `advance` decides turns and phases | opening state is computed in a constructor and never reaches the journal |
 | One seat's move vs. the round's resolution | `submit` runs `advance` once; `settle` runs it to rest with `move=None` | a seat's event carries the scoring of everyone else's round |
@@ -1838,6 +1897,7 @@ play was good **given what the player knew**.
 | Framework vs. games | the `The framework knows no game` contract; `cardgames` is a distribution of its own | a mechanism under `cardwork/` names a game, or a handler branches on which game it serves |
 | What a game states vs. how it looks | `presentation` holds zone ids, kinds of move and fields of the cursor | a layout carries a measurement, or an interface branches on a zone id or a phase |
 | A game's rules vs. its layout | the `Rules know no presentation` contract; `backend` and `frontend` per game | a rules module names a slot or a caption, or a zone id is written twice |
+| A rule over cards vs. the table it is played on | the `Rules read cards rather than tables` contract | a `rules` module names a zone, an effect or a cursor, so a card rule can be read only against a dealt table |
 | A mechanism vs. the choice of game | the `Nothing names the host` contract; `cardtable.catalogue` is the only module naming `cardgames` | a registry, a handler or a scene is reached for by a game's name outside the catalogue |
 | A shape stated once vs. a shape restated | the layout vocabulary is generated from the published document; only the projections carrying a game's own state are written by hand | a field of a slot, a gesture or a move is typed in TypeScript by hand |
 | A credential vs. an address | the table and the token ride in the fragment; the token reaches the endpoints in a header | a seat token appears in a path, a query string or a log line |
@@ -1851,7 +1911,7 @@ play was good **given what the player knew**.
 
 ## 13. Invariants under test
 
-Most of the suite is ordinary unit coverage. Seven properties are the ones worth naming, because each
+Most of the suite is ordinary unit coverage. Nine properties are the ones worth naming, because each
 stands in for a class of bug rather than a case:
 
 | Property | Guards |
@@ -1861,6 +1921,8 @@ stands in for a class of bug rather than a case:
 | A view and an event offer their observer its own moves and no others | a simultaneous phase disclosing the shape of another seat's holding through the options it opens |
 | `history[n] == journal.replay(n)` for every `n`, after a random legal sequence | the memo and the record drifting apart, which would make `base_seq` name a position that never existed |
 | A `Transaction` survives a JSON round-trip with every effect field intact | the discriminated unions degrading to their abstract bases |
+| A pattern, a compound of patterns, a `Combination`, a `Ranking` and a game's own pattern nested in a built-in one each survive a JSON round-trip to an equal value | a rule that cannot be read back, which would keep a ranking or a combination out of a cursor and off the wire |
+| The places a `Ranking` offers over a generated hand are exactly the places it reads as a combination, under Hypothesis | a move list and the ranking it is drawn from drifting apart, so a pattern added to the rules is never offered |
 | Card conservation over `starting_deck` on every dealt table | a zone layout that loses or duplicates a card |
 | A stream resumed from `Last-Event-ID` delivers exactly what a client missed | the resumption path, which a dropped stream and a tab coming back into view both travel |
 
