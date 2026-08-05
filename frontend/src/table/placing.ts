@@ -1,8 +1,17 @@
-import type { Layout, Slot } from "../api/layout";
+import type { Layout, Slot, Spread } from "../api/layout";
 import { turnOf } from "../play/seats";
 
-/** Where a group of zones sits on the page, which follows from the seat the zones belong to. */
-export type Placement = "shared" | "own" | "station";
+/**
+ * Where a group of zones sits on the page, which follows from the seat the zones belong to.
+ *
+ * The seat reading the page holds its own, another seat holds theirs, and the rest of the zones are shared. The
+ * three names are the group's alone: the style sheet reads a placement off the group it belongs to, and a seat
+ * round the table is drawn by a box of its own under a name of its own.
+ */
+export type Placement = "shared" | "own" | "theirs";
+
+/** How the one card a seat seals a commitment in lies, which is the arrangement a station lays out on its own. */
+const SEALED: Spread = "slot";
 
 /** Which side of the table a seat sits at, read from the near edge the seat reading the page holds. */
 export type Side = "left" | "across" | "right";
@@ -50,6 +59,31 @@ export function stations(layout: Layout): Station[] {
     .map((plaque) => ({ seat: plaque.seat, turn: turnOf(layout, plaque.seat), slots: ownedBy(layout, plaque.seat) }))
     .filter((station) => station.slots.length > 0)
     .sort((one, other) => one.turn - other.turn);
+}
+
+/**
+ * The lines one group of zones lies in, in the order they stand one above another.
+ *
+ * A group with the width of the page to lie along lies in one line, which is the panel a player plays from and the
+ * zones at the middle of the table. A seat drawn across the table has the depth of the edge it sits at instead: the
+ * holdings the table reads of it lie side by side under its name, and the places it seals a card in lie beneath
+ * them, which leaves a station half as wide and reading in two glances. So the cards of a seat are drawn to the
+ * room its corner of the table has rather than to the width the whole of it laid out in a line would need.
+ *
+ * @param place - where the group sits on the page.
+ * @param slots - the zones of the group, in the order the layout places them.
+ */
+export function linesOf(place: Placement, slots: Slot[]): Slot[][] {
+  switch (place) {
+    case "shared":
+    case "own":
+      return [slots];
+    case "theirs": {
+      const holdings = slots.filter((slot) => slot.spread !== SEALED);
+      const sealed = slots.filter((slot) => slot.spread === SEALED);
+      return [holdings, sealed].filter((line) => line.length > 0);
+    }
+  }
 }
 
 /**

@@ -1,16 +1,17 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import type { Layout } from "../src/api/layout";
+import type { Layout, Slot } from "../src/api/layout";
 import type { PositionView } from "../src/api/views";
 import { NOTHING_LANDED } from "../src/play/arrivals";
 import type { Selection } from "../src/play/selection";
 import { offersOf, prospect } from "../src/play/selection";
 import { Header } from "../src/table/Header";
-import { drawnAt, own, ringOf, shared, SIDES, stations } from "../src/table/placing";
+import { drawnAt, linesOf, own, ringOf, shared, SIDES, stations } from "../src/table/placing";
 import { Sitting } from "../src/table/Sitting";
 import { Station } from "../src/table/Station";
 import {
+  aBlind,
   aGive,
   aHolding,
   aLayout,
@@ -18,7 +19,9 @@ import {
   AROUND,
   aTableOf,
   aTake,
+  aTray,
   aView,
+  blindOf,
   card,
   DEALT_FROM,
   GIVING,
@@ -29,9 +32,11 @@ import {
   offering,
   PILE,
   PLAQUES,
+  SEAT,
   SEATS,
   STACK,
   TAKING,
+  trayOf,
 } from "./tables";
 
 /** The whole of a `passing` table: every seat's hand laid out, the pile dealt from and the stack laid on. */
@@ -53,6 +58,17 @@ const CONCEALED: Layout = aLayout({
   slots: [HELD, DEALT_FROM, LAID_ON],
   plaques: PLAQUES,
   gestures: [TAKING, GIVING],
+});
+
+/** What a `showdown` seat holds: a hand, the blind beside it, and the place a commitment lies sealed in. */
+function sealing(seat: number): Slot[] {
+  return [aHolding(seat), aBlind(seat), aTray(seat)];
+}
+
+/** A table of that shape as one seat plays it, which is three zones in the panel and three at every other seat. */
+const SEALED_AT: Layout = aLayout({
+  slots: [HELD, aBlind(SEAT), aTray(SEAT), ...SEATS.filter((seat) => seat !== SEAT).flatMap(sealing)],
+  plaques: PLAQUES,
 });
 
 const POSITION: PositionView = aView(
@@ -142,6 +158,42 @@ describe("the seats round the table", () => {
   it("draws no station for a seat whose cards the table keeps off it", () => {
     expect(stationed(drawn(CONCEALED, POSITION, null))).toBe(0);
     expect(drawnAt(CONCEALED, 0)).toBe(false);
+  });
+});
+
+describe("the lines a group of zones lies in", () => {
+  it("stands the holdings of a seat across the table over the place it seals a card in", () => {
+    expect(linesOf("theirs", sealing(0)).map((line) => line.map((slot) => slot.zone))).toEqual([
+      [handOf(0), blindOf(0)],
+      [trayOf(0)],
+    ]);
+  });
+
+  it("stands a seat with nothing to seal along the one line", () => {
+    expect(linesOf("theirs", [aHolding(0)])).toEqual([[aHolding(0)]]);
+  });
+
+  it("lays the panel a player plays from along one line, the place they seal a card in among the rest", () => {
+    const panel = own(SEALED_AT);
+
+    expect(panel.map((slot) => slot.zone)).toEqual([HAND, blindOf(SEAT), trayOf(SEAT)]);
+    expect(linesOf("own", panel)).toEqual([panel]);
+  });
+
+  it("lays the zones the table shares along one line", () => {
+    expect(linesOf("shared", shared(LAYOUT))).toEqual([shared(LAYOUT)]);
+  });
+
+  it("draws a seat across the table in the lines its zones lie in", () => {
+    expect([...drawn(SEALED_AT, POSITION, null).matchAll(/class="line"/g)]).toHaveLength(4);
+    expect([...drawn(LAYOUT, POSITION, null).matchAll(/class="line"/g)]).toHaveLength(2);
+  });
+
+  it("names the group of a seat's zones apart from the box that seat sits in", () => {
+    const table = drawn(LAYOUT, POSITION, null);
+
+    expect(table).toContain('class="zones theirs"');
+    expect(table).not.toContain('class="zones station"');
   });
 });
 

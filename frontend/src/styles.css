@@ -39,14 +39,16 @@
   --gap: clamp(4px, 0.8vh, 12px);
   --least: 48px;
   --dealt: clamp(var(--least), 22vh, 200px);
-  --felt-share: 56vh;
   --card-height: var(--dealt);
   --card-aspect-width: 71;
   --card-aspect-height: 96;
   --radius: calc(var(--dealt) * 0.07);
   --overlap: 0.42;
   --widths: 1;
+  --lines: 1;
   --caption: clamp(10px, 1.5vh, 14px);
+  --lettering: calc(var(--caption) * 2);
+  --edging: calc(var(--gap) * 8);
 }
 
 * {
@@ -79,9 +81,16 @@ body {
   height: 100dvh;
 }
 
+/*
+ * The three bands of the page, each as wide as the window and no wider: the standing, the table, and the panel a
+ * player plays from. A band whose own reading runs longer than that — a table of many seats, each named and
+ * counted — keeps its place and reads as far as the window carries it.
+ */
+
 .page {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   height: 100%;
 }
 
@@ -168,14 +177,21 @@ body {
  * neighbours give way by rather than room they are drawn over. A table of any size lies inside the felt, and
  * every name on it stays legible.
  *
- * The felt states the one height every card on it is drawn at, the heaps in the middle and the holdings round the
- * sides alike, and gives way from the height of a card in hand by however many seats stand one above another at a
- * side of it. So a card another player holds is the size of the card on the pile, whatever the size of the table.
+ * The felt divides the height it was given between the zones at the middle and the seats round the edge: the
+ * middle takes up to half of it and the seats take the rest, which is what keeps a table of any size inside the
+ * felt and every part of it clear of the panel below. The seats divide their share again by however many of them
+ * stand one above another at a side and by how many lines each of them stands in.
+ *
+ * It divides its width the same way: a quarter of it to each side that holds seats, and what is left down the
+ * middle to the seats facing the near edge and the cards they share.
+ *
+ * The shares are stated on what lies inside the felt rather than on the felt itself, since a container states its
+ * size to what it holds. The card on the pile is the largest card the table draws, so what a player reads of
+ * another seat is a card of that size or of the size that seat's own share leaves it.
  */
 
 .felt {
-  --on-the-table: max(var(--least), min(var(--dealt), calc(var(--felt-share) / var(--stacked) - var(--caption) * 5)));
-
+  container-type: size;
   display: grid;
   grid-template:
     "left across right" auto
@@ -185,6 +201,12 @@ body {
   gap: var(--gap);
   min-height: 0;
   padding: var(--gap);
+}
+
+.felt > * {
+  --on-the-table: max(var(--least), min(var(--dealt), 50cqh));
+  --round-the-table: calc(100cqh - var(--on-the-table));
+  --down-the-middle: calc(100cqw - var(--flanked) * 50cqw);
 }
 
 .sitting {
@@ -222,6 +244,13 @@ body {
 /*
  * One group of zones, drawn at the height its own room affords: the height it stands upright at, or the height
  * the cards it lies as many wide as have width for, whichever is the lesser of the two.
+ *
+ * A group lies in lines, which is the one line the page has width for and the two a seat across the table stands
+ * its cards in. Every line is drawn to the widest of them and the height of the group is shared out among them,
+ * one line of lettering to a line of cards and one over the group for the name of the seat.
+ *
+ * A seat round the table draws at the height of a card on the table or at the height its own share leaves it,
+ * whichever is the lesser, so what a player reads of another seat is a card the size of the card on the pile.
  */
 
 .zones {
@@ -231,6 +260,13 @@ body {
   );
 
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap);
+}
+
+.line {
+  display: flex;
   align-items: flex-end;
   gap: calc(var(--gap) * 2);
 }
@@ -238,20 +274,40 @@ body {
 .zones.own {
   --upright: var(--dealt);
   --room: calc(100vw - var(--gap) * 12);
+
+  align-items: flex-start;
 }
 
 .zones.shared {
-  --upright: var(--on-the-table);
-  --room: calc(44vw - var(--gap) * 8);
+  --upright: calc(var(--on-the-table) - var(--lettering));
+  --room: calc(var(--down-the-middle) - var(--edging));
 
   grid-area: middle;
-  justify-content: center;
 }
 
-.zones.station {
-  --upright: var(--on-the-table);
-  --room: calc(28vw - var(--gap) * 4);
+/*
+ * A seat up a side of the table has a quarter of its width, and the seats facing the near edge share what is left
+ * down the middle. Each of them keeps the edging of its own box out of the width its cards are drawn to, so the
+ * shares add to the width of the felt and the seats of a table of any size stand clear of each other and clear of
+ * the cards they share.
+ */
 
+.zones.theirs {
+  --upright: max(
+    var(--least),
+    min(
+      calc(var(--on-the-table) - var(--lettering)),
+      calc((var(--round-the-table) / var(--stacked) - var(--lettering)) / var(--lines) - var(--lettering))
+    )
+  );
+  --room: calc(25cqw - var(--edging));
+}
+
+.sitting.across .zones.theirs {
+  --room: calc(var(--down-the-middle) / var(--abreast) - var(--edging));
+}
+
+.zones.theirs .line {
   gap: var(--gap);
 }
 
@@ -260,6 +316,9 @@ body {
  *
  * The seats up one side of the table share the height it has for them, so a table of many seats draws the cards
  * of each at the size that stands all of them clear of each other, which is the size the whole table is drawn at.
+ *
+ * The box a seat is drawn in and the group of zones inside it carry names of their own — `station` and `theirs` —
+ * so a rule written for the box reaches the box, and the group inside it lies in the lines it states for itself.
  */
 
 .station {

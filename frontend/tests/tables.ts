@@ -30,6 +30,23 @@ export function aHolding(seat: number): Slot {
   return { zone: handOf(seat), label: "Hand", seat, spread: "fan", place: 0, counted: true };
 }
 
+/** The two zones a `showdown` seat holds beside its hand: the blind it picks in, and the place a card is sealed in. */
+export function blindOf(seat: number): ZoneId {
+  return `blind:${seat}`;
+}
+
+export function trayOf(seat: number): ZoneId {
+  return `tray:${seat}`;
+}
+
+export function aBlind(seat: number): Slot {
+  return { zone: blindOf(seat), label: "Blind", seat, spread: "stack", place: 1, counted: true };
+}
+
+export function aTray(seat: number): Slot {
+  return { zone: trayOf(seat), label: "Sealed", seat, spread: "slot", place: 2, counted: false };
+}
+
 /** The seats around this one, each with the cards the table reads of them. */
 export const AROUND: Slot[] = SEATS.filter((seat) => seat !== SEAT).map(aHolding);
 

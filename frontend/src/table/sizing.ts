@@ -8,15 +8,27 @@ import type { Ring } from "./placing";
 const OVERLAP = "--overlap";
 const WIDTHS = "--widths";
 
+/** The name the sheet reads how many lines a group of zones lies in under. */
+const LINES = "--lines";
+
+/** One line, which is the fewest a group of zones ever lies in. */
+const ONE_LINE = 1;
+
 /** The names the sheet reads the proportions of a card under, both in the units the artwork was written in. */
 const ASPECT_WIDTH = "--card-aspect-width";
 const ASPECT_HEIGHT = "--card-aspect-height";
 
-/** The name the sheet reads how many seats stand one above another at a side of the table under. */
+/** The names the sheet reads how the seats stand round the table under: up its sides, and across the near edge. */
 const STACKED = "--stacked";
+const ABREAST = "--abreast";
+const FLANKED = "--flanked";
 
 /** One seat, which is the fewest a side of the table ever stands. */
 const ONE_SEAT = 1;
+
+/** Whether seats sit up the sides of the table, which is what the seats facing the near edge share the width with. */
+const FLANKING = 1;
+const CLEAR = 0;
 
 /** How much of a card the next one in a fan lies over, at its loosest and at its tightest. */
 const LOOSE = 0.42;
@@ -64,32 +76,41 @@ export function fanning(held: number): Measured {
 }
 
 /**
- * How wide a group of zones lies, counted in cards, which is the figure the cards are drawn to fit.
+ * How wide a group of zones lies and how many lines it lies in, counted in cards and in lines.
  *
  * A card is as tall as the room its group has for it: the panel a player plays from draws a hand of three at the
  * full height the window affords, and a hand of seventeen beside a row of five at the height their width leaves,
- * both read off one figure saying how many cards wide the whole group lies. What that comes to in pixels is the
- * sheet's, since the proportions of a card belong to the drawing of one.
+ * both read off one figure saying how many cards wide the group lies. A group standing in two lines is as wide as
+ * the wider of them and divides the height it has between them, so every card of it is drawn at one size. What
+ * either figure comes to in pixels is the sheet's, since the proportions of a card belong to the drawing of one.
  *
- * @param runs - the zones of the group, in the order they lie.
+ * @param lines - the zones of the group, gathered into the lines they lie in.
  */
-export function spanning(runs: Run[]): Measured {
-  const width = runs.reduce((room, run) => room + running(run), 0);
-  return { [WIDTHS]: rounded(Math.max(ONE_CARD, width)) };
+export function spanning(lines: Run[][]): Measured {
+  const widths = lines.map((line) => line.reduce((room, run) => room + running(run), 0));
+  return { [WIDTHS]: rounded(Math.max(ONE_CARD, ...widths)), [LINES]: Math.max(ONE_LINE, lines.length) };
 }
 
 /**
- * How many seats stand one above another at a side of the table, handed to the sheet so all of them fit.
+ * How the seats stand round the table, handed to the sheet so every one of them fits inside it.
  *
- * The seats up one side share the height the table has for them, so a table of seven draws the cards of a seat
- * smaller than a table of four does. Every card on the table is drawn at that one height, the heaps in the middle
- * with them: what a player reads of another seat is a card the size of the card on the pile, since both of them
- * are cards lying on the same table.
+ * The seats up one side share the height the table has for them and the seats facing the near edge share its
+ * width, so a table of seven draws the cards of a seat smaller than a table of four does. What the seats facing
+ * the near edge have the width of is the middle of the table, which is the whole of it where the sides stand
+ * empty and half of it where they hold seats.
+ *
+ * Every card on the table is drawn at that one height, the heaps in the middle with them: what a player reads of
+ * another seat is a card the size of the card on the pile, since both of them are cards lying on the same table.
  *
  * @param ring - the seats round the table, gathered by the side of it they sit at.
  */
 export function crowding(ring: Ring): Measured {
-  return { [STACKED]: Math.max(ONE_SEAT, ring.left.length, ring.right.length) };
+  const flanked = ring.left.length > 0 || ring.right.length > 0;
+  return {
+    [STACKED]: Math.max(ONE_SEAT, ring.left.length, ring.right.length),
+    [ABREAST]: Math.max(ONE_SEAT, ring.across.length),
+    [FLANKED]: flanked ? FLANKING : CLEAR,
+  };
 }
 
 /**

@@ -27,6 +27,9 @@ interface StationProps {
  * table it holds, counting from the seat reading the page. What a holding says from across the table is how many
  * cards it has, which it carries beside the backs standing for them, and the name of the seat stands over both.
  *
+ * The holdings of a seat lie side by side under that name and the places it seals a card in lie beneath them,
+ * since the room round the edge of a table runs deeper than it runs wide.
+ *
  * A seat the cards in hand can be sent to lies under a place to send them, so a card is passed by pointing at
  * the player it goes to.
  */
@@ -49,7 +52,7 @@ export function Station({ station, layout, view, arrivals, playing }: StationPro
         />
       )}
       <span className="who">{name}</span>
-      <Zones place="station" slots={station.slots} view={view} arrivals={arrivals} playing={playing} />
+      <Zones place="theirs" slots={station.slots} view={view} arrivals={arrivals} playing={playing} />
     </div>
   );
 }

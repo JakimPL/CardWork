@@ -8,6 +8,7 @@ import { wordsOf } from "../play/selection";
 import type { Playing } from "../play/usePlay";
 import { classes } from "./classes";
 import type { Placement } from "./placing";
+import { linesOf } from "./placing";
 import type { Run } from "./sizing";
 import { spanning } from "./sizing";
 import { Slot } from "./Slot";
@@ -31,23 +32,42 @@ interface ZonesProps {
  * drawing under three geographies, which is the whole of what a placement says: one component serves all of
  * them, and where each sits on the page is the style sheet's affair.
  *
- * A group carries how many cards wide it lies, so the cards of it are drawn as large as the room it has: the
- * panel a player plays from fills the width of the window, and a station the part of the table its seat holds.
+ * A group carries how many cards wide it lies and how many lines it lies in, so the cards of it are drawn as
+ * large as the room it has: the panel a player plays from fills the width of the window, and a seat across the
+ * table stands its holdings on one line with the places it seals a card in beneath them, which is the shape of
+ * the room round the edge of a table.
  *
  * That panel holds the moves a player says as well as the cards they play: a move landing on no place is drawn
  * at the end of it and counted in the width like a card, so it lies among the cards it is said instead of.
  */
 export function Zones({ place, slots, view, arrivals, playing }: ZonesProps): ReactElement {
   const said = place === OWN ? wordsOf(playing.standing) : [];
-  const runs = [...slots.map((slot) => reading(slot, view)), ...saying(said)];
+  const lines = linesOf(place, slots);
   return (
-    <div className={classes("zones", place)} style={spanning(runs)}>
-      {slots.map((slot) => (
-        <Slot key={slot.zone} slot={slot} zone={view.zones[slot.zone]} arrivals={arrivals} playing={playing} />
+    <div className={classes("zones", place)} style={spanning(measuring(lines, view, said))}>
+      {lines.map((line, index) => (
+        <div key={naming(line)} className="line">
+          {line.map((slot) => (
+            <Slot key={slot.zone} slot={slot} zone={view.zones[slot.zone]} arrivals={arrivals} playing={playing} />
+          ))}
+          {said.length > 0 && index === lines.length - 1 && <Words offers={said} playing={playing} />}
+        </div>
       ))}
-      {said.length > 0 && <Words offers={said} playing={playing} />}
     </div>
   );
+}
+
+/** Each line of a group as the fitting reads it, with the words of a turn taking the room of a card among them. */
+function measuring(lines: Arrangement[][], view: PositionView, said: Offered[]): Run[][] {
+  return lines.map((line, index) => [
+    ...line.map((slot) => reading(slot, view)),
+    ...(index === lines.length - 1 ? saying(said) : []),
+  ]);
+}
+
+/** What tells one line of a group from the next, which is the zones lying along it. */
+function naming(line: Arrangement[]): string {
+  return line.map((slot) => slot.zone).join(" ");
 }
 
 /** One zone as the fitting reads it, which is how its cards lie and how many of them the observer is served. */
