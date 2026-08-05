@@ -21,7 +21,6 @@ from cardwork.presentation.scene import Scene
 from cardwork.presentation.scope import Scope
 from cardwork.presentation.setting import Setting
 from cardwork.presentation.spread import Spread
-from cardwork.rounds.state import MatchPhase
 from cardwork.zones.zones import DISCARD, HANDS
 
 TITLE: Final[str] = "Showdown"
@@ -42,18 +41,14 @@ SEATED: Final[tuple[Setting, ...]] = (
     Setting.sealed(TRAYS, "Sealed"),
 )
 
-READOUTS: Final[tuple[Readout, ...]] = (
-    Readout.of(ShowdownState, "points", "Points", scope=Scope.SEAT),
-    Readout.of(ShowdownState, "round_points", "This round", scope=Scope.SEAT),
-    Readout.of(ShowdownState, "round_number", "Round", scope=Scope.TABLE),
+READOUTS: Final[tuple[Readout, ...]] = presets.match_readouts(ShowdownState) + (
     Readout.of(ShowdownState, "rounds", "Rounds", scope=Scope.TABLE),
     Readout.of(ShowdownState, "turn_number", "Turn", scope=Scope.TABLE),
 )
 
 PHASES: Final[Mapping[str, str]] = {
     ShowdownPhase.COMMITTING: "Commit a card",
-    MatchPhase.BETWEEN_ROUNDS: "Between rounds",
-    MatchPhase.MATCH_OVER: "Match over",
+    **presets.match_phases(),
 }
 
 INTERLUDES: Final[Mapping[str, Interlude]] = presets.match_interludes()

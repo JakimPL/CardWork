@@ -14,7 +14,6 @@ from cardwork.presentation.readout import Readout
 from cardwork.presentation.scene import Scene
 from cardwork.presentation.scope import Scope
 from cardwork.presentation.setting import Setting
-from cardwork.rounds.state import MatchPhase
 from cardwork.zones.zones import DISCARD, HANDS
 
 TITLE: Final[str] = "Shedding"
@@ -26,10 +25,7 @@ TABLE: Final[tuple[Fixture, ...]] = (
 
 SEATED: Final[tuple[Setting, ...]] = (Setting.hand(HANDS, "Hand", mine="Your hand", tally="Cards"),)
 
-READOUTS: Final[tuple[Readout, ...]] = (
-    Readout.of(SheddingState, "points", "Points", scope=Scope.SEAT),
-    Readout.of(SheddingState, "round_points", "This round", scope=Scope.SEAT),
-    Readout.of(SheddingState, "round_number", "Round", scope=Scope.TABLE),
+READOUTS: Final[tuple[Readout, ...]] = presets.match_readouts(SheddingState) + (
     Readout.of(SheddingState, "rounds", "Rounds", scope=Scope.TABLE),
     Readout.of(SheddingState, "winner", "Out first", scope=Scope.TABLE),
 )
@@ -37,8 +33,7 @@ READOUTS: Final[tuple[Readout, ...]] = (
 PHASES: Final[Mapping[str, str]] = {
     SheddingPhase.SHEDDING: "Shed two or more of one rank",
     SheddingPhase.DECIDED: "Round decided",
-    MatchPhase.BETWEEN_ROUNDS: "Between rounds",
-    MatchPhase.MATCH_OVER: "Match over",
+    **presets.match_phases(),
 }
 
 INTERLUDES: Final[Mapping[str, Interlude]] = presets.match_interludes()
