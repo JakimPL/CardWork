@@ -9,6 +9,7 @@ from cardgames.backend.passing.state import PassingPhase, PassingState
 from cardgames.backend.passing.zones import PILE
 from cardwork.decks.standard import standard_decks
 from cardwork.effects.effects import Effects
+from cardwork.exceptions import GameValidationError
 from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.game import NOTHING
@@ -171,23 +172,23 @@ def test_a_spectator_reads_the_stack_and_the_size_of_everything_else(passing: Pa
 
 
 def test_a_table_seats_two_to_eight_players() -> None:
-    with pytest.raises(ValueError, match=f"seats {TWO_SEATS} to 8"):
+    with pytest.raises(GameValidationError, match=f"seats {TWO_SEATS} to 8"):
         a_match(TOO_MANY_SEATS, PLAIN_DECK, SEED)
 
-    with pytest.raises(ValueError, match=f"seats {TWO_SEATS} to 8"):
+    with pytest.raises(GameValidationError, match=f"seats {TWO_SEATS} to 8"):
         a_match(TOO_FEW_SEATS, PLAIN_DECK, SEED)
 
 
 def test_a_deck_short_of_a_whole_standard_deck_is_refused() -> None:
-    with pytest.raises(ValueError, match="whole standard decks"):
+    with pytest.raises(GameValidationError, match="whole standard decks"):
         a_match(SEATS, PLAIN_DECK[:-1], SEED)
 
 
 def test_a_deck_of_jokers_alone_is_refused() -> None:
-    with pytest.raises(ValueError, match="whole standard decks"):
+    with pytest.raises(GameValidationError, match="whole standard decks"):
         a_match(SEATS, JOKERED_DECK[len(PLAIN_DECK) :], SEED)
 
 
 def test_a_deal_leaving_the_leader_without_its_fourth_card_is_refused() -> None:
-    with pytest.raises(ValueError, match="hold a hand of a size other than"):
+    with pytest.raises(GameValidationError, match="hold a hand of a size other than"):
         ShortDealGame(players=SEATS, deck=PLAIN_DECK, conclusion=Conclusion(lead=WINNING_LEAD), rng=Random(SEED))

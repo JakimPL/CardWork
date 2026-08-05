@@ -12,8 +12,8 @@ NO_WHOLE_DECKS: Final[int] = 0
 def standard_decks(
     count: int,
     *,
-    black_jokers: int,
-    red_jokers: int,
+    black_jokers: int = 0,
+    red_jokers: int = 0,
 ) -> Deck:
     """`count` whole standard decks laid together, and the jokers a host asks for besides.
 

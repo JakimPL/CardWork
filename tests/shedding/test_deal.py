@@ -10,6 +10,7 @@ from cardgames.backend.shedding.state import SheddingPhase, SheddingState
 from cardgames.backend.shedding.zones import STOCK
 from cardwork.decks.standard import standard_deck, standard_decks
 from cardwork.effects.effects import Effects
+from cardwork.exceptions import GameValidationError
 from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.redeal import Redeal
@@ -124,25 +125,25 @@ def test_a_spectator_reads_the_discard_and_the_size_of_everything_else(shedding:
 
 
 def test_a_table_seats_two_to_six_players() -> None:
-    with pytest.raises(ValueError, match=f"seats {TWO_SEATS} to 6"):
+    with pytest.raises(GameValidationError, match=f"seats {TWO_SEATS} to 6"):
         a_match(TOO_MANY_SEATS, ROUNDS, SEED)
 
-    with pytest.raises(ValueError, match=f"seats {TWO_SEATS} to 6"):
+    with pytest.raises(GameValidationError, match=f"seats {TWO_SEATS} to 6"):
         a_match(TOO_FEW_SEATS, ROUNDS, SEED)
 
 
 def test_a_deck_other_than_one_standard_deck_is_refused() -> None:
-    with pytest.raises(ValueError, match="one standard deck"):
+    with pytest.raises(GameValidationError, match="one standard deck"):
         SheddingGame(players=SEATS, deck=DECK[:-1], conclusion=Conclusion(rounds=ROUNDS), rng=Random(SEED))
 
-    with pytest.raises(ValueError, match="one standard deck"):
+    with pytest.raises(GameValidationError, match="one standard deck"):
         SheddingGame(
             players=SEATS, deck=standard_decks(2, black_jokers=0, red_jokers=0), conclusion=Conclusion(rounds=ROUNDS)
         )
 
 
 def test_a_deck_holding_a_joker_is_refused() -> None:
-    with pytest.raises(ValueError, match="one standard deck"):
+    with pytest.raises(GameValidationError, match="one standard deck"):
         SheddingGame(
             players=SEATS,
             deck=standard_deck(black_jokers=1, red_jokers=0),
@@ -152,5 +153,5 @@ def test_a_deck_holding_a_joker_is_refused() -> None:
 
 
 def test_a_deal_leaving_a_seat_short_of_its_hand_is_refused() -> None:
-    with pytest.raises(ValueError, match="hold a hand of a size other than"):
+    with pytest.raises(GameValidationError, match="hold a hand of a size other than"):
         ShortDealGame(players=SEATS, deck=DECK, conclusion=Conclusion(rounds=ROUNDS), rng=Random(SEED))

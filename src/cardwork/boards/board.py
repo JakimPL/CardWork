@@ -57,7 +57,7 @@ class Board(BaseFrozen):
         cards = tuple(card for zone in self.zones.values() for card in zone.cards)
         if len(cards) != len(self.starting_deck):
             raise GameValidationError(
-                f"Zones hold {len(cards)} cards while the starting deck {len(self.starting_deck)}"
+                f"Zones hold {len(cards)} cards while the starting deck holds {len(self.starting_deck)}"
             )
 
         if not compare_decks(cards, self.starting_deck):

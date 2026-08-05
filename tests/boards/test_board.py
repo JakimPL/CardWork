@@ -2,6 +2,9 @@ import pytest
 from pydantic import ValidationError
 
 from cardwork.boards.board import Board
+from cardwork.cards.cards import TWO_OF_CLUBS
+from cardwork.cards.game import GameCard
+from cardwork.exceptions import GameValidationError
 from cardwork.zones.presets import PILE
 from cardwork.zones.zone import Zone
 
@@ -13,8 +16,17 @@ def test_validate_board_accepts_the_zones_holding_the_starting_deck(board: Board
 def test_validate_board_rejects_a_vanished_card(board: Board, hand: Zone) -> None:
     short_of_one = board.with_zones(hand.model_copy(update={"cards": hand.cards[:1]}))
 
-    with pytest.raises(ValueError, match="differing from the starting deck"):
+    with pytest.raises(GameValidationError, match="while the starting deck holds"):
         short_of_one.validate_board()
+
+
+def test_validate_board_rejects_a_card_the_deck_never_held(board: Board, hand: Zone) -> None:
+    substituted = board.with_zones(
+        hand.model_copy(update={"cards": (GameCard(card=TWO_OF_CLUBS, face_down=True), *hand.cards[1:])})
+    )
+
+    with pytest.raises(GameValidationError, match="differing from the starting deck"):
+        substituted.validate_board()
 
 
 def test_with_zones_leaves_the_board_it_was_called_on_intact(board: Board, hand: Zone) -> None:

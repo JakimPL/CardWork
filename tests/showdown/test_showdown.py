@@ -33,6 +33,7 @@ from cardwork.cards.cards import (
     TWO_OF_CLUBS,
 )
 from cardwork.cards.joker import Joker
+from cardwork.exceptions import LogicError
 from cardwork.rounds.seating import rotation
 from cardwork.zones.zones import DISCARD
 from tests.cases import Case, descriptions
@@ -106,12 +107,12 @@ def test_the_strongest_card_revealed_takes_what_every_other_one_is_worth(case: T
 
 
 def test_a_joker_is_no_card_of_this_game() -> None:
-    with pytest.raises(ValueError, match="suited cards alone"):
+    with pytest.raises(LogicError, match="suited cards alone"):
         suited(BLACK_JOKER)
 
 
 def test_a_turn_nothing_was_revealed_in_has_nobody_to_take_it() -> None:
-    with pytest.raises(ValueError, match="strongest of the cards revealed"):
+    with pytest.raises(LogicError, match="strongest of the cards revealed"):
         taken_by(())
 
 

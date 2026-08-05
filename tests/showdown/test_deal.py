@@ -17,6 +17,7 @@ from cardgames.backend.showdown.zones import STOCK, blind_of, hand_of, tray_of
 from cardwork.decks.decks import jokers
 from cardwork.decks.standard import standard_deck
 from cardwork.effects.effects import Effects
+from cardwork.exceptions import GameValidationError
 from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import ONE_ROUND, Conclusion
 from cardwork.rounds.redeal import Redeal
@@ -132,20 +133,20 @@ def test_a_spectator_reads_the_size_of_every_zone_and_the_cards_of_none(showdown
 
 
 def test_a_table_seats_two_to_five_players() -> None:
-    with pytest.raises(ValueError, match=f"seats {TWO_SEATS} to {FULL_TABLE}"):
+    with pytest.raises(GameValidationError, match=f"seats {TWO_SEATS} to {FULL_TABLE}"):
         a_match(TOO_MANY_SEATS, ROUNDS, SEED)
 
-    with pytest.raises(ValueError, match=f"seats {TWO_SEATS} to {FULL_TABLE}"):
+    with pytest.raises(GameValidationError, match=f"seats {TWO_SEATS} to {FULL_TABLE}"):
         a_match(TOO_FEW_SEATS, ROUNDS, SEED)
 
 
 def test_a_deck_short_of_a_standard_one_is_refused() -> None:
-    with pytest.raises(ValueError, match="one standard deck"):
+    with pytest.raises(GameValidationError, match="one standard deck"):
         ShowdownGame(players=SEATS, deck=DECK[:-1], conclusion=Conclusion(rounds=ROUNDS), rng=Random(SEED))
 
 
 def test_a_deck_carrying_jokers_is_refused() -> None:
-    with pytest.raises(ValueError, match="one standard deck"):
+    with pytest.raises(GameValidationError, match="one standard deck"):
         ShowdownGame(
             players=SEATS,
             deck=standard_deck() + jokers(black=1, red=1),
@@ -155,5 +156,5 @@ def test_a_deck_carrying_jokers_is_refused() -> None:
 
 
 def test_a_deal_leaving_a_seat_short_of_the_five_it_reads_is_refused() -> None:
-    with pytest.raises(ValueError, match=f"other than {HAND_SIZE} cards to read"):
+    with pytest.raises(GameValidationError, match=f"other than {HAND_SIZE} cards to read"):
         ShortDealGame(players=SEATS, deck=DECK, conclusion=Conclusion(rounds=ROUNDS), rng=Random(SEED))

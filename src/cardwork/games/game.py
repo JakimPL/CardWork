@@ -427,11 +427,19 @@ class Game(ABC, Generic[StateT]):
 
     @abstractmethod
     def _validate_players(self, players: int) -> None:
-        """Conditions on the number of players."""
+        """Conditions on the number of players.
+
+        Raises:
+            GameValidationError: when this game does not seat the number of players asked for.
+        """
 
     @abstractmethod
     def _validate_initial_deck(self, deck: Deck) -> None:
-        """Additional checks for supported initial decks."""
+        """Additional checks for supported initial decks.
+
+        Raises:
+            GameValidationError: when this game is not played with the deck it was handed.
+        """
 
     @abstractmethod
     def _deal_cards(
@@ -447,7 +455,11 @@ class Game(ABC, Generic[StateT]):
 
     @abstractmethod
     def _final_validation(self, position: Position[StateT]) -> None:
-        """Game-specific checks on the position after the deal."""
+        """Game-specific checks on the position after the deal.
+
+        Raises:
+            GameValidationError: when the deal leaves the table in a standing this game does not open from.
+        """
 
     @abstractmethod
     def validate(self, position: Position[StateT], move: Move) -> None:

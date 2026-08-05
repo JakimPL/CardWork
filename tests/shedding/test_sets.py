@@ -31,6 +31,7 @@ from cardwork.cards.cards import (
 from cardwork.cards.game import CardsOrJokers
 from cardwork.cards.rank import Rank
 from cardwork.decks.deck import Indices
+from cardwork.exceptions import LogicError
 from tests.cases import Case, descriptions
 
 FULL_STOCK: Final[int] = 40
@@ -168,7 +169,7 @@ def test_a_card_reads_as_the_rank_it_carries() -> None:
 
 
 def test_a_joker_reads_as_no_rank_this_game_is_played_with() -> None:
-    with pytest.raises(ValueError, match="suited cards alone"):
+    with pytest.raises(LogicError, match="suited cards alone"):
         ranked(RED_JOKER)
 
 
@@ -178,7 +179,7 @@ def test_a_draw_takes_the_card_at_the_end_of_the_stock() -> None:
 
 
 def test_a_draw_from_a_stock_that_has_run_out_is_refused() -> None:
-    with pytest.raises(ValueError, match="has run out"):
+    with pytest.raises(LogicError, match="has run out"):
         drawn_from(RUN_OUT)
 
 

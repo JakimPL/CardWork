@@ -5,6 +5,7 @@ import pytest
 from cardwork.cards.joker import Joker
 from cardwork.decks.draw import permutation
 from cardwork.effects.effects import Reorder
+from cardwork.exceptions import GameValidationError
 from cardwork.positions.position import Position
 from cardwork.states.state import GameState
 
@@ -68,12 +69,12 @@ def test_the_final_check_reads_the_dealt_position() -> None:
 
 
 def test_construction_counts_the_cards_of_a_game_that_scores_nothing_yet() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(GameValidationError):
         ShortDealGame(players=SEATS, deck=DECK, rng=Random(SEED))
 
 
 def test_construction_matches_the_points_table_to_the_table() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(GameValidationError):
         MisscoredGame(players=SEATS, deck=DECK, rng=Random(SEED))
 
 
@@ -85,17 +86,17 @@ def test_construction_matches_the_points_table_to_the_table() -> None:
     ],
 )
 def test_construction_rejects_a_table_the_engine_cannot_seat(players: int, deck: tuple[object, ...]) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(GameValidationError):
         DiscardGame(players=players, deck=deck, rng=Random(SEED))
 
 
 def test_construction_puts_the_game_s_own_seating_rule_to_the_table() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(GameValidationError):
         DiscardGame(players=1, deck=DECK, rng=Random(SEED))
 
 
 def test_construction_puts_the_game_s_own_deck_rule_to_the_deck() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(GameValidationError):
         DiscardGame(players=SEATS, deck=DECK + (Joker(red=True),), rng=Random(SEED))
 
 

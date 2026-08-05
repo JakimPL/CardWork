@@ -8,7 +8,7 @@ from cardwork.decks.deck import Deck
 from cardwork.decks.decks import does_contain_jokers, to_game_cards
 from cardwork.decks.draw import permutation
 from cardwork.effects.effects import Effects, MoveCards, Reorder, SetState
-from cardwork.exceptions import IllegalMove
+from cardwork.exceptions import GameValidationError, IllegalMove
 from cardwork.games.game import Game
 from cardwork.games.intents import Intents
 from cardwork.moves.actions import Play, Take
@@ -53,11 +53,11 @@ class DiscardGame(Game[GameState]):
 
     def _validate_players(self, players: int) -> None:
         if not 2 <= players <= 5:
-            raise ValueError(f"This game seats 2 to 5 players, and {players} were asked for")
+            raise GameValidationError(f"This game seats 2 to 5 players, and {players} were asked for")
 
     def _validate_initial_deck(self, deck: Deck) -> None:
         if does_contain_jokers(deck):
-            raise ValueError("This game is played with suited cards alone")
+            raise GameValidationError("This game is played with suited cards alone")
 
     def _deal_cards(self, position: Position[GameState], rng: Random) -> Effects[GameState]:
         pile = position.board.zone("draw").cards
@@ -76,7 +76,7 @@ class DiscardGame(Game[GameState]):
             seat for seat in range(position.players) if len(position.board.zone(hand_of(seat)).cards) != HAND_SIZE
         )
         if short:
-            raise ValueError(f"Seats {short} hold a hand of some size other than {HAND_SIZE}")
+            raise GameValidationError(f"Seats {short} hold a hand of some size other than {HAND_SIZE}")
 
     def validate(self, position: Position[GameState], move: Move) -> None:
         indices = LAYING.read(move).indices
