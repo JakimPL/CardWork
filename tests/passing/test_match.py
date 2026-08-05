@@ -12,9 +12,9 @@ from cardwork.decks.deck import Deck
 from cardwork.effects.fold import fold
 from cardwork.moves.actions import Give
 from cardwork.moves.move import Move
-from cardwork.rounds.game import NOTHING
 from cardwork.rounds.seating import next_seat
 from cardwork.rounds.state import MatchPhase
+from cardwork.states.state import NOTHING
 from tests.cases import Case, descriptions
 
 from .driving import (

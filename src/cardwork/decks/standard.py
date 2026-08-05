@@ -4,6 +4,7 @@ from cardwork.cards.cards import STANDARD_CARDS
 from cardwork.cards.game import is_joker
 from cardwork.decks.deck import Deck, GameDeck
 from cardwork.decks.decks import compare_decks, count_cards, jokers
+from cardwork.exceptions import GameValidationError
 
 ONE_DECK: Final[int] = 1
 NO_WHOLE_DECKS: Final[int] = 0
@@ -74,3 +75,31 @@ def is_standard_deck(
             red_jokers=red_jokers,
         ),
     )
+
+
+def confirm_standard_deck(
+    deck: GameDeck,
+    *,
+    black_jokers: int = 0,
+    red_jokers: int = 0,
+) -> None:
+    """Confirm the deck is one whole standard deck, beside the jokers a game is played with.
+
+    Raises:
+        GameValidationError: when the deck holds another run of cards.
+    """
+    if not is_standard_deck(
+        deck,
+        black_jokers=black_jokers,
+        red_jokers=red_jokers,
+    ):
+        raise GameValidationError(f"This game is played with {_deck_spoken(black_jokers, red_jokers)}")
+
+
+def _deck_spoken(black_jokers: int, red_jokers: int) -> str:
+    """The deck a game is played with as a phrase, which is how a refusal states what it asks for."""
+    standard = "one standard deck of suited cards"
+    if not black_jokers and not red_jokers:
+        return standard
+
+    return f"{standard} beside {black_jokers} black and {red_jokers} red jokers"

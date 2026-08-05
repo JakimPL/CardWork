@@ -3,6 +3,7 @@ from typing import Final
 
 import pytest
 
+from cardwork.exceptions import LogicError
 from cardwork.rounds.state import BEFORE_THE_FIRST_ROUND, USUAL_AWARD, RoundState
 from cardwork.states.award import Award
 from cardwork.states.state import Points
@@ -23,7 +24,7 @@ def test_a_cursor_stands_before_the_first_round_until_one_opens() -> None:
 def test_a_cursor_before_the_first_round_names_no_leading_seat() -> None:
     state = RoundState(phase=FRESH)
 
-    with pytest.raises(ValueError, match="No round has opened"):
+    with pytest.raises(LogicError, match="No round has opened"):
         state.led_by  # pylint: disable=pointless-statement
 
 

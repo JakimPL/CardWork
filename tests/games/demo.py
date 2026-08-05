@@ -9,6 +9,7 @@ from cardwork.decks.decks import does_contain_jokers, to_game_cards
 from cardwork.decks.draw import permutation
 from cardwork.effects.effects import Effects, MoveCards, Reorder, SetState
 from cardwork.exceptions import GameValidationError, IllegalMove
+from cardwork.games.capacity import Capacity
 from cardwork.games.game import Game
 from cardwork.games.intents import Intents
 from cardwork.moves.actions import Play, Take
@@ -23,6 +24,8 @@ SEATS: Final[int] = 3
 HAND_SIZE: Final[int] = 3
 RANKS: Final[tuple[Rank, ...]] = (Rank.ACE, Rank.KING, Rank.QUEEN)
 DECK: Final[Deck] = tuple(Card(rank=rank, suit=suit) for suit in Suit for rank in RANKS)
+SEATS_LEAST: Final[int] = 2
+SEATS_MOST: Final[int] = 5
 LAYING: Final[Intents[Play]] = Intents(Play)
 LAYING_OR_RETRACTING: Final[Intents[Play | Take]] = Intents(Play, Take)
 
@@ -42,6 +45,7 @@ class DiscardGame(Game[GameState]):
     both intents the two of them reach and each states the vocabulary it is played with.
     """
 
+    capacity: ClassVar[Capacity] = Capacity(least=SEATS_LEAST, most=SEATS_MOST)
     intents: ClassVar[Intents[Play | Take]] = LAYING
 
     def zones(self, players: int, deck: Deck) -> Zones:
@@ -50,10 +54,6 @@ class DiscardGame(Game[GameState]):
             "draw": Zone(id="draw", visibility=PILE, ordered=True, cards=to_game_cards(deck, face_down=True)),
             **discard(),
         }
-
-    def _validate_players(self, players: int) -> None:
-        if not 2 <= players <= 5:
-            raise GameValidationError(f"This game seats 2 to 5 players, and {players} were asked for")
 
     def _validate_initial_deck(self, deck: Deck) -> None:
         if does_contain_jokers(deck):
@@ -110,10 +110,9 @@ class DiscardGame(Game[GameState]):
 
         return ()
 
-    def legal_moves(self, position: Position[GameState]) -> Moves:
+    def moves_of(self, position: Position[GameState], seat: int) -> Moves:
         return tuple(
             Move(player=seat, action=Play(group="discard", indices=frozenset({index})))
-            for seat in sorted(position.state.to_act)
             for index in range(len(position.board.zone(hand_of(seat)).cards))
         )
 
@@ -240,11 +239,10 @@ class ShortDealGame(DiscardGame):
 class BareGame(Game[GameState]):
     """The least a game may declare: the hooks the engine requires, leaving the optional ones as they come."""
 
+    capacity: ClassVar[Capacity] = Capacity(least=1, most=SEATS_MOST)
+
     def zones(self, players: int, deck: Deck) -> Zones:
         return {"draw": Zone(id="draw", visibility=PILE, ordered=True, cards=to_game_cards(deck, face_down=True))}
-
-    def _validate_players(self, players: int) -> None:
-        """Any seating this engine accepts suits this game."""
 
     def _validate_initial_deck(self, deck: Deck) -> None:
         """Any deck this engine accepts suits this game."""

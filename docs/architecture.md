@@ -1088,14 +1088,15 @@ A game that overrides any of them has found a missing hook.
 | `zones(players, deck)` | abstract | the components on the table before anyone touches them: the layout, its visibility policy, and the zone the undealt deck sits in |
 | `_initialize(players)` | abstract | the pre-deal state — what is knowable before a card has moved |
 | `_deal_cards(position, rng)` | abstract | the physical deal: shuffle and distribute |
-| `_validate_players(players)` | abstract | conditions on the number of players |
 | `_validate_initial_deck(deck)` | abstract | conditions on supported initial decks |
 | `_final_validation(position)` | abstract | game-specific checks on the dealt position |
 | `validate(position, move)` | abstract | raise `IllegalMove` unless the move is permitted |
 | `expand(position, move, rng)` | abstract | translate an intent into primitive effects |
 | `advance(position, move, rng)` | abstract | turn and phase transitions, scoring, terminal detection |
 | `authorize(position, move)` | concrete | raise `NotYourTurn` unless this seat may act. Default: `move.player in state.to_act` |
-| `legal_moves(position)` | concrete | enumerate the moves this position admits, for a search and for the interfaces they reach through `view` (§7). Default: none |
+| `moves_of(position, seat)` | concrete | enumerate the moves one seat may make, for a search and for the interfaces they reach through `view` (§7). Default: none |
+| `legal_moves(position)` | concrete | the whole move list this position admits. Default: `moves_of` gathered over the seats `to_act` names |
+| `capacity` | declaration | the tables the game is played at, which the engine holds every table it opens to. Stated by every game |
 | `intents` | declaration | the actions the rules answer to, which the engine holds a move to at step 7 of §6. Default: `None`, which is every intent |
 
 Four rules for reading that surface:

@@ -3,6 +3,7 @@ from typing import Final, TypeVar
 
 from pydantic import Field
 
+from cardwork.models.held import held
 from cardwork.rounds.conclusion import ONE_POINT, ONE_ROUND
 from cardwork.states.award import Award
 from cardwork.states.state import GameState, Points
@@ -60,12 +61,9 @@ class RoundState(GameState):
         """The seat leading the round in play.
 
         Raises:
-            ValueError: when no round has opened, which leaves no seat leading one.
+            LogicError: when no round has opened, which leaves no seat leading one.
         """
-        if self.leader is None:
-            raise ValueError("No round has opened, so no seat leads one")
-
-        return self.leader
+        return held(self.leader, "round has opened, so no seat leads one")
 
     def concluded(self, standing: Points) -> bool:
         """Whether the clauses this match ends on are met by the standing as it stands.

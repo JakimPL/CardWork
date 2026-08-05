@@ -20,15 +20,17 @@ from cardwork.decks.deck import Deck, Indices
 from cardwork.decks.standard import ONE_DECK, standard_multiplicity
 from cardwork.effects.effects import Effects, MoveCards, SetFace, SetState
 from cardwork.exceptions import GameValidationError, IllegalMove
+from cardwork.games.capacity import Capacity
 from cardwork.games.intents import Intents
 from cardwork.moves.actions import Give, Take
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import Conclusion
-from cardwork.rounds.game import NOTHING, RoundGame
+from cardwork.rounds.game import RoundGame
 from cardwork.rounds.redeal import Admits, Redeal
 from cardwork.rounds.seating import next_seat, rotation
 from cardwork.rounds.state import MatchPhase
+from cardwork.states.state import NOTHING
 from cardwork.zones.zone import Zones, cards_of
 from cardwork.zones.zones import STACK, hand_of
 
@@ -54,6 +56,7 @@ class PassingGame(RoundGame[PassingState]):
                            conclusion=Conclusion(lead=2), rng=Random(7))
     """
 
+    capacity: ClassVar[Capacity] = Capacity(least=SEATS_LEAST, most=SEATS_MOST)
     intents: ClassVar[Intents[Take | Give]] = Intents(Take, Give)
 
     def __init__(
@@ -74,12 +77,6 @@ class PassingGame(RoundGame[PassingState]):
 
     def zones(self, players: int, deck: Deck) -> Zones:
         return passing_zones(players, deck)
-
-    def _validate_players(self, players: int) -> None:
-        if not SEATS_LEAST <= players <= SEATS_MOST:
-            raise GameValidationError(
-                f"This game seats {SEATS_LEAST} to {SEATS_MOST} players, and {players} were asked for"
-            )
 
     def _validate_initial_deck(self, deck: Deck) -> None:
         if standard_multiplicity(deck) < ONE_DECK:

@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from random import Random
-from typing import Final
 
 from cardwork.decks.deck import Deck
 from cardwork.effects.effects import Effects, SetState
@@ -9,9 +8,7 @@ from cardwork.moves.move import Move
 from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.state import MatchPhase, RoundStateT
-from cardwork.states.state import Points
-
-NOTHING: Final[int] = 0
+from cardwork.states.state import NOTHING, Points
 
 
 def standing(position: Position[RoundStateT]) -> Points:
@@ -151,9 +148,8 @@ class RoundGame(Game[RoundStateT], ABC):
         and the one that opens the next clears it.
         """
         state = position.state
-        closed = state.with_changes(
-            phase=MatchPhase.BETWEEN_ROUNDS,
-            to_act=frozenset(),
+        closed = state.at_rest(
+            MatchPhase.BETWEEN_ROUNDS,
             points=tuple(
                 before + won
                 for before, won in zip(
@@ -170,8 +166,7 @@ class RoundGame(Game[RoundStateT], ABC):
         position: Position[RoundStateT],
     ) -> Effects[RoundStateT]:
         """The effects closing the match: the phase every seat reads as over, and nobody left to act."""
-        finished = position.state.with_changes(phase=MatchPhase.MATCH_OVER, to_act=frozenset())
-        return (SetState(state=finished),)
+        return (SetState(state=position.state.at_rest(MatchPhase.MATCH_OVER)),)
 
     def next_leader(
         self,

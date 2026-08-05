@@ -88,18 +88,17 @@ class Redeal(Generic[StateT]):
         if not turning:
             return ()
 
-        turned: Effects[StateT] = (
+        return (
             SetFace(
                 zone=self._pile,
                 indices=turning,
                 face_down=self._face_down,
             ),
         )
-        return turned
 
     def _emptied(self) -> Effects[StateT]:
         """Every zone besides the pile that holds a card, emptied into it."""
-        emptied: Effects[StateT] = tuple(
+        return tuple(
             MoveCards(
                 source=zone_id,
                 indices=frozenset(range(len(zone.cards))),
@@ -110,16 +109,13 @@ class Redeal(Generic[StateT]):
             if zone.cards and zone_id != self._pile
         )
 
-        return emptied
-
     def shuffle(self, rng: Random) -> Effects[StateT]:
         """The gathered pile laid out in an order drawn once and recorded, so a replay deals the same round."""
-        shuffled: Effects[StateT] = (Reorder(zone=self._pile, order=permutation(self._gathered(), rng)),)
-        return shuffled
+        return (Reorder(zone=self._pile, order=permutation(self._gathered(), rng)),)
 
     def distribute(self, counts: Mapping[ZoneId, int]) -> Effects[StateT]:
         """The top of the pile dealt out, each zone taking its count in the order the counts name them."""
-        dealt: Effects[StateT] = tuple(
+        return tuple(
             MoveCards(
                 source=self._pile,
                 indices=frozenset(range(count)),
@@ -129,8 +125,6 @@ class Redeal(Generic[StateT]):
             for zone_id, count in counts.items()
             if count
         )
-
-        return dealt
 
     def _gathered(self) -> int:
         """How many cards the pile holds once every zone has emptied into it."""

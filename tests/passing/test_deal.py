@@ -12,9 +12,9 @@ from cardwork.effects.effects import Effects
 from cardwork.exceptions import GameValidationError
 from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import Conclusion
-from cardwork.rounds.game import NOTHING
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
+from cardwork.states.state import NOTHING
 from cardwork.zones.zones import STACK, hand_of
 from tests.cases import Case, descriptions
 

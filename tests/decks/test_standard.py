@@ -9,11 +9,13 @@ from cardwork.decks.decks import compare_decks, jokers
 from cardwork.decks.standard import (
     NO_WHOLE_DECKS,
     ONE_DECK,
+    confirm_standard_deck,
     is_standard_deck,
     standard_deck,
     standard_decks,
     standard_multiplicity,
 )
+from cardwork.exceptions import GameValidationError
 from tests.cases import Case, descriptions
 
 FULL_DECK_SIZE: Final[int] = 52
@@ -114,3 +116,21 @@ MULTIPLICITIES: Final[tuple[MultiplicityCase, ...]] = (
 @pytest.mark.parametrize("case", MULTIPLICITIES, ids=descriptions(MULTIPLICITIES))
 def test_the_multiplicity_counts_the_whole_standard_decks_the_suited_cards_make(case: MultiplicityCase) -> None:
     assert standard_multiplicity(case.deck) == case.decks
+
+
+def test_a_standard_deck_stands_where_a_game_is_played_with_one() -> None:
+    confirm_standard_deck(standard_deck())
+
+
+def test_a_deck_of_another_run_of_cards_is_refused_naming_the_deck_the_game_asks_for() -> None:
+    with pytest.raises(GameValidationError, match="one standard deck of suited cards"):
+        confirm_standard_deck(standard_decks(TWO_DECKS))
+
+
+def test_the_jokers_a_game_is_played_with_stand_beside_its_standard_deck() -> None:
+    confirm_standard_deck(standard_deck(black_jokers=1, red_jokers=1), black_jokers=1, red_jokers=1)
+
+
+def test_a_refusal_states_the_jokers_the_game_is_played_with() -> None:
+    with pytest.raises(GameValidationError, match="beside 1 black and 1 red jokers"):
+        confirm_standard_deck(standard_deck(), black_jokers=1, red_jokers=1)

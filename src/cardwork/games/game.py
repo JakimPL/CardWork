@@ -13,6 +13,7 @@ from cardwork.exceptions import (
     StalePosition,
     UndoUnavailable,
 )
+from cardwork.games.capacity import Capacity
 from cardwork.games.intents import Intents
 from cardwork.moves.actions import AnyAction
 from cardwork.moves.move import Move, Moves
@@ -45,8 +46,13 @@ class Game(ABC, Generic[StateT]):
     declaration with the actions it names has them reach its own signatures, so a `match` over an intent is
     covered by the cases the game stated. Left at None it states a condition on nothing, and every intent a
     client may send reaches the rules.
+
+    `capacity` states the tables the game is played at, and the engine holds every table it opens to it. A
+    game states one, since a seating range is something a game has settled: one stating none is a game that
+    stands no table up at all.
     """
 
+    capacity: ClassVar[Capacity]
     intents: ClassVar[Intents[AnyAction] | None] = None
 
     _history: list[Position[StateT]]
@@ -61,8 +67,8 @@ class Game(ABC, Generic[StateT]):
         *,
         rng: Random | None = None,
     ) -> None:
-        self._basic_initial_validation(players, deck)
-        self._validate_players(players)
+        self.capacity.confirm(players)
+        self._basic_initial_validation(deck)
         self._validate_initial_deck(deck)
 
         origin = Position(
@@ -244,8 +250,11 @@ class Game(ABC, Generic[StateT]):
             raise StalePosition(base_seq, self.head)
 
         self._confirm_arrangement(zone, order, seat)
-        arranged: Effects[StateT] = (Reorder(zone=zone, order=order),)
-        transaction = Transaction(seq=self.head, move=None, effects=arranged)
+        transaction: Transaction[StateT] = Transaction(
+            seq=self.head,
+            move=None,
+            effects=(Reorder(zone=zone, order=order),),
+        )
         self._commit(transaction)
         return transaction
 
@@ -334,8 +343,17 @@ class Game(ABC, Generic[StateT]):
         if move.player not in position.state.to_act:
             raise NotYourTurn(move.player, position.state.to_act)
 
-    def legal_moves(self, position: Position[StateT]) -> Moves:  # pylint: disable=unused-argument
-        """Every move the rules admit from this position, and an empty run from a game that lists none.
+    def legal_moves(self, position: Position[StateT]) -> Moves:
+        """Every move the rules admit from this position, seat by seat in the order the cursor names them.
+
+        The moves of each seat that owes an action are gathered here, which leaves a game stating the moves
+        of one seat and saying nothing about the walk across the table. A game whose list is read another
+        way — one offering a move to a seat waiting out of turn — states the whole of it here instead.
+        """
+        return tuple(move for seat in sorted(position.state.to_act) for move in self.moves_of(position, seat))
+
+    def moves_of(self, position: Position[StateT], seat: int) -> Moves:  # pylint: disable=unused-argument
+        """Every move one seat may make from this position, and an empty run from a game that lists none.
 
         Enumeration is optional: a game with a wide or awkward move space serves clients that propose a
         move and let `validate` answer. A game that does enumerate gains a searchable engine, since
@@ -399,12 +417,14 @@ class Game(ABC, Generic[StateT]):
                 f"Order {order} is not a permutation of the {len(held.cards)} cards seat {seat} holds in {zone!r}"
             )
 
-    def _basic_initial_validation(self, players: int, deck: Deck) -> None:
-        if players < 1:
-            raise GameValidationError(f"Expected at least 1 player, got {players}")
+    def _basic_initial_validation(self, deck: Deck) -> None:
+        """Confirm the table is dealt from a deck holding a card.
 
+        Raises:
+            GameValidationError: when the deck is empty.
+        """
         if not deck:
-            raise GameValidationError("Deck cannot be empty")
+            raise GameValidationError("A table is dealt from a deck holding a card, and this one holds none")
 
     def _basic_final_validation(self, position: Position[StateT]) -> None:
         """Confirm the dealt table holds every card it started with and scores the seats it seated.
@@ -424,14 +444,6 @@ class Game(ABC, Generic[StateT]):
     @abstractmethod
     def zones(self, players: int, deck: Deck) -> Zones:
         """Zone layout and visibility policy for this game."""
-
-    @abstractmethod
-    def _validate_players(self, players: int) -> None:
-        """Conditions on the number of players.
-
-        Raises:
-            GameValidationError: when this game does not seat the number of players asked for.
-        """
 
     @abstractmethod
     def _validate_initial_deck(self, deck: Deck) -> None:

@@ -110,3 +110,28 @@ def test_project_hands_the_shared_cursor_to_everyone(observer: int | None) -> No
     state = GameState(phase="score", to_act=frozenset({1}), points=(3, 5))
 
     assert state.project(observer) == state
+
+
+def test_at_rest_leaves_the_phase_it_names_with_no_seat_owing_an_action() -> None:
+    state = BiddingState(phase="bid", to_act=frozenset({0, 1}), trump="♠")
+
+    assert state.at_rest("score") == BiddingState(phase="score", to_act=frozenset(), trump="♠")
+
+
+def test_at_rest_carries_whatever_else_the_close_writes() -> None:
+    state = BiddingState(phase="bid", to_act=frozenset({0, 1}), trump="♠")
+
+    closed = state.at_rest("score", points=(3, 5), highest_bid=4)
+
+    assert closed == BiddingState(phase="score", to_act=frozenset(), trump="♠", points=(3, 5), highest_bid=4)
+
+
+def test_at_rest_keeps_the_game_s_own_state_type() -> None:
+    assert isinstance(BiddingState(phase="bid", trump="♠").at_rest("score"), BiddingState)
+
+
+def test_at_rest_rejects_what_with_changes_rejects() -> None:
+    state = BiddingState(phase="bid", trump="♠")
+
+    with pytest.raises(ValidationError):
+        state.at_rest("score", highest_bid="three")

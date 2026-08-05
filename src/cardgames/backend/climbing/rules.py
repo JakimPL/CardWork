@@ -18,8 +18,6 @@ from cardwork.combinations.policy import Duplicates, Evaluation
 from cardwork.combinations.ranking import Ranking
 from cardwork.exceptions import LogicError
 
-NOTHING: Final[int] = 0
-
 SEATS_LEAST: Final[int] = 2
 SEATS_MOST: Final[int] = 5
 

@@ -7,9 +7,8 @@ from cardwork.cards.orders import REGULAR_ORDER
 from cardwork.cards.points import REGULAR_POINTS, PointTable
 from cardwork.exceptions import LogicError
 from cardwork.ordering.preorder import Preorder
-from cardwork.rounds.game import NOTHING
 from cardwork.states.award import Award
-from cardwork.states.state import Points
+from cardwork.states.state import NOTHING, Points
 
 HAND_SIZE: Final[int] = 5
 BLIND_SIZE: Final[int] = 5

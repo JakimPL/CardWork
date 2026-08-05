@@ -11,9 +11,8 @@ from cardwork.combinations.patterns.same_rank import SameRank
 from cardwork.combinations.policy import Duplicates, Evaluation
 from cardwork.decks.deck import Indices
 from cardwork.exceptions import LogicError
-from cardwork.rounds.game import NOTHING
 from cardwork.states.award import Award
-from cardwork.states.state import Points
+from cardwork.states.state import NOTHING, Points
 
 AWARD: Final[Award] = Award.HIGHEST
 HAND_SIZE: Final[int] = 4

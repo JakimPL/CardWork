@@ -27,17 +27,19 @@ from cardgames.backend.showdown.zones import (
     zone_of,
 )
 from cardwork.decks.deck import Deck
-from cardwork.decks.standard import is_standard_deck
+from cardwork.decks.standard import confirm_standard_deck
 from cardwork.effects.effects import Effects, MoveCards, SetState
 from cardwork.exceptions import GameValidationError, IllegalMove
+from cardwork.games.capacity import Capacity
 from cardwork.games.intents import Intents
 from cardwork.moves.actions import Play
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
-from cardwork.rounds.game import NOTHING, RoundGame
+from cardwork.rounds.game import RoundGame
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import rotation
 from cardwork.rounds.state import MatchPhase
+from cardwork.states.state import NOTHING
 from cardwork.zones.zone import Zones, cards_of
 from cardwork.zones.zones import DISCARD
 
@@ -77,20 +79,14 @@ class ShowdownGame(RoundGame[ShowdownState]):
         game = ShowdownGame(players=4, deck=standard_deck(), conclusion=Conclusion(rounds=3), rng=Random(7))
     """
 
+    capacity: ClassVar[Capacity] = Capacity(least=SEATS_LEAST, most=SEATS_MOST)
     intents: ClassVar[Intents[Play]] = Intents(Play)
 
     def zones(self, players: int, deck: Deck) -> Zones:
         return showdown_zones(players, deck)
 
-    def _validate_players(self, players: int) -> None:
-        if not SEATS_LEAST <= players <= SEATS_MOST:
-            raise GameValidationError(
-                f"This game seats {SEATS_LEAST} to {SEATS_MOST} players, and {players} were asked for"
-            )
-
     def _validate_initial_deck(self, deck: Deck) -> None:
-        if not is_standard_deck(deck):
-            raise GameValidationError("This game is played with one standard deck of suited cards")
+        confirm_standard_deck(deck)
 
     def initial_state(self, players: int) -> ShowdownState:
         return ShowdownState(

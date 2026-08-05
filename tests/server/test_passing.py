@@ -13,8 +13,8 @@ from cardwork.decks.standard import standard_decks
 from cardwork.moves.actions import Give, Take
 from cardwork.moves.move import Move
 from cardwork.rounds.conclusion import Conclusion
-from cardwork.rounds.game import NOTHING
 from cardwork.rounds.seating import next_seat
+from cardwork.states.state import NOTHING
 from cardwork.zones.zones import STACK, hand_of
 
 from .conftest import DEAL, MOVES, VIEW, command, credentials, served

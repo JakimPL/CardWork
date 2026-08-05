@@ -10,6 +10,7 @@ from cardwork.decks.deck import Deck
 from cardwork.decks.decks import does_contain_jokers, to_game_cards
 from cardwork.effects.effects import Effects, MoveCards, SetState
 from cardwork.exceptions import GameValidationError, IllegalMove
+from cardwork.games.capacity import Capacity
 from cardwork.games.game import Game
 from cardwork.games.intents import Intents
 from cardwork.moves.actions import Play
@@ -31,6 +32,8 @@ HAND_SIZE: Final[int] = 2
 ROUNDS: Final[int] = 2
 SEED: Final[int] = 20260805
 STOCK: Final[ZoneId] = "stock"
+SEATS_LEAST: Final[int] = 2
+SEATS_MOST: Final[int] = 4
 FIRST_CARD: Final[int] = 0
 RANKS: Final[Ranks] = (Rank.TWO, Rank.THREE, Rank.FOUR)
 DECK: Final[Deck] = tuple(Card(rank=rank, suit=suit) for suit in Suit for rank in RANKS)
@@ -60,6 +63,7 @@ class TossGame(RoundGame[MatchState]):
     rounds and a score that accumulates are the whole of it.
     """
 
+    capacity: ClassVar[Capacity] = Capacity(least=SEATS_LEAST, most=SEATS_MOST)
     intents: ClassVar[Intents[Play]] = Intents(Play)
 
     def zones(self, players: int, deck: Deck) -> Zones:
@@ -73,10 +77,6 @@ class TossGame(RoundGame[MatchState]):
             ),
             **discard(),
         }
-
-    def _validate_players(self, players: int) -> None:
-        if not 2 <= players <= 4:
-            raise GameValidationError(f"This game seats 2 to 4 players, and {players} were asked for")
 
     def _validate_initial_deck(self, deck: Deck) -> None:
         if does_contain_jokers(deck):
