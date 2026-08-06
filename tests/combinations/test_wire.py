@@ -20,6 +20,7 @@ from cardwork.combinations.demand import ANY_CARD
 from cardwork.combinations.detect import find
 from cardwork.combinations.pattern import Pattern, Reading
 from cardwork.combinations.patterns.any_cards import AnyCards
+from cardwork.combinations.patterns.apart import Apart
 from cardwork.combinations.patterns.beside import Beside
 from cardwork.combinations.patterns.run import Run
 from cardwork.combinations.patterns.same_rank import SameRank
@@ -38,6 +39,7 @@ from cardwork.combinations.poker import (
 from cardwork.combinations.policy import REGULAR_EVALUATION, Evaluation
 from cardwork.combinations.ranking import Ranking
 from cardwork.combinations.shape import Shape
+from cardwork.combinations.spread import Facet
 from cardwork.ordering.preorder import Key
 from tests.cases import Case, descriptions
 
@@ -49,6 +51,8 @@ SPADES: Final[CardsOrJokers] = (KING_OF_SPADES, QUEEN_OF_SPADES, TEN_OF_SPADES)
 SPADES_AND_A_HEART: Final[CardsOrJokers] = (*SPADES, TWO_OF_HEARTS)
 THREE_SPADES: Final[Pattern] = OneSuit(suit=Suit.SPADE, places=SUITED_PLACES)
 AUTHORED_INSIDE_A_BUILT_IN: Final[Pattern] = Beside(parts=(THREE_SPADES, PAIR))
+APART_PAIR: Final[Pattern] = Apart.of_suit(PAIR)
+TWO_APART_PAIRS: Final[Pattern] = Beside(parts=(APART_PAIR, APART_PAIR))
 CONTRACT: Final[Ranking] = Ranking(
     patterns=(HIGH_CARD, PAIR, THREE_SPADES, AUTHORED_INSIDE_A_BUILT_IN),
     evaluation=REGULAR_EVALUATION,
@@ -90,6 +94,8 @@ ROUND_TRIPS: Final[tuple[RoundTripCase, ...]] = (
     RoundTripCase(description="a run", pattern=STRAIGHT, reads_as=Run),
     RoundTripCase(description="parts standing beside each other", pattern=TWO_PAIR, reads_as=Beside),
     RoundTripCase(description="parts read together", pattern=STRAIGHT_FLUSH, reads_as=Together),
+    RoundTripCase(description="a rule read apart", pattern=APART_PAIR, reads_as=Apart),
+    RoundTripCase(description="rules read apart standing beside each other", pattern=TWO_APART_PAIRS, reads_as=Beside),
     RoundTripCase(description="a game's own rule", pattern=THREE_SPADES, reads_as=OneSuit),
     RoundTripCase(
         description="a game's own rule inside a built-in one",
@@ -152,6 +158,11 @@ def test_a_pattern_states_the_word_it_travels_under_beside_its_own_fields() -> N
             {"kind": "same_rank", "places": TRIPLET.size},
             {"kind": "same_rank", "places": PAIR.size},
         ),
+    }
+    assert APART_PAIR.model_dump() == {
+        "kind": "apart",
+        "part": {"kind": "same_rank", "places": PAIR.size},
+        "facet": Facet.SUIT,
     }
 
 

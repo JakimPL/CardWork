@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Final
 
 from cardwork.cards.rank import Rank
 from cardwork.cards.suit import Suit
 from cardwork.combinations.demand import Demand
+from cardwork.combinations.spread import Spread
+
+NO_SPREADS: Final[tuple[Spread, ...]] = ()
 
 
 @dataclass(frozen=True)
@@ -17,11 +21,34 @@ class Shape:
     for a spade. `together` and `beside` build the shapes of a pattern made of parts.
 
     `low_ace` marks the reading where a run begins on the highest rank and continues from the lowest, so that
-    the combination built from it knows the ace stands for one.
+    the combination built from it knows the ace stands for one. `spreads` are the places the reading holds
+    apart, each of them taking a card, a rank or a suit of its own, which `Apart` states over a rule.
     """
 
     demands: tuple[Demand, ...]
     low_ace: bool
+    spreads: tuple[Spread, ...] = NO_SPREADS
+
+    def __post_init__(self) -> None:
+        """Confirm each spread names places of this reading, one spread to a place.
+
+        A place reading apart one way is what keeps the filling of a shape a matching, so the readings a
+        pattern admits are held to it where they are built.
+
+        Raises:
+            ValueError: when a spread names a place the reading lacks, or when two spreads name one place.
+        """
+        held: frozenset[int] = frozenset()
+        for spread in self.spreads:
+            if any(place >= self.size for place in spread.places):
+                stood = tuple(sorted(place for place in spread.places if place >= self.size))
+                raise ValueError(f"A reading of {self.size} places reads apart within them, and {stood} stand out")
+
+            if not held.isdisjoint(spread.places):
+                twice = tuple(sorted(held & spread.places))
+                raise ValueError(f"A place reads apart one way, and {twice} read apart more than one")
+
+            held |= spread.places
 
     @classmethod
     def together(cls, shapes: Sequence[Shape]) -> Shape | None:
@@ -39,7 +66,11 @@ class Shape:
 
             demands.append(shared)
 
-        return cls(demands=tuple(demands), low_ace=cls._low_ace(shapes))
+        return cls(
+            demands=tuple(demands),
+            low_ace=cls._low_ace(shapes),
+            spreads=cls._shared_spreads(shapes),
+        )
 
     @classmethod
     def beside(cls, shapes: Sequence[Shape]) -> Shape:
@@ -47,6 +78,7 @@ class Shape:
         return cls(
             demands=tuple(demand for shape in shapes for demand in shape.demands),
             low_ace=cls._low_ace(shapes),
+            spreads=cls._shifted_spreads(shapes),
         )
 
     @staticmethod
@@ -91,3 +123,19 @@ class Shape:
     def _low_ace(shapes: Sequence[Shape]) -> bool:
         """Whether any of these readings takes its highest rank as its lowest."""
         return any(shape.low_ace for shape in shapes)
+
+    @staticmethod
+    def _shared_spreads(shapes: Sequence[Shape]) -> tuple[Spread, ...]:
+        """The spreads of every reading, which name the same places where the readings are read together."""
+        return tuple(spread for shape in shapes for spread in shape.spreads)
+
+    @staticmethod
+    def _shifted_spreads(shapes: Sequence[Shape]) -> tuple[Spread, ...]:
+        """The spreads of every reading, each over the places that reading takes in the run of them."""
+        spreads: list[Spread] = []
+        taken = 0
+        for shape in shapes:
+            spreads.extend(spread.shifted(taken) for spread in shape.spreads)
+            taken += shape.size
+
+        return tuple(spreads)
