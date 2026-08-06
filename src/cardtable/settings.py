@@ -3,7 +3,7 @@ from typing import Final
 
 from pydantic import Field, field_validator
 
-from cardserver.codes import a_drawn_code, ranks_in, written
+from cardserver.codes import CODE_LENGTH, a_drawn_code, code_in
 from cardwork.models.base import BaseFrozen
 
 SEEDS: Final[int] = 1 << 32
@@ -38,10 +38,14 @@ class Settings(BaseFrozen):
         """The code as the ranks it reads as, which is the one form a person is handed and a page offers back.
 
         Raises:
-            ValueError: when what was stated reads as no hand of ranks at all.
+            ValueError: when what was stated stands as no code, being some other count of ranks than a code is
+                or holding the one rank that takes two characters to write.
         """
-        ranks = ranks_in(offered)
-        if ranks is None:
-            raise ValueError(f"A table gathers on a hand of ranks, and {offered!r} reads as none")
+        code = code_in(offered)
+        if code is None:
+            raise ValueError(
+                f"A table gathers on {CODE_LENGTH} ranks written in {CODE_LENGTH} characters, "
+                f"and {offered!r} reads as no such hand"
+            )
 
-        return written(ranks)
+        return code

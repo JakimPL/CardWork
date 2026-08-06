@@ -199,8 +199,15 @@ describe("the line saying where play stands", () => {
 
     expect(status).toContain("Passing");
     expect(status).toContain("Round");
-    expect(status).toContain("seat 1");
+    expect(status).toContain("Seat 1");
     expect(status).toContain("Live");
+  });
+
+  it("names the seat to act by the name its plaque carries, which the gathering settled", () => {
+    const named = aLayout({ ...LAYOUT, plaques: [{ seat: 1, name: "Grace", counts: [] }] });
+    const status = drawn(<StatusLine layout={named} view={DEALT} connection="following" trouble={null} />);
+
+    expect(status).toContain("Grace");
   });
 
   it("says so while a stream it lost is being taken up again", () => {

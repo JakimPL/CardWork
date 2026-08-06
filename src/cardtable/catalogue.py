@@ -33,7 +33,7 @@ OFFERINGS: Final[tuple[Offering, ...]] = (
         game=GameName.CLIMBING.value,
         title=CLIMBING_SCENE.title,
         seats=ClimbingGame.capacity,
-        decks=ONE_DECK_ONLY,
+        decks=ONE_DECK_OR_TWO,
     ),
     Offering(
         game=GameName.PASSING.value,

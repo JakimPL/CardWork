@@ -5,6 +5,9 @@ from typing import ClassVar, Final
 from cardgames.backend.climbing.rules import (
     AWARD,
     CLIMBING_RANKING,
+    DECKS_ADMITTED,
+    DECKS_SPOKEN,
+    HAND_MOST,
     OPENING_CARD,
     POINTS,
     SEATS_LEAST,
@@ -16,8 +19,8 @@ from cardwork.cards.game import CardsOrJokers
 from cardwork.combinations.combination import Combination
 from cardwork.combinations.selection import Selection
 from cardwork.decks.deck import Deck, Indices
-from cardwork.decks.decks import named
-from cardwork.decks.standard import confirm_standard_deck
+from cardwork.decks.decks import compare_decks, named
+from cardwork.decks.standard import standard_decks
 from cardwork.effects.effects import Effects, MoveCards, SetState
 from cardwork.exceptions import GameValidationError, IllegalMove
 from cardwork.games.capacity import Capacity
@@ -29,7 +32,7 @@ from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.game import RoundGame
-from cardwork.rounds.redeal import Redeal
+from cardwork.rounds.redeal import Admits, Redeal
 from cardwork.rounds.seating import followed, rotation
 from cardwork.rounds.state import BEFORE_THE_FIRST_ROUND, MatchPhase
 from cardwork.states.state import NOTHING, Points
@@ -68,6 +71,13 @@ class ClimbingGame(RoundGame[ClimbingState]):
     **The match opens on the seat holding `rules.OPENING_CARD`**, which is the one card every other card in the
     deck climbs over, and that seat leads a combination holding it. Each round after is led by the seat that went
     out of the one before.
+
+    **A table is dealt from one whole standard deck or from two.** Over two decks a card is held twice, which
+    this game reads under `Duplicates.COLLAPSE`: a repeated card reads once, so no combination is made of two
+    copies of one card and the contest is the one it is over a single deck, played with twice the hand. Two
+    copies of the opening card put two seats in a position to open, and the one that does is the first from the
+    leader the round was dealt to. A hand runs to `rules.HAND_MOST` cards, so two decks are played at the
+    larger tables and a table asking for a hand beyond that is refused with the deck.
     """
 
     capacity: ClassVar[Capacity] = Capacity(least=SEATS_LEAST, most=SEATS_MOST)
@@ -102,7 +112,37 @@ class ClimbingGame(RoundGame[ClimbingState]):
         return climbing_zones(players, deck)
 
     def _validate_initial_deck(self, deck: Deck) -> None:
-        confirm_standard_deck(deck)
+        """Confirm the cards are one whole standard deck or two, dealt into hands this game reads.
+
+        Every card is answered by a stronger one, and a joker names no rank this ranking places, so a deck is
+        held to its suited cards exactly.
+
+        Raises:
+            GameValidationError: when the deck holds another run of cards, a joker among them, or divides into
+                hands larger than this game deals.
+        """
+        if not any(compare_decks(deck, standard_decks(count)) for count in DECKS_ADMITTED):
+            raise GameValidationError(f"This game is played with {DECKS_SPOKEN}")
+
+        self._confirm_hand_size(len(deck))
+
+    def _confirm_hand_size(self, cards: int) -> None:
+        """Confirm the deck divides into hands this game is played with.
+
+        The seats and the decks each state something the other does not, and the hand is where the two meet:
+        two decks halved between two seats deal fifty-two cards each, and what a seat answering a combination
+        is offered is every combination of as many cards its hand holds — a reading that grows with the hand
+        far faster than the hand does. So the largest hand this game deals is a rule of it, and a table asking
+        for more is refused where the seating and the deck are.
+
+        Raises:
+            GameValidationError: when the shares of the deck come to more cards than a hand of this game holds.
+        """
+        if self._hand_size > HAND_MOST:
+            raise GameValidationError(
+                f"A hand of this game runs to {HAND_MOST} cards, and equal shares of {cards} "
+                f"at this table deal {self._hand_size} each"
+            )
 
     def initial_state(self, players: int) -> ClimbingState:
         return ClimbingState(
@@ -144,7 +184,7 @@ class ClimbingGame(RoundGame[ClimbingState]):
         }
         redeal = Redeal(position, pile=STACK, face_down=True)
         if self._opening_round(position):
-            return redeal.admitted(counts, rng, self._deals_the_opening_card)
+            return redeal.admitted(counts, rng, self._deals_the_opening_card(leader))
 
         return redeal.effects(counts, rng)
 
@@ -209,16 +249,31 @@ class ClimbingGame(RoundGame[ClimbingState]):
         """Whether the round about to open is the first of the match, which is the one opened from a card."""
         return position.state.round_number == BEFORE_THE_FIRST_ROUND
 
-    def _deals_the_opening_card(self, dealt: Position[ClimbingState]) -> bool:
-        """Whether a draw of the deal handed the opening card to a seat rather than setting it aside."""
-        return self._holding_the_opening_card(dealt) is not None
+    def _deals_the_opening_card(self, leader: int) -> Admits[ClimbingState]:
+        """Whether a draw of the deal handed the opening card to a seat rather than setting it aside.
+
+        The leader is carried in because the deal is weighed before the cursor naming it is stamped, and which
+        seat opens is read from there.
+        """
+
+        def dealt_the_opening_card(dealt: Position[ClimbingState]) -> bool:
+            return self._holding_the_opening_card(dealt, leader) is not None
+
+        return dealt_the_opening_card
 
     def _holding_the_opening_card(
         self,
         position: Position[ClimbingState],
+        leader: int,
     ) -> int | None:
-        """The seat dealt the opening card, and None where the shares left it lying aside."""
-        return next((seat for seat, hand in enumerate(position.held(HANDS)) if OPENING_CARD in hand), None)
+        """The first seat from the leader dealt the opening card, and None where the shares left it lying aside.
+
+        Two decks in play hold that card twice, so the seat that opens is read the way the round was dealt:
+        round the table from the leader, the first seat holding a copy of it. One deck holds one copy, which
+        every rotation reaches at the same seat.
+        """
+        hands = position.held(HANDS)
+        return next((seat for seat in rotation(leader, position.players) if OPENING_CARD in hands[seat]), None)
 
     def _opened(self, position: Position[ClimbingState]) -> ClimbingState:
         """The match opened on the seat the deal handed the opening card, which is the seat that leads it.
@@ -228,7 +283,7 @@ class ClimbingGame(RoundGame[ClimbingState]):
                 one does.
         """
         opener = held(
-            self._holding_the_opening_card(position),
+            self._holding_the_opening_card(position, position.state.led_by),
             f"seat holds the {OPENING_CARD} this round was dealt to hand out",
         )
         return position.state.with_changes(

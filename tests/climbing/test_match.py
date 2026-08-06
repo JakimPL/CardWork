@@ -18,6 +18,7 @@ from cardwork.cards.cards import (
     TWO_OF_SPADES,
 )
 from cardwork.cards.game import CardsOrJokers
+from cardwork.decks.standard import ONE_DECK
 from cardwork.effects.fold import fold
 from cardwork.rounds.conclusion import ONE_ROUND
 from cardwork.rounds.state import MatchPhase
@@ -32,9 +33,11 @@ from .driving import (
     ROUNDS,
     SEATS,
     SEED,
+    TWO_DECKS,
     a_lead_of,
     a_match,
     a_play,
+    a_two_deck_match,
     caught_with,
     climbing_first,
     passing_first,
@@ -60,18 +63,31 @@ class MatchCase(Case):
     players: int
     rounds: int
     seed: int
+    decks: int = ONE_DECK
 
 
 MATCHES: Final[tuple[MatchCase, ...]] = (
     MatchCase(description="three seats over one round", players=SEATS, rounds=ONE_ROUND, seed=SEED),
     MatchCase(description="four seats over two rounds", players=FOUR_SEATS, rounds=ROUNDS, seed=SEED),
     MatchCase(description="a full table over two rounds", players=FULL_TABLE, rounds=ROUNDS, seed=SEED),
+    MatchCase(
+        description="a full table over two decks and two rounds",
+        players=FULL_TABLE,
+        rounds=ROUNDS,
+        seed=SEED,
+        decks=TWO_DECKS,
+    ),
 )
 
 
 def a_match_played_out(case: MatchCase) -> ClimbingGame:
-    """The table of that case driven to rest, its moves chosen by a generator of the case's own seed."""
-    game = a_match(case.players, case.rounds, case.seed)
+    """The table of that case driven to rest, its moves chosen by a generator of the case's own seed.
+
+    A table dealt from two decks is played out exactly as one dealt from one: twice the hand, the same contest,
+    and a card held twice reading once wherever a combination is looked for.
+    """
+    dealt = a_two_deck_match if case.decks == TWO_DECKS else a_match
+    game = dealt(case.players, case.rounds, case.seed)
     play_out(game, Random(case.seed).choice)
     return game
 
@@ -182,6 +198,15 @@ def test_a_decided_round_is_scored_into_the_standing_and_the_table_left_between_
     assert closed.state.points == out.state.round_points
     assert closed.state.phase == MatchPhase.BETWEEN_ROUNDS
     assert closed.state.to_act == frozenset()
+
+
+def test_a_round_that_has_come_to_rest_offers_its_seats_no_move_at_all(climbing: ClimbingGame) -> None:
+    """A round is decided at a phase no turn stands in, so the vocabulary of moves runs out where the round does."""
+    position = a_lead_of(climbing, GOING_OUT_HANDS, LAID_IT)
+    out = climbing.step(position, a_play(LAID_IT, THE_PAIR), Random(SEED))
+
+    assert out.state.phase == ClimbingPhase.DECIDED
+    assert all(climbing.moves_of(out, seat) == () for seat in range(SEATS))
 
 
 def test_the_round_after_one_decided_opens_on_the_seat_that_went_out_of_it(climbing: ClimbingGame) -> None:

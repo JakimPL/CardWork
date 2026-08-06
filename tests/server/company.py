@@ -20,8 +20,8 @@ from .layout import SEALED_SCENE, TITLE
 GAME: Final[str] = "sealed"
 OTHER_GAME: Final[str] = "unsealed"
 OTHER_TITLE: Final[str] = "Unsealed round"
-CODE: Final[str] = "K10AJ2"
-WRONG_CODE: Final[str] = "23456789"
+CODE: Final[str] = "KQAJ72"
+WRONG_CODE: Final[str] = "234567"
 COMPANY_LEAST: Final[int] = 2
 COMPANY_MOST_HERE: Final[int] = 4
 ONE_DECK: Final[int] = 1

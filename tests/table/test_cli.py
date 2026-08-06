@@ -134,9 +134,9 @@ def test_a_run_naming_two_clauses_ends_on_whichever_arrives_first(tmp_path: Path
 
 
 def test_a_run_stating_a_code_gathers_behind_the_hand_of_ranks_it_names(tmp_path: Path) -> None:
-    departed = reading(a_config_file(tmp_path, CONFIGURED), "--code", "q 10-k")
+    departed = reading(a_config_file(tmp_path, CONFIGURED), "--code", "q k-a_j 7 2")
 
-    assert departed.table.code == "Q10K"
+    assert departed.table.code == "QKAJ72"
 
 
 def test_a_clause_below_the_least_a_match_runs_to_is_turned_away(tmp_path: Path) -> None:

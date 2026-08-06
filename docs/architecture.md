@@ -5,12 +5,14 @@ only what they are entitled to know. Four packages divide the work:
 
 - **`cardwork`** — the engine. Synchronous and pure: a position is a value, a move produces another
   value, and every commit is recorded as data that replays exactly.
-- **`cardserver`** — an adapter that puts tables into service over HTTP and server-sent events.
+- **`cardserver`** — an adapter that gathers tables and puts them into service over HTTP and server-sent
+  events.
 - **`cardgames`** — the games written on the framework, each stated twice over: `backend` holds its rules
   and `frontend` the layout a player reads them through. This is where every claim this document makes is
   answerable.
-- **`cardtable`** — the host, and the one place a game and a transport meet: it opens a table of a chosen
-  game, hands out a token per seat, and serves the player interface beside the endpoints (§10, *The host*).
+- **`cardtable`** — the host, and the one place a game and a transport meet: it gathers a table on a join
+  code, deals whichever game its company settles on, and serves the player interface beside the endpoints
+  (§10, *The host*).
 
 A game is a subclass of `Game` that fills in rules hooks: the zone layout, the deal, what a move means,
 and how the turn advances. Everything else — journalling, projection, concurrency, reconnection, replay —
@@ -216,8 +218,10 @@ aspirational:
    consumer (§10, *The port*), so the arrow between the packages points one way.
 3. **The framework knows no game** — neither `cardwork` nor `cardserver` names `cardgames`, which is what
    keeps a mechanism general and an adapter game-agnostic.
-4. **Adapter layers** — `cardserver` layers in its own right, high to low: `app`, `streams`,
-   `registry`, `sessions`, `identity`, `errors`, `schemas`, `protocol`.
+4. **Adapter layers** — `cardserver` layers in its own right, high to low: `app`, `lobby`, `streams`,
+   `registry`, `gathering`, `sessions`, `identity`, `errors`, `schemas`, `naming`, then `protocol` beside
+   `codes` at the foot. `gathering` stands above `sessions` and below `registry` because a gathering ends by
+   putting a table into service and reaches the registry through a port of its own (§10, *The gathering*).
 5. **Rules know no presentation** — within `cardgames`, `frontend` stands above `backend`, so a game's rules
    are playable with no layout in sight and a layout is free to name the rules it lays out.
 6. **Rules read cards rather than tables** — a game's `rules` module names none of `presentation`, `rounds`,
@@ -234,8 +238,8 @@ aspirational:
 11. **Nothing names the host** — none of `cardwork`, `cardserver` or `cardgames` names `cardtable`, so the
    composition root stays a leaf nothing depends on and a second host costs no change below it.
 12. **Host layers** — `cardtable` layers in its own right, high to low: `cli`, `catalogue`, `hosting`,
-   `config`, then `settings`, `service`, `interface` and `seats` standing independent of one another, and
-   `games` beside `paths` at the foot.
+   `config` beside `reaching`, then `settings`, `service`, `interface` and `artwork` standing independent of
+   one another, and `games` beside `paths` at the foot.
 
 **Four of those contracts state one claim, because a game is stated across two packages.**
 `cardgames.*.passing` is the expression meaning everything that belongs to passing, and an `independence`
@@ -1320,13 +1324,32 @@ class Presentation(Protocol):
 A table opens with both — `registry.open(table_id, table, presentation)` — and `TableSession` answers for
 each, which is what puts a layout and a projection behind one credential and one seat.
 
-**`StateT` is invariant, and the application is generic instead.** A covariant state type would let one
-registry hold `Table[GameState]` for any game, and it is unsound: `Journal.append` and `Effect.apply` use
-the parameter in argument position, so a table built for one state type cannot stand where a table for the
-base type is expected — the caller would be free to hand it a bare `GameState`. So the application factory
-is generic in the state type and a server binds it once. The cost is one registry per rule set, which is
-what a deployment has anyway. What it buys is a game's own state type reaching the wire with every
-declared field intact.
+**`StateT` is invariant, so the registry names no state type and a third `Protocol` is what it stores.** A
+covariant state type would let one registry hold `Table[GameState]` for any game, and it is unsound:
+`Journal.append` and `Effect.apply` use the parameter in argument position, so a table built for one state
+type cannot stand where a table for the base type is expected — the caller would be free to hand it a bare
+`GameState`. Making the registry generic instead binds one rule set per process, which is exactly what a
+table chosen at runtime cannot do. So `protocol.py`'s neighbour `sessions.py` declares one table in service
+read without naming its cursor:
+
+```python
+class InService(Protocol):
+    @property
+    def head(self) -> int: ...
+    def view(self, observer: int | None) -> BaseFrozen: ...
+    def events(self, observer: int | None, since: int) -> tuple[Commit, ...]: ...
+    def layout(self, observer: int | None) -> Layout: ...
+    ...
+```
+
+The three generic answers erase to what a client is served anyway: `view` and `record` to their pydantic base,
+`events` to a `Commit` carrying the sequence and its own JSON. Return position is covariant, so
+`TableSession[PassingState]` satisfies it structurally with nothing changed in `TableSession` itself, exactly
+as a `Game` satisfies `Table`. The type parameter is kept where it earns something — `registry.open` is
+generic per call, so a table is opened at its own state type — and dropped where the routes were already
+declaring `response_model=None` for the same reason (`/view`, `/events`, `/journal`). What it buys is one
+registry serving whatever game a company settles on, with each game's own state type reaching the wire with
+every declared field intact.
 
 ### Endpoints
 
@@ -1338,6 +1361,23 @@ declared field intact.
 | `GET` | `/tables/{id}/view` | Full projection for this observer, stamped with `seq`. Used on join and reconnect. |
 | `GET` | `/tables/{id}/events` | SSE stream of projected events, resuming from `Last-Event-ID` or `?since=`. |
 | `GET` | `/tables/{id}/journal` | Full reveal for analysis, once the host has called the game over. |
+
+A table is gathered before it is dealt, and the routes that happens over are carried by the same application,
+since a person reaches the room and the table at one address:
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/offerings` | Every game this host offers, the tables each seats and the deck counts each is dealt from. Open to anybody. |
+| `POST` | `/tables/{id}/guests` | Arrive on the code that admits. Body: `{code, name}`. Answers `{token, gathering}`. The one route open to a stranger. |
+| `GET` | `/tables/{id}/gathering` | The room as this guest reads it: the company, what is settled, where it stands. |
+| `GET` | `/tables/{id}/gathering/events` | SSE of one whole reading per revision, resuming like the table's own stream, ending on the deal. |
+| `PUT` | `/tables/{id}/seat` | Take a seat, or stand up by naming none. Body: `{seat, base_revision}`. |
+| `PUT` | `/tables/{id}/choice` | Settle what is played. Body: `{choice, base_revision}`. |
+| `POST` | `/tables/{id}/deal` | Deal the table the company settled on, which opens it and ends the gathering. Body: `{base_revision}`. |
+
+`PUT` for the seat and the choice because both state a value; `POST` for arriving and dealing because both
+happen once. The gathering routes are carried by a router `create_app` includes where a host gathers its own
+tables, so a deployment serving a table already seated mounts none of them.
 
 Request and response bodies are frozen models that forbid undeclared fields, so a body carrying a field
 the schema leaves out is refused with `422` before a handler runs.
@@ -1358,6 +1398,15 @@ Refusals are mapped kind by kind, one handler each:
 | `StalePosition` | `409` | commits have landed since `base_seq` |
 | `IllegalMove` | `422` | the rules reject what the move asks for |
 | `ArrangementRefused` | `422` | the seat arranges no such zone, or the order is no permutation of it |
+| `Unadmitted` | `403` | the code offered admits nobody, the company is as large as it gets, or wrong codes have come too fast from one address |
+| `NoSay` | `403` | the guest holds no say over what the table plays or when it is dealt |
+| `NameTaken` | `409` | that name is already read at this table |
+| `SeatTaken` | `409` | another guest of the company holds that seat |
+| `GatheringOver` | `409` | the table is dealt and its gathering is done |
+| `SeatsEmpty` | `409` | the deal was called for while a seat stood empty |
+| `StaleGathering` | `409` | the gathering has moved past the revision the command was built on |
+| `NoSuchSeat` | `422` | the seat stands outside the table the gathering settled on |
+| `GameValidationError` | `422` | the rules refuse the table or the deck the choice asks for |
 
 One handler per kind rather than one over a root exception is what keeps the mapping open at the edges:
 Starlette walks an exception's MRO, so a game raising its own subclass of `IllegalMove` is answered `422`
@@ -1445,6 +1494,47 @@ stay in step.
 A session also holds the two things a served table needs that a bare game does not: the `key -> seq` map
 behind §6's idempotency, and the timer of the grace window.
 
+### The gathering
+
+A table stands **gathered** before it is dealt. `gathering.py` holds the room: its code, its company, the seat
+each guest has taken, the choice settled, and a `revision` that counts the changes. A gathering knows the name
+of no game — it validates a `Choice` against the `Offering`s it was handed, exactly as the page draws a
+`Layout` without knowing a game — and turning a settled choice into a table in service is a port of its own:
+
+```python
+class Opening(Protocol):
+    def open(self, table: TableId, choice: Choice, names: Mapping[int, str]) -> None: ...
+```
+
+`cardtable.catalogue` is what satisfies it, so the one module naming `cardgames` is still the one module
+naming `cardgames`.
+
+**Concurrency is the table's, one layer up.** A `revision` only grows and a command quotes the one it was
+built on, so two guests settling the choice at once leaves the second told rather than overruled — `base_seq`
+for a room. What a gathering needs no lock for is that every change it goes through happens between two
+awaits: a table serialises its commits and a gathering commits nothing. Its stream re-reads and re-answers
+the whole room at each revision, the way `streams.py` already serves a table, and holding that stream is what
+reads a guest as **present**, so the company a page draws is the company watching it. The deal is the last
+thing a gathering has to say, and the frame carrying it closes the stream and takes every page at the room
+over to the table.
+
+**A code is a hand of card ranks.** `codes.py` reads a hand out of what somebody offered greedily and left to
+right, over the code in capitals with the separators a person writes it with dropped — so `10` is taken where
+`1` would be, and since neither `1` nor `0` names a rank alone every offering has one reading: `K10A7Q3` reads
+as six ranks and `012345` as none. What a table may *gather* on is narrower, and `code_in` states it: six ranks
+drawn from the twelve written in a character, so a code stands six ranks long and six characters wide at once
+and a person types exactly what they counted. A code is passed on out loud, so it admits however it was written
+down, and `admits` compares the two hands under `compare_digest`. Twelve ranks over six places name some three
+million codes, which is a number a program reaches and a person does not, so what guards a code is the rate
+rather than the length: a `Turnstile` counts wrong codes against the address they came from and stops reading
+them past its allowance.
+
+**The names a company settled reach the plaques without widening the port.** `Plaque.name` reads `"Seat {n}"`
+until a host holds a name for one, so `naming.py` wraps a `Presentation` and reads the gathered names onto the
+plaques of the layout it answers with. `Named` satisfies `Presentation` structurally, so `registry.open` takes
+it where it took the `Scene`. Names settle at the deal and never change, which is what makes it correct: a
+layout answers for the match and a page reads it once as it joins.
+
 ### Identity
 
 The adapter maps a credential to a **seat index** for a given table, behind a `SeatPolicy` protocol. The
@@ -1452,9 +1542,24 @@ domain sees `int` and a spectator is `observer=None`; users, sessions, accounts 
 adapter's vocabulary. This keeps the `zones` and `views` layers testable with plain integers and keeps
 identity policy where it changes without touching game logic.
 
-The shipped policy holds opaque tokens per table: **no credential means a spectator, a known token means
-the seat it was issued for, and anything else is turned away.** So watching is open and a seat belongs to
-whoever holds its token. A deployment with accounts writes its own policy and changes nothing else.
+**The gathering *is* that policy**, which is what lets a table be played without accounts. A token is
+`token_urlsafe(32)`, minted as a person arrives on the code and under the name the company will read them by,
+and `Gatherings.seat` answers the six playing endpoints out of the room: **a token holds the seat its guest has
+taken, holds none while they are standing, and belongs nowhere when it was minted at no gathering here.** So
+watching is standing at the gathering, playing is having taken a seat, and play is authorised by the same
+arrival that seated it — no endpoint of the table needed a line changed. A deployment with accounts writes its
+own policy and changes nothing else.
+
+Who may settle what is played is a second question, and it stands behind a `SayPolicy` of its own. The shipped
+`SeatedSay` asks only that a guest is sitting at the table, which is the whole of what a friendly table asks: a
+guest standing by is told rather than obeyed. A deployment holding groups or owners answers the same call out
+of what it knows of them.
+
+**Plain HTTP on a LAN means a token crosses the local network in the clear.** That is the accepted condition of
+play among people in one room; TLS is out of scope here. It also settles what a page may reach for: a plain
+address is no secure context, so the browser holds back `crypto.randomUUID` and `crypto.subtle` there. The one
+thing the page draws at random is the name a command carries, and `play/sending.ts` draws it through
+`getRandomValues`, which answers at every address.
 
 One check bridges identity and the domain, and §6 step 2 is the whole of it: the seat behind the
 credential must equal `move.player`, and a spectator holds no seat to act from. The engine trusts
@@ -1510,31 +1615,57 @@ meet in `cardtable`, which nothing names. It is a composition root and holds one
 
 | module | states |
 |---|---|
-| `cli` | the file a run is configured from, and every value of it a command line states instead |
-| `catalogue` | which games this host puts into service, and the deck and scene each is opened with |
-| `hosting` | one table in service: a registry, a token per seat, an application, and the page beside it |
-| `config` | the whole of one run: the game played, the table it is played at, and where that table answers |
-| `settings` | what one table is opened with: its name, its seating, its seed, its window |
-| `service` | where a table answers, and how much of what it does reaches a log |
+| `cli` | the file a run is configured from, every value of it a command line states instead, and the announcement a run opens with |
+| `catalogue` | which games this host offers, the deck and scene each is dealt with, and the lobby that gathers them |
+| `hosting` | one table gathered and then in service: a registry, a lobby, an application, and the page beside it |
+| `config` | the whole of one run: the table gathered, the choice it opens on, the pack it draws with, and where it answers |
+| `reaching` | the addresses a run is reached at, which is where a person is handed a line to open |
+| `settings` | what one table is opened with: the name it answers under, the code it gathers on, its seed, its window |
+| `service` | where a table listens, where it says it is reached, and how much of what it does reaches a log |
 | `interface` | a built player interface served from the root of the same application |
-| `seats` | a token per seat, drawn as the table opens |
+| `artwork` | the pack of pictures a table draws with, served beside the page |
 | `games` | the names a person asks for a game by, which the catalogue turns into rules |
 | `paths` | where the checkout keeps what a host reads off disk: the configuration, the artwork, the page |
 
-`catalogue.opened(game, settings)` is the whole of it, and `catalogue` is the one module of the repository
-naming `cardgames`. The state type of the game is bound inside that call and stays there: `Hosted` names an
-application, a table name, the tokens and the page, none of which is generic, which is what lets one host
-open games whose cursors are of different shapes through the one entry point.
+`catalogue.opened(settings, choice, artwork)` is the whole of it, and `catalogue` is the one module of the
+repository naming `cardgames`. It builds the registry, the `Deals` that satisfies `Opening`, and the
+`Gatherings` that is both the lobby and the seat policy, then hands the lobby to `hosting.serve` whole — one
+object arriving twice at `create_app`, since the playing routes ask only for a seat where the gathering routes
+ask for the room. The state type of a game is bound inside `Deals.open` and stays there: `Hosted` names an
+application, a table name, the code and the page, none of which is generic, which is what lets one host deal
+games whose cursors are of different shapes through the one entry point.
+
+**What the host offers and what the rules deal are two statements, and a test holds them together.** An
+`Offering` is built from each game's own `Game.capacity`, its `Scene.title` and the deck counts its
+`_validate_initial_deck` accepts, all of which already existed with no way out over HTTP. Every table an
+offering promises is settled in a test — each count of decks at each seating it names — and each of them either
+deals or is refused with a sentence a company can act on, which is what rules out the third answer: a promise
+that hangs or one the server meets as a defect. The game keeps the last word, since a seating and a count of
+decks state something apart and a rule may turn on both: `climbing` reads a hand of at most twenty-six cards, so
+two decks halved between two seats are refused where they are asked for. What would keep such a choice out of a
+company's hands altogether is an offering stating the counts a deck is dealt at per seating, which is a wider
+answer than one deck list per game.
 
 **One file states a run, and a command line states where a run departs from it.** `config.yaml` beside the
-repository holds the game played, the table it is played at and where that table answers, and
+repository holds the table gathered, the choice it opens on, the pack it draws with and where it answers, and
 `Configuration.read` validates the whole of it as it is read: every field is asked for outright, so a value
 left out is refused at the file rather than met as a surprise at the table, and a key the configuration holds
 no field for is refused with it. The port stands at a settled number, since a local run answers at the same
-address until it is told otherwise, and a run stating no seed draws one, so each table deals a match of its
-own and the announcement names the seed it drew for a run that wants that match again. Each option of the
-command line stands empty until it is given, and an option left alone is answered by the file — so a value a
-person turns lives in one place, and `make play` passes on only what it was handed.
+address until it is told otherwise, and a run stating no seed or no code draws one, so each table deals a match
+of its own behind a hand of its own and the announcement names both — the seed for a run that wants that match
+again, the code for the people about to join. What the file states of the choice is where the gathering opens
+rather than what it plays, since the company settles that: a seating the game seats nowhere is refused as the
+room opens, and what config refuses is a table of nobody and a game this host holds no rules for. Each option
+of the command line stands empty until it is given, and an option left alone is answered by the file — so a
+value a person turns lives in one place, and `make play` passes on only what it was handed.
+
+**Where a run listens and where it is reached are two questions.** A run bound to `0.0.0.0` answers on every
+interface and at none: printing the bind address hands a person `http://0.0.0.0:8421`, which nobody can open.
+So `reaching.py` answers the second question — the advertised address where one is stated, the machine's own
+address beside the loopback where the bind is a wildcard, and the bind address otherwise. The machine's own
+address is read off the route to an RFC 5737 documentation address on a UDP socket that sends nothing, and a
+machine holding no route out answers with the loopback alone. The announcement then prints one line per address,
+each carrying the table and the code, so play across a room is opening the line you were handed.
 
 **Every path a run reads is stated in `paths`, at the foot of the host.** One module climbs from its own
 file to the checkout, and the artwork, the interface and its build are named from there — so a directory
@@ -1558,9 +1689,24 @@ the host mounts. It holds three layers of its own, and each names only what is b
 
 | layer | states |
 |---|---|
-| `api` | what a table answers and what a client sends: the layout vocabulary, the projections, the seat, the refusals, and the calls that read them |
-| `play` | what a client makes of those answers: the seat an address names, the view a commit leaves, one card read against another, the figures a readout reads, the boundary a commit pauses at |
-| `table` | what appears on screen: the standing, the three groups of zones, a station, a slot, a card, a card carried by hand, the places a carry may land on, the line saying where play stands, the report a boundary is read at |
+| `api` | what a table and its gathering answer and what a client sends: the layout vocabulary, the room vocabulary, the projections, the seat, the refusals, and the request and stream plumbing the two clients are built on |
+| `play` | what a client makes of those answers: where an address leaves a tab standing, the hand of ranks a code reads as, the places at a gathering and what holds its deal up, the choice a company may settle, the view a commit leaves, one card read against another, the figures a readout reads, the boundary a commit pauses at |
+| `table` | what appears on screen: the table named, the arrival, the room, the company, the choice, the standing, the three groups of zones, a station, a slot, a card, a card carried by hand, the places a carry may land on, the line saying where play stands, the report a boundary is read at |
+
+**Three states carry a person from an address to a seat**, and `App.tsx` is the whole of the routing: a tab
+standing at no table names one, a tab at a table with nothing to speak through arrives on the code, and a tab
+holding a token is in the room — the gathering until the company deals it, the table from then on. One reading
+of the gathering carries the page across, since `dealt` turns true once: the guest who called for the deal
+crosses on the answer to their own command and the guests watching cross on the frame the stream closes with.
+
+**The page draws a lobby while holding the name of no game.** Every control of the choice is drawn from an
+`Offering` — the games listed by their titles, the tables by each game's own seating, the deck counts where a
+game admits more than one — so a fifth game reaches the page as another option and no line of it names a game.
+`play/company.ts` and `play/choosing.ts` hold the decisions as pure functions: which places stand empty, whether
+this guest holds a say, what the deal button reads, and what a choice becomes when it is carried onto another
+game. `play/codes.ts` mirrors `cardserver/codes.py` so the page can read a code back to a person as they type
+it and send the arrival once a whole one stands there; whether a code admits them stays the server's answer
+alone.
 
 **The types come from the document where a document exists, and by hand where one cannot.** `/layout` is the
 one answer that stands apart from a game's own state, so it publishes a schema and `openapi-typescript`
@@ -1601,11 +1747,12 @@ A client says `Live` once its stream has opened rather than once it has joined, 
 waiting for a connection saying so. A deployment reached over HTTP/2 multiplexes one connection per origin and
 the limit lifts; the gate costs it a request per tab switch.
 
-**A tab is told which table it plays at, and as whom, in the fragment of its own address.** The host prints
-one address per seat as it opens a table, and a browser sends a fragment to nobody: the page reads the table
-and the token out of it as it loads, and offers the token in a header from then on. So a player joins by
-opening the line they were handed, a tab holding no token watches the table, and no address the server writes
-down holds a credential.
+**A tab is told which table it stands at, and as whom, in the fragment of its own address.** The host prints
+the address of the table it gathers, carrying the table and the code, and a browser sends a fragment to nobody:
+the page reads both out of it as it loads, offers the code once on arrival, and speaks through the token from
+then on. A token supersedes the code it was minted against, so the code leaves the address the moment one
+exists and a reload rejoins as the same guest with no name asked again. So a person joins by opening the line
+they were handed, and no address the server writes down holds a credential.
 
 **A move is built by pointing, and a selection alone sends nothing.** `play/selection.ts` reads each move the
 table says is open through the gesture matching it (§9), which yields the zone the move's positions address
@@ -1962,7 +2109,12 @@ play was good **given what the player knew**.
 | A rule over cards vs. the table it is played on | the `Rules read cards rather than tables` contract | a `rules` module names a zone, an effect or a cursor, so a card rule can be read only against a dealt table |
 | A mechanism vs. the choice of game | the `Nothing names the host` contract; `cardtable.catalogue` is the only module naming `cardgames` | a registry, a handler or a scene is reached for by a game's name outside the catalogue |
 | A shape stated once vs. a shape restated | the layout vocabulary is generated from the published document; only the projections carrying a game's own state are written by hand | a field of a slot, a gesture or a move is typed in TypeScript by hand |
-| A credential vs. an address | the table and the token ride in the fragment; the token reaches the endpoints in a header | a seat token appears in a path, a query string or a log line |
+| A credential vs. an address | the table, the code and the token ride in the fragment; the token reaches the endpoints in a header | a seat token or a join code appears in a path, a query string or a log line |
+| A room vs. a table | `gathering.py` holds the company and reaches the registry through `Opening`; the six playing endpoints are unchanged | a gathering opens a game itself, or a table endpoint reads the company |
+| Who someone is vs. what they may do | a token minted at arrival holds a seat through `SeatPolicy`; a say over the choice stands behind `SayPolicy` | a name authorises anything, or a handler decides who may deal |
+| One table in service vs. the state its game declares | `InService` erases the cursor at the storage boundary; `registry.open` stays generic per call | the registry names a state type, so one process serves one rule set |
+| What a host offers vs. what the rules admit | an `Offering` is built from `Game.capacity`, `Scene.title` and the deck counts `_validate_initial_deck` accepts, and every one of them is dealt in a test | a company settles a table the rules refuse, and meets it at the deal |
+| Where a run listens vs. where it is reached | `reaching.py` answers the second; `Service.advertise` states it outright | an announcement prints the bind address, so a wildcard is handed out as an address to open |
 | Cards in hand vs. a move sent | a selection resolves through the gestures; a press at an armed place or on the words of an armed move is what submits | a card click sends a move, or a selection is read as a command |
 | What the table offers vs. what the page knows | `selection.ts` reads `view.legal` through `layout.gestures` and nothing else | the page counts cards, reads a rank, or names a zone to decide what may be picked |
 | A position vs. what has just happened to it | a view is the cards as they lie; `arrivals.ts` reads a commit for what it laid down | a heap is animated from a difference between two views, or a zone is drawn from a move's intent |

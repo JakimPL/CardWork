@@ -1011,3 +1011,128 @@ button.card {
 .trouble {
   color: var(--acting);
 }
+
+/* The room a table gathers in: the company round it, what it plays, and the press that deals it. */
+
+.gathering {
+  gap: calc(var(--gap) * 1.5);
+  width: 100%;
+}
+
+.gathering .gathered,
+.gathering .code {
+  align-self: stretch;
+}
+
+.gathering .code {
+  color: var(--chalk-dim);
+  letter-spacing: 0.08em;
+}
+
+.company {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  width: 100%;
+}
+
+.places {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap) / 2);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.place {
+  display: flex;
+  gap: var(--gap);
+  align-items: center;
+  padding: calc(var(--gap) / 2) var(--gap);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--felt);
+}
+
+.place.own {
+  border-color: var(--acting);
+}
+
+.place .seat {
+  min-width: 5rem;
+  color: var(--chalk-dim);
+}
+
+.place .guest {
+  flex: 1;
+  color: var(--chalk);
+}
+
+.place.empty .guest {
+  color: var(--chalk-dim);
+  font-style: italic;
+}
+
+.place .guest.away {
+  opacity: var(--quieted);
+}
+
+.place .guest.present::before {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  margin-right: 0.5em;
+  border-radius: 50%;
+  background: var(--live);
+  content: "";
+}
+
+.watching {
+  color: var(--chalk-dim);
+}
+
+.settling {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  align-items: center;
+  width: 100%;
+}
+
+.settling label {
+  width: auto;
+}
+
+.settling select {
+  padding: calc(var(--gap) / 2) var(--gap);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--chalk);
+  font: inherit;
+}
+
+.settling select:disabled {
+  opacity: 0.45;
+}
+
+.settling .ending,
+.settling .told {
+  flex-basis: 100%;
+  color: var(--chalk-dim);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  align-items: center;
+  width: 100%;
+}
+
+.notice .reading {
+  color: var(--chalk-dim);
+  letter-spacing: 0.08em;
+}

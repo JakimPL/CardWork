@@ -17,13 +17,18 @@ from cardwork.combinations.poker import (
 )
 from cardwork.combinations.policy import Duplicates, Evaluation
 from cardwork.combinations.ranking import Ranking
+from cardwork.decks.standard import ONE_DECK
 from cardwork.states.award import Award
 
 SEATS_LEAST: Final[int] = 2
 SEATS_MOST: Final[int] = 5
+TWO_DECKS: Final[int] = 2
+DECKS_ADMITTED: Final[tuple[int, ...]] = (ONE_DECK, TWO_DECKS)
 POINTS: Final[PointTable] = REGULAR_POINTS
 AWARD: Final[Award] = Award.LOWEST
 OPENING_CARD: Final[Card] = TWO_OF_DIAMONDS
+DECKS_SPOKEN: Final[str] = "one or two whole standard decks of suited cards"
+HAND_MOST: Final[int] = 26
 
 CLIMBING_PATTERNS: Final[tuple[Pattern, ...]] = (
     HIGH_CARD,

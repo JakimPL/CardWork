@@ -8,6 +8,7 @@ import type { EventView, PositionView } from "../api/views";
 import type { Arrivals } from "./arrivals";
 import { useArrivals } from "./arrivals";
 import { advanced, reachedBy } from "./commits";
+import type { Connection } from "./connection";
 import type { Interluding, Reading, Report } from "./interludes";
 import { arriving, dismissed, interludeIn, PLAYING_ON } from "./interludes";
 import { whileInView } from "./viewing";
@@ -17,9 +18,6 @@ const UNREAD = 0;
 
 /** Where play pauses before a client has been told, which is a table it reads straight through. */
 const UNTOLD: Interludes = {};
-
-/** How a client stands with the table it is watching. */
-export type Connection = "joining" | "following" | "resuming" | "refused";
 
 /** A table as one tab holds it: how it is laid out, where it stands, and how the two are being kept current. */
 export interface Watched {
@@ -114,7 +112,7 @@ export function useTable(seat: Seat): Watched {
           setConnection("following");
           setTrouble(null);
         },
-        onCommit: (event) => {
+        onFrame: (event) => {
           reached.current = Math.max(reached.current, reachedBy(event));
           arrive(event);
         },

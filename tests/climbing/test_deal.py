@@ -5,13 +5,22 @@ from typing import Final
 import pytest
 
 from cardgames.backend.climbing.game import ClimbingGame
-from cardgames.backend.climbing.rules import CLIMBING_RANKING, OPENING_CARD, SEATS_LEAST, SEATS_MOST
+from cardgames.backend.climbing.rules import (
+    CLIMBING_RANKING,
+    DECKS_SPOKEN,
+    HAND_MOST,
+    OPENING_CARD,
+    SEATS_LEAST,
+    SEATS_MOST,
+)
 from cardgames.backend.climbing.state import ClimbingPhase, ClimbingState
+from cardwork.cards.game import CardOrJoker, CardsOrJokers
 from cardwork.decks.decks import named
 from cardwork.decks.standard import standard_deck, standard_decks
 from cardwork.effects.effects import Effects
-from cardwork.exceptions import GameValidationError
+from cardwork.exceptions import GameValidationError, IllegalMove
 from cardwork.moves.actions import Play
+from cardwork.moves.move import Move
 from cardwork.positions.position import Position
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.redeal import Redeal
@@ -27,8 +36,10 @@ from .driving import (
     ROUNDS,
     SEATS,
     SEED,
+    TWO_DECK,
     TWO_SEATS,
     a_match,
+    a_two_deck_match,
     held_by,
     places_of,
     play_from,
@@ -38,10 +49,31 @@ from .driving import (
 FIRST_ROUND: Final[int] = 1
 TOO_MANY_SEATS: Final[int] = 6
 TOO_FEW_SEATS: Final[int] = 1
+THREE_DECKS: Final[int] = 3
+TWO_COPIES: Final[int] = 2
+
+# The one deal of two decks these read, where the seat the cards went out from is not the lowest holding the
+# opening card, so the seat that opens tells the reading from the leader apart from a walk in seat order.
+DOUBLED_SEED: Final[int] = 4
+DOUBLED_LEADER: Final[int] = 1
 NO_CARDS: Final[int] = 0
 ONE_SHARE_SHORT: Final[int] = 1
 READER: Final[int] = 0
 ANOTHER_SEAT: Final[int] = 1
+
+
+def _held_twice(hand: CardsOrJokers) -> tuple[tuple[int, ...], CardOrJoker]:
+    """The two places one card of a hand stands at, and the card, which two decks in play leave hands holding.
+
+    Raises:
+        ValueError: when the hand holds no card of the deck twice.
+    """
+    for place, card in enumerate(hand):
+        doubled = tuple(other for other, held in enumerate(hand) if held == card)
+        if len(doubled) == TWO_COPIES:
+            return doubled, hand[place]
+
+    raise ValueError(f"A hand of {len(hand)} cards dealt from two decks holds one twice, and this one holds none")
 
 
 class ShortDealGame(ClimbingGame):
@@ -58,6 +90,25 @@ class ShortDealGame(ClimbingGame):
             DISCARD: self._rejected_cards,
         }
         return Redeal(position, pile=STACK, face_down=True).effects(counts, rng)
+
+
+class RecordedDealGame(ClimbingGame):
+    """A game keeping the seat each deal went out from, which the cursor gives up as the match names its opener.
+
+    `_opened` reads the leader the round was dealt to and then stands the opener in its place, so a test that
+    wants to know which rotation the opening card was looked for along reads it here.
+    """
+
+    dealt_from: int | None = None
+
+    def deal_round(
+        self,
+        position: Position[ClimbingState],
+        leader: int,
+        rng: Random,
+    ) -> Effects[ClimbingState]:
+        self.dealt_from = leader
+        return super().deal_round(position, leader, rng)
 
 
 class GatheringDealGame(ClimbingGame):
@@ -190,21 +241,100 @@ def test_a_table_seats_two_to_five_players() -> None:
         a_match(TOO_FEW_SEATS, ROUNDS, SEED)
 
 
-def test_a_deck_other_than_one_standard_deck_is_refused() -> None:
-    with pytest.raises(GameValidationError, match="one standard deck"):
+TWO_DECK_DEALS: Final[tuple[DealCase, ...]] = (
+    DealCase(description="four seats, both decks divided", players=FOUR_SEATS, each=26, aside=NO_CARDS),
+    DealCase(description="five seats, four cards over", players=FULL_TABLE, each=20, aside=4),
+)
+
+TOO_FEW_FOR_TWO_DECKS: Final[tuple[int, ...]] = (TWO_SEATS, SEATS)
+
+
+@pytest.mark.parametrize("case", TWO_DECK_DEALS, ids=descriptions(TWO_DECK_DEALS))
+def test_a_round_over_two_decks_deals_the_share_they_divide_into(case: DealCase) -> None:
+    """Twice the cards is twice the hand, which the share a table divides the deck into already follows."""
+    game = a_two_deck_match(case.players, ROUNDS, SEED)
+
+    assert all(len(held_by(game, seat)) == case.each for seat in range(case.players))
+    assert game.board.count(DISCARD) == case.aside
+    assert game.state.phase == ClimbingPhase.OPENING
+    assert game.state.to_act == frozenset({game.state.led_by})
+    game.board.validate_board()
+
+
+def test_a_match_over_two_decks_opens_on_the_first_seat_from_the_leader_holding_the_opening_card() -> None:
+    """Two decks hold the opening card twice, so which of the seats holding one opens is read the way it was dealt."""
+    game = RecordedDealGame(
+        players=FOUR_SEATS,
+        deck=TWO_DECK,
+        conclusion=Conclusion(rounds=ROUNDS),
+        rng=Random(DOUBLED_SEED),
+    )
+    holding = tuple(seat for seat in rotation(DOUBLED_LEADER, game.players) if OPENING_CARD in held_by(game, seat))
+
+    assert game.dealt_from == DOUBLED_LEADER
+    assert len(holding) == TWO_COPIES
+    assert holding[0] != min(holding)
+    assert game.state.led_by == holding[0]
+    assert game.state.to_act == frozenset({holding[0]})
+
+
+def test_a_match_over_one_deck_opens_on_the_one_seat_holding_the_opening_card() -> None:
+    """One copy stands at one seat, which every rotation round the table reaches at the same one."""
+    game = a_match(FOUR_SEATS, ROUNDS, SEED)
+    holding = tuple(seat for seat in range(game.players) if OPENING_CARD in held_by(game, seat))
+
+    assert holding == (game.state.led_by,)
+
+
+@pytest.mark.parametrize("players", TOO_FEW_FOR_TWO_DECKS)
+def test_a_table_too_small_to_share_two_decks_into_hands_this_game_reads_is_refused(players: int) -> None:
+    """The one thing the seats and the decks state together, which is why the hand is where they are held.
+
+    What a seat answering a combination is offered is every combination of as many cards its hand holds, and
+    that reading grows with the hand far faster than the hand does — so a hand beyond the largest this game
+    deals is refused where the seating and the deck are, rather than met as a turn nobody waits out.
+    """
+    with pytest.raises(GameValidationError, match=f"runs to {HAND_MOST} cards"):
+        a_two_deck_match(players, ROUNDS, SEED)
+
+
+def test_two_copies_of_one_card_read_as_the_one_card_and_make_no_pair() -> None:
+    """What `Duplicates.COLLAPSE` comes to at the table: the doubling adds cards and adds no combination.
+
+    So the contest over two decks is the contest over one, played with twice the hand: a pair asks for two ranks
+    that read apart, and a card held twice answers one of the two demands it fills.
+    """
+    game = a_two_deck_match(FOUR_SEATS, ROUNDS, SEED)
+    opener = game.state.led_by
+    hand = held_by(game, opener)
+    doubled, card = _held_twice(hand)
+
+    assert len(doubled) == TWO_COPIES
+    assert CLIMBING_RANKING.exactly((card, card)) is None
+    assert all(places != frozenset(doubled) for places in CLIMBING_RANKING.selections(hand))
+    with pytest.raises(IllegalMove, match="combination this game is played by"):
+        game.submit(
+            Move(player=opener, action=Play(group=HANDS.name, indices=frozenset(doubled))),
+            base_seq=game.head,
+        )
+
+
+def test_a_deck_other_than_one_whole_standard_deck_or_two_is_refused() -> None:
+    with pytest.raises(GameValidationError, match=DECKS_SPOKEN):
         ClimbingGame(players=SEATS, deck=DECK[:-1], conclusion=Conclusion(rounds=ROUNDS), rng=Random(SEED))
 
-    with pytest.raises(GameValidationError, match="one standard deck"):
+    with pytest.raises(GameValidationError, match=DECKS_SPOKEN):
         ClimbingGame(
             players=SEATS,
-            deck=standard_decks(2, black_jokers=0, red_jokers=0),
+            deck=standard_decks(THREE_DECKS),
             conclusion=Conclusion(rounds=ROUNDS),
             rng=Random(SEED),
         )
 
 
 def test_a_deck_holding_a_joker_is_refused() -> None:
-    with pytest.raises(GameValidationError, match="one standard deck"):
+    """A joker names no rank the ranking places, so a card standing in for another is refused with the deck."""
+    with pytest.raises(GameValidationError, match=DECKS_SPOKEN):
         ClimbingGame(
             players=SEATS,
             deck=standard_deck(black_jokers=1, red_jokers=0),

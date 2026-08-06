@@ -13,7 +13,7 @@ from cardwork.rounds.conclusion import Conclusion
 
 FILE: Final[str] = "config.yaml"
 BACK: Final[str] = "crosshatch"
-CODE: Final[str] = "K10AJ2"
+CODE: Final[str] = "KQAJ72"
 
 GLYPHS: Final[Artwork] = Artwork(pack=None, back=BACK)
 

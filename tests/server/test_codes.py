@@ -5,8 +5,10 @@ import pytest
 
 from cardserver.codes import (
     CODE_LENGTH,
+    CODE_RANKS,
     a_drawn_code,
     admits,
+    code_in,
     ranks_in,
     spoken,
     written,
@@ -16,6 +18,7 @@ from cardwork.cards.rank import Rank, Ranks
 from tests.cases import Case, descriptions
 
 HAND: Final[Ranks] = (Rank.KING, Rank.TEN, Rank.ACE, Rank.JACK, Rank.TWO)
+DRAWS: Final[range] = range(64)
 
 
 @dataclass(frozen=True)
@@ -103,6 +106,57 @@ def test_a_drawn_code_is_a_hand_of_the_length_a_code_is() -> None:
 
     assert drawn is not None
     assert len(drawn) == CODE_LENGTH
+
+
+def test_a_drawn_code_is_as_many_characters_as_it_is_ranks_so_a_person_counts_what_they_see() -> None:
+    """Every rank a code is drawn from is written in one character, which the ten of the deck is left out of."""
+    assert Rank.TEN not in CODE_RANKS
+    assert all(len(a_drawn_code()) == CODE_LENGTH for _ in DRAWS)
+
+
+@dataclass(frozen=True)
+class CodeCase(Case):
+    offered: str
+    code: str | None
+
+
+CODES: Final[tuple[CodeCase, ...]] = (
+    CodeCase(
+        description="six ranks written as a code is drawn",
+        offered="KQAJ72",
+        code="KQAJ72",
+    ),
+    CodeCase(
+        description="the same six as one person says them and another writes them down",
+        offered="k q-a_j 7 2",
+        code="KQAJ72",
+    ),
+    CodeCase(
+        description="six ranks holding the ten, which writes as seven characters",
+        offered="K10AJ72",
+        code=None,
+    ),
+    CodeCase(
+        description="a code one rank short",
+        offered="KQAJ7",
+        code=None,
+    ),
+    CodeCase(
+        description="a code one rank over",
+        offered="KQAJ722",
+        code=None,
+    ),
+    CodeCase(
+        description="six characters that read as no hand of ranks",
+        offered="012345",
+        code=None,
+    ),
+)
+
+
+@pytest.mark.parametrize("case", CODES, ids=descriptions(CODES))
+def test_a_table_gathers_on_six_ranks_written_in_six_characters(case: CodeCase) -> None:
+    assert code_in(case.offered) == case.code
 
 
 def test_a_hand_is_written_as_the_code_it_reads_from() -> None:

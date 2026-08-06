@@ -7,6 +7,7 @@ import { parse } from "yaml";
 
 const CONFIGURATION = fileURLToPath(new URL("../config.yaml", import.meta.url));
 const ENDPOINTS = "/tables";
+const OFFERINGS = "/offerings";
 const ARTWORK = "/artwork";
 
 interface Service {
@@ -36,6 +37,7 @@ export default defineConfig({
   server: {
     proxy: {
       [ENDPOINTS]: { target: served(), changeOrigin: true },
+      [OFFERINGS]: { target: served(), changeOrigin: true },
       [ARTWORK]: { target: served(), changeOrigin: true },
     },
   },

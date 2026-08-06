@@ -6,14 +6,15 @@ Four packages:
 
 - **`cardwork`** — the engine. Synchronous and pure: a position is a value, a move produces another
   value, and every commit is recorded as data that replays exactly.
-- **`cardserver`** — a FastAPI adapter that puts tables into service over HTTP and server-sent events.
+- **`cardserver`** — a FastAPI adapter that gathers tables and puts them into service over HTTP and
+  server-sent events.
 - **`cardgames`** — the games written on it, each stated twice over: `backend` holds a game's rules and
   `frontend` the layout a player reads them through. `passing` is a game of four cards played in turn;
   `showdown`, a game of ten turns played at once; `shedding`, a game of matched sets laid down several cards
   at a time; `climbing`, a game of combinations answered by stronger ones.
-- **`cardtable`** — the host: it opens a table of a chosen game, hands out a token per seat, and serves
-  the player interface beside the endpoints. The one place a game and a transport meet. All four games are
-  playable in a browser.
+- **`cardtable`** — the host: it gathers a table on a join code, deals whichever game its company settles
+  on, and serves the player interface beside the endpoints. The one place a game and a transport meet. All
+  four games are playable in a browser, across a room or over a LAN.
 
 `docs/architecture.md` is the design and the reasoning behind it; `docs/combinations.md`, `docs/rounds.md`,
 `docs/presentation.md` and `docs/games/` state the parts a game reaches for and the four games themselves.
@@ -27,7 +28,8 @@ make check        # lint, mypy --strict, import contracts, coverage, the page's 
 make test         # pytest -n auto, and the page's tests
 make interface    # install, test and build the player interface
 make build        # draw the player interface the table serves, which play does for itself
-make play         # open the table config.yaml states; GAME=showdown PLAYERS=4 to depart from it
+make play         # gather the table config.yaml states; GAME=showdown PLAYERS=4 to depart from it
+                  # HOST=0.0.0.0 to be reached from another machine on the network
 ```
 
 ## Writing a game
@@ -164,7 +166,7 @@ Rules that more than one game wants live in the framework, each in a layer of it
 | `cardgames.backend.passing` | a sequential turn: one exchange with the pile, then a pass round the table | a game whose rules ask a question about cards |
 | `cardgames.backend.showdown` | a simultaneous turn: every seat commits one sealed card, and they turn over together | a game whose turn belongs to the whole table |
 | `cardgames.backend.shedding` | a turn of two minds: shed a set of one rank, or draw a card and pass it on | a game whose move names several cards, and one that asked the layers below it for nothing |
-| `cardgames.backend.climbing` | a combination put down on lead, climbed over by the seats after it or passed | a game whose contest sits in the cursor, a turn given up by word, and a standing of penalties won at the low end |
+| `cardgames.backend.climbing` | a combination put down on lead, climbed over by the seats after it or passed | a game whose contest sits in the cursor, a turn given up by word, a standing of penalties won at the low end, and a table dealt from one deck or two (two at four seats or five, where the hands stay ones it reads) |
 
 `tests/games/demo.py` is a smaller exercise game: a simultaneous round with sealed commitments, a reveal,
 scoring and take-backs.
@@ -175,18 +177,19 @@ scoring and take-backs.
 from cardserver import TableRegistry, TokenSeats, create_app
 from cardwork.decks.standard import standard_deck
 
-registry: TableRegistry[Trump] = TableRegistry(grace_seconds=2.0)
+registry = TableRegistry(grace_seconds=2.0)
 session = registry.open("green-baize", MyGame(players=3, deck=standard_deck()), MYGAME_SCENE)
 
-app = create_app(registry, TokenSeats({"green-baize": {"tok-0": 0, "tok-1": 1, "tok-2": 2}}))
+app = create_app(registry, TokenSeats({"green-baize": {"tok-0": 0, "tok-1": 1, "tok-2": 2}}), None)
 ```
 
 A table opens with the game and the arrangement it is read through, since a client asks for both. Run it
-with `uvicorn`, and the table answers five endpoints:
+with `uvicorn`, and the table answers six endpoints:
 
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/tables/{id}/moves` | Submit `{move, base_seq, idempotency_key}`; answers `{seq}` |
+| `POST` | `/tables/{id}/arrangements` | Lay out a zone of this seat's own: `{zone, order, base_seq, idempotency_key}`; answers `{seq}` |
 | `GET` | `/tables/{id}/layout` | How this observer lays the table out: its own zones and gestures, and the shared table |
 | `GET` | `/tables/{id}/view` | This observer's projection of the table and the moves it may make, stamped with `seq` |
 | `GET` | `/tables/{id}/events` | SSE stream of projected commits, resumable via `Last-Event-ID` |
@@ -194,6 +197,13 @@ with `uvicorn`, and the table answers five endpoints:
 
 A client identifies itself with the `X-Seat-Token` header; a request without one watches as a spectator.
 Each response carries what that observer is entitled to know, and nothing further.
+
+**A table already seated is one way to open one, and gathering it is the other.** Hand `create_app` a
+`Gatherings` in place of that `None` — as the lobby *and* as the seat policy, since a token minted at arrival
+is what holds a seat — and the application carries seven more routes: `/offerings`, and the guests, room,
+stream, seat, choice and deal of each table gathering. A company then arrives on a join code of six card ranks,
+names themselves, takes seats, settles what to play out of what the host offers, and deals it. `cardtable` does
+that wiring, below.
 
 Two decisions the host makes:
 
@@ -210,23 +220,26 @@ one:
 ```bash
 uv run cardtable                                  # the run config.yaml states
 uv run cardtable --game showdown --players 4      # or: make play GAME=showdown PLAYERS=4
+uv run cardtable --host 0.0.0.0                   # or: make play HOST=0.0.0.0, to be reached across a room
 ```
 
 A table hands out the page as `make build` last drew it, which is what `make play` draws before opening one.
 
-`config.yaml` states the run: the game played, the table's name and seating, the seed and grace window it
-deals and settles with, the cards it is drawn with, and the address it answers at. Every option of the
-command line stands empty until it is given, so it states where one run departs from that file:
+`config.yaml` states the run: the table gathered, the choice it opens on, the cards it is drawn with, and the
+address it answers at. Every option of the command line stands empty until it is given, so it states where one
+run departs from that file:
 
 ```yaml
-game: passing
-
 table:
   name: green-baize
-  players: 3
-  rounds: 3
-  seed: 20260803
   grace_seconds: 2.0
+
+choice:
+  game: passing
+  players: 3
+  decks: 1
+  conclusion:
+    rounds: 3
 
 artwork:
   pack: kare
@@ -234,24 +247,35 @@ artwork:
 
 service:
   host: 127.0.0.1
-  port: 8000
+  port: 8421
+  advertise: null
   log_level: info
 ```
 
-It prints one address per seat, and one that watches the table:
+The table's own fields are what the host holds — the name it answers under, the window it settles in, and the
+seed and code it draws where the file states neither. Everything under `choice` is where the gathering opens
+rather than what it plays, since the company settles that for itself.
+
+It prints the code the table gathers behind, and a line per address it is reached at:
 
 ```
-Table 'green-baize' is open at http://127.0.0.1:8000
-  seat 0: http://127.0.0.1:8000/#table=green-baize&token=Ux9-tKPqf1A
-  seat 1: http://127.0.0.1:8000/#table=green-baize&token=x2mE7Rl0aQs
-  seat 2: http://127.0.0.1:8000/#table=green-baize&token=Kd4pT1nWqZ8
-  watching: http://127.0.0.1:8000/#table=green-baize
+Table 'green-baize' is gathering — join code K 7 A Q 3 J
+  http://192.168.1.42:8421/#table=green-baize&code=K7AQ3J
+  http://127.0.0.1:8421/#table=green-baize&code=K7AQ3J
+  dealt from seed 20260806
 ```
 
-Each player opens the line they were handed in a tab of their own, and that is the whole of joining: the
-table and the token stand in the fragment, which a browser sends to nobody, and the page offers the token in
-a header from then on. The page comes out of the same application the endpoints do, so nothing is
-cross-origin and no address holds a credential.
+Everyone opens a line in a tab of their own, names themselves, and that is the whole of joining. The table and
+the code stand in the fragment, which a browser sends to nobody; arriving mints a token that takes the code's
+place there, so a reload rejoins as the same guest and no address the server writes down holds a credential.
+The page comes out of the same application the endpoints do, so nothing is cross-origin.
+
+From there the room is the page: every guest sees who else is at it, any of them takes a seat, and any guest
+holding a seat settles the game, the seating, the decks where the rules admit more than one, and how long the
+match runs. Pressing the deal puts every page at the table at once, each plaque reading the name its guest
+arrived under. A run bound to `0.0.0.0` is reached from another machine at the address it announces, so a table
+of people in one room needs nothing further; `--advertise` states an address instead, for a run behind a name or
+a tunnel.
 
 A table lives as long as the process: the position is held in memory, and a restart deals a fresh one.
 
@@ -267,8 +291,8 @@ npm --prefix frontend run dev     # a development server, proxying /tables to th
 ```
 
 A game states how it is read and the page draws whatever it is handed: the layout names the zones, where
-they sit and how their cards lie, the plaques and the words for each phase, so the page holds the name of
-no game at all. What it is served is what its seat may know — a card it may not read arrives as a placeholder
+they sit and how their cards lie, the plaques and the words for each phase, and an offering names the tables
+and deck counts each game admits — so the page holds the name of no game at all, in the room as at the table. What it is served is what its seat may know — a card it may not read arrives as a placeholder
 at that card's own position, and draws as a back.
 
 The table fits one screen at any size and scrolls nowhere: cards are measured from the shorter side of the

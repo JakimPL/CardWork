@@ -41,7 +41,7 @@ async def test_a_guest_is_told_the_code_so_they_can_pass_it_on(visitor: AsyncCli
 
 
 async def test_the_code_admits_however_a_person_wrote_it_down(visitor: AsyncClient) -> None:
-    assert await offering(visitor, "k 10-a j 2", NAMED) == HTTPStatus.OK
+    assert await offering(visitor, "k q-a_j 7 2", NAMED) == HTTPStatus.OK
 
 
 async def test_another_hand_of_ranks_admits_nobody(visitor: AsyncClient) -> None:

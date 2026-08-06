@@ -8,18 +8,24 @@ from cardwork.cards.rank import Rank, Ranks
 CODE_LENGTH: Final[int] = 6
 SEPARATORS: Final[str] = " -_"
 APART: Final[str] = " "
+ONE_CHARACTER: Final[int] = 1
 
 READ_AS: Final[Mapping[str, Rank]] = {rank.value: rank for rank in RANK_SEQUENCE}
 LONGEST_RANK: Final[int] = max(len(rank.value) for rank in RANK_SEQUENCE)
+CODE_RANKS: Final[Ranks] = tuple(rank for rank in RANK_SEQUENCE if len(rank.value) == ONE_CHARACTER)
 
 
 def a_drawn_code() -> str:
     """A join code drawn at random, which is the hand of ranks one table is entered by.
 
+    The draw is one of `CODE_RANKS` per place, so a code stands six ranks long and six characters wide at once
+    and a person typing it counts what they see. That leaves the twelve ranks written in a character to draw
+    from, which name some three million hands.
+
     The draw comes from the system's own source of randomness rather than from a game's seed, since a code is
     a capability and a seeded table is meant to deal the same cards twice.
     """
-    return written(tuple(choice(RANK_SEQUENCE) for _ in range(CODE_LENGTH)))
+    return written(tuple(choice(CODE_RANKS) for _ in range(CODE_LENGTH)))
 
 
 def written(ranks: Ranks) -> str:
@@ -65,6 +71,20 @@ def ranks_in(offered: str) -> Ranks | None:
         place += len(rank.value)
 
     return tuple(read)
+
+
+def code_in(offered: str) -> str | None:
+    """The code what was offered stands as, and None where it is no code a table may gather on.
+
+    A code is `CODE_LENGTH` ranks drawn from `CODE_RANKS`, so it is six characters written down and six ranks
+    read out. This is what a stated code is held to, and it answers the hand written the one way an address
+    carries it however the hand was offered.
+    """
+    ranks = ranks_in(offered)
+    if ranks is None or len(ranks) != CODE_LENGTH:
+        return None
+
+    return written(ranks) if all(rank in CODE_RANKS for rank in ranks) else None
 
 
 def admits(code: str, offered: str) -> bool:

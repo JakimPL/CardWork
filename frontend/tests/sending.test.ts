@@ -178,4 +178,8 @@ describe("the name one attempt carries", () => {
   it("names two attempts apart, so a table dedupes the one that was sent twice", () => {
     expect(named()).not.toBe(named());
   });
+
+  it("draws its name out of the randomness a plain address holds, which is where a table on a LAN stands", () => {
+    expect(named()).toMatch(/^[0-9a-f]{32}$/);
+  });
 });

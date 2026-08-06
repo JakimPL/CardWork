@@ -2,17 +2,14 @@ import type { ReactElement } from "react";
 
 import type { Layout } from "../api/layout";
 import type { PositionView } from "../api/views";
+import type { Connection } from "../play/connection";
+import { CONNECTIONS } from "../play/connection";
 import { phaseCaption, tableReadouts, tableValue } from "../play/readouts";
-import type { Connection } from "../play/useTable";
+import { nameOf } from "../play/seats";
 import { classes } from "./classes";
 
-/** What a client watching a table says of itself, in the words a person reads. */
-const CONNECTIONS: Record<Connection, string> = {
-  joining: "Joining",
-  following: "Live",
-  resuming: "Reconnecting",
-  refused: "Disconnected",
-};
+/** What stands where no seat owes an action, which is a table waiting on the boundary that scores it. */
+const NOBODY = "nobody";
 
 interface StatusLineProps {
   layout: Layout;
@@ -39,7 +36,7 @@ export function StatusLine({ layout, view, connection, trouble }: StatusLineProp
       ))}
       <span className="reading">
         <span className="label">To act</span>
-        <span className="value">{acting(view)}</span>
+        <span className="value">{acting(layout, view)}</span>
       </span>
       <span className={classes("connection", connection)} title={trouble ?? undefined}>
         {CONNECTIONS[connection]}
@@ -48,8 +45,13 @@ export function StatusLine({ layout, view, connection, trouble }: StatusLineProp
   );
 }
 
-/** The seats that owe an action, which is one seat while a turn goes round and several while a round is sealed. */
-function acting(view: PositionView): string {
+/**
+ * The seats that owe an action, which is one seat while a turn goes round and several while a round is sealed.
+ *
+ * A seat is read by the name its plaque carries, which is the name its guest arrived at the gathering under, so
+ * a person waiting on somebody is told who.
+ */
+function acting(layout: Layout, view: PositionView): string {
   const seats = [...view.state.to_act].sort((one, other) => one - other);
-  return seats.length === 0 ? "nobody" : seats.map((seat) => `seat ${seat}`).join(", ");
+  return seats.length === 0 ? NOBODY : seats.map((seat) => nameOf(layout, seat)).join(", ");
 }

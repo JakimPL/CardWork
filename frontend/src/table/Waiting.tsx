@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 
-import { leaveSeat } from "../play/useSeat";
-import type { Connection } from "../play/useTable";
+import type { Connection } from "../play/connection";
+import { leave } from "../play/useStanding";
 
 interface WaitingProps {
   table: string;
@@ -15,8 +15,8 @@ export function Waiting({ table, connection, trouble }: WaitingProps): ReactElem
     <div className="notice">
       <p>{connection === "refused" ? `Table ${table} turned this tab away` : `Joining table ${table}`}</p>
       {trouble !== null && <p className="trouble">{trouble}</p>}
-      <button type="button" onClick={leaveSeat}>
-        Take another seat
+      <button type="button" onClick={leave}>
+        Name another table
       </button>
     </div>
   );

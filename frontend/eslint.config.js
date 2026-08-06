@@ -58,8 +58,9 @@ export default typescript.config(
     },
   },
   {
-    // The two readers there answer with whatever they read, and naming the shape once is the whole of the module.
-    files: ["src/api/parsing.ts"],
+    // These answer with whatever they read and send whatever they are handed, and naming the shape once is the
+    // whole of what they do with it: the schema either side is held to is the caller's to state.
+    files: ["src/api/parsing.ts", "src/api/requests.ts"],
     rules: { "@typescript-eslint/no-unnecessary-type-parameters": "off" },
   },
   {

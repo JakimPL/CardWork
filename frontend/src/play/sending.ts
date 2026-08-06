@@ -4,6 +4,13 @@ import { Refused } from "../api/refusal";
 import type { Seat } from "../api/seat";
 import type { ZoneId } from "../api/views";
 
+/** How many bytes one attempt is named by, which is what two names apart rests on. */
+const NAME_BYTES = 16;
+
+/** The base a name is written in, and how many characters one byte of it takes there. */
+const HEXADECIMAL = 16;
+const BYTE_DIGITS = 2;
+
 /**
  * One command out of the move a player armed and the position they armed it against.
  *
@@ -25,9 +32,17 @@ export function orderFor(zone: ZoneId, order: number[], seq: number, attempt: st
   return { zone, order, base_seq: seq, idempotency_key: attempt };
 }
 
-/** A name for one attempt at a command, which two attempts never share. */
+/**
+ * A name for one attempt at a command, which two attempts never share.
+ *
+ * The draw is `getRandomValues`, which answers wherever a page is served from. A table on a local network is
+ * reached at a plain address, and `randomUUID` stands at a secure one alone.
+ */
 export function named(): string {
-  return crypto.randomUUID();
+  const drawn = new Uint8Array(NAME_BYTES);
+  crypto.getRandomValues(drawn);
+
+  return Array.from(drawn, (byte) => byte.toString(HEXADECIMAL).padStart(BYTE_DIGITS, "0")).join("");
 }
 
 /**

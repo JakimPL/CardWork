@@ -2,9 +2,9 @@
 
 `cardgames.backend.climbing` is a game of combinations answered by stronger ones: a seat on lead puts down any
 combination the game is played by, the seats after it climb over what stands on the table or give their turn
-up, and the round closes on the first hand to run out. It seats two to five, plays over one standard deck dealt
-out in equal shares, and runs to the ending its table states, which is a count of rounds where it is played as
-it was written.
+up, and the round closes on the first hand to run out. It seats two to five, plays over one standard deck or two
+dealt out in equal shares, and runs to the ending its table states, which is a count of rounds where it is played
+as it was written.
 
 It is the fourth game written on this framework and the first whose contest lives in the cursor: what a seat
 may play is read off the combination lying on the table rather than off a rule about cards, so the four things
@@ -31,6 +31,33 @@ than in the shuffle, so it is read off the hands once they are dealt and lands i
 of its own (§4). A deck dividing unevenly could set that card aside, so the first round is dealt again until
 some seat holds it — one deal in fifty-two at three seats and one in twenty-six at five, while two seats and
 four take the whole deck between them and hand it out every time.
+
+**A table is dealt from one whole standard deck or from two.** `rules.DECKS_ADMITTED` states the counts, and
+what the second deck adds is hand size: every seat takes twice the share, the shares leave twice the remainder,
+and the contest is the one it was over a single deck. That follows from `Duplicates.COLLAPSE` in
+`rules.CLIMBING_EVALUATION`, which reads a card held twice as one card (`docs/combinations.md` §2): a pair asks
+for two cards that read apart, so the two two of diamonds make no pair and no run of two decks gains a
+combination the deck of one has no answer to. Jokers stay out, since a card standing in for another names no
+rank this ranking places.
+
+Two decks hold the opening card twice, which puts two seats in a position to open. The one that does is the
+first from the leader the round was dealt to, counting the way the cards went out, so which seat opens follows
+the deal rather than the numbering of the seats. One deck holds one copy, and every rotation round the table
+reaches it at the same seat.
+
+**A hand of this game runs to `rules.HAND_MOST` cards**, and a table asking for more is refused where the
+seating and the deck are. That is the one thing the seats and the decks state together, and the reason it is a
+rule rather than an arithmetic accident: what a seat answering a combination is offered is every set of five
+cards its hand holds that reads as one, and that reading grows with the hand far faster than the hand does. A
+hand of twenty-six reads in a second and a hand of fifty-two in half a minute, so two decks halved between two
+seats deal a table nobody waits out. Two decks are therefore played at four seats and five, where the shares
+come to twenty-six and twenty — the same hands one deck deals at two seats and three.
+
+A host offers one deck or two at every table this game seats, since an `Offering` states one count of decks for
+a whole seating range. So a company of two or three may settle two decks and is answered when they call for the
+deal: `422`, and the sentence above, which names the hand it would have dealt them. Stating the counts a deck is
+dealt at per seating is what would keep the choice out of their hands in the first place, and that is a change
+to the offering rather than to these rules.
 
 **A seat on lead puts down any combination this game is played by.** `rules.CLIMBING_RANKING` holds that
 vocabulary whole — eight patterns across four counts:
@@ -309,9 +336,10 @@ a deal held to a condition and a leader of its own, among them:
 - **`Award.LOWEST`** was in the vocabulary from the day `Award` arrived, since a direction with one member
   states nothing. This is the first game to read a standing at that end, and the layer needed nothing for it:
   the same `points` tuple, the same `Readout`, the same panel naming a winner.
-- **`confirm_standard_deck` and `confirm_dealt`** are the two setup conditions stated rather than written. What
-  this game adds beside them is one count of its own — the cards its shares leave over — which is a check on
-  the remainder rather than on a share.
+- **`compare_decks` and `confirm_dealt`** are the two setup conditions stated rather than written. The first
+  holds the cards to one whole standard deck or two exactly, which is a game admitting several decks reading
+  what it was handed against each count it plays at. What this game adds beside them is one count of its own —
+  the cards its shares leave over — which is a check on the remainder rather than on a share.
 - **`Redeal.admitted`** deals a round again until the game admits the draw, which passing asked for so that a
   hand still had something to be won with. Here the condition is a card in somebody's hand, and the draw that is
   kept stands uniformly among the deals holding it, so the deck this match opens from is an honest shuffle

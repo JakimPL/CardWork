@@ -9,7 +9,7 @@ from cardwork.cards.game import CardOrJoker, CardsOrJokers
 from cardwork.combinations.combination import Combination
 from cardwork.decks.deck import Deck, Indices
 from cardwork.decks.decks import to_game_cards
-from cardwork.decks.standard import standard_deck
+from cardwork.decks.standard import standard_deck, standard_decks
 from cardwork.models.held import held
 from cardwork.moves.actions import Pass, Play
 from cardwork.moves.move import Move, Moves
@@ -27,7 +27,9 @@ ROUNDS: Final[int] = 2
 SEED: Final[int] = 20260806
 FIRST_MOVE: Final[int] = 0
 NO_PASSES: Final[frozenset[int]] = frozenset()
+TWO_DECKS: Final[int] = 2
 DECK: Final[Deck] = standard_deck()
+TWO_DECK: Final[Deck] = standard_decks(TWO_DECKS)
 
 type Chooser = Callable[[Moves], Move]
 
@@ -35,6 +37,11 @@ type Chooser = Callable[[Moves], Move]
 def a_match(players: int, rounds: int, seed: int) -> ClimbingGame:
     """A fresh table of that many seats, built for that many rounds, drawing from a generator of that seed."""
     return ClimbingGame(players=players, deck=DECK, conclusion=Conclusion(rounds=rounds), rng=Random(seed))
+
+
+def a_two_deck_match(players: int, rounds: int, seed: int) -> ClimbingGame:
+    """The same table dealt from two whole standard decks, which is the variant a card held twice is read in."""
+    return ClimbingGame(players=players, deck=TWO_DECK, conclusion=Conclusion(rounds=rounds), rng=Random(seed))
 
 
 def seat_on_turn(game: ClimbingGame) -> int:

@@ -4,7 +4,7 @@ from typing import Final
 import pytest
 from pydantic import ValidationError
 
-from cardserver.codes import ranks_in
+from cardserver.codes import code_in
 from cardtable.config import Configuration
 from cardtable.games import GAMES_HELD, GameName
 from cardtable.paths import CONFIGURATION
@@ -41,7 +41,7 @@ def test_a_file_stating_neither_seed_nor_code_nor_port_states_a_run_all_the_same
     configured = Configuration.read(a_file_stating(tmp_path, SPARE))
 
     assert configured.table.seed in range(SEEDS)
-    assert ranks_in(configured.table.code) is not None
+    assert code_in(configured.table.code) is not None
     assert configured.service.port == PORT
 
 
@@ -111,6 +111,14 @@ def test_a_code_reading_as_no_hand_of_ranks_is_turned_away_as_the_file_is_read(t
 
     with pytest.raises(ValidationError):
         Configuration.read(a_file_stating(tmp_path, unread))
+
+
+def test_a_code_of_ranks_that_writes_wider_than_a_code_is_turned_away_as_the_file_is_read(tmp_path: Path) -> None:
+    """Six ranks holding the ten write as seven characters, and a code is what a person counts at a glance."""
+    overlong = {**SPARE, "table": {"name": "baize", "code": "K10AJ72", "grace_seconds": 0.0}}
+
+    with pytest.raises(ValidationError):
+        Configuration.read(a_file_stating(tmp_path, overlong))
 
 
 def test_a_pack_no_fetch_writes_is_turned_away_as_the_file_is_read(tmp_path: Path) -> None:

@@ -1,21 +1,21 @@
 import { type ReactElement, type SyntheticEvent, useState } from "react";
 
-import { takeSeat } from "../play/useSeat";
+import { standAt } from "../play/useStanding";
 
 /**
- * How a tab that was opened at the bare address takes a seat.
+ * How a tab that was opened at the bare address reaches a table.
  *
- * The host prints one address per seat as it opens a table, so a person joins by opening the line they were
- * handed and reads none of this. It stands for the tab opened without one, and for watching a table whose name
- * is known while its tokens are not.
+ * The host prints the address of the table it gathers, so a person joins by opening the line they were handed
+ * and reads none of this. It stands for the tab opened without one, and the code may be left for the arrival
+ * to ask for.
  */
 export function Joining(): ReactElement {
   const [table, setTable] = useState("");
-  const [token, setToken] = useState("");
+  const [code, setCode] = useState("");
 
   const join = (event: SyntheticEvent): void => {
     event.preventDefault();
-    takeSeat({ table: table.trim(), token: token.trim() === "" ? null : token.trim() });
+    standAt(table.trim(), code.trim() === "" ? null : code.trim());
   };
 
   return (
@@ -26,11 +26,11 @@ export function Joining(): ReactElement {
         <input value={table} onChange={(event) => setTable(event.target.value)} placeholder="green-baize" />
       </label>
       <label>
-        Token
-        <input value={token} onChange={(event) => setToken(event.target.value)} placeholder="a seat's own token" />
+        Code
+        <input value={code} onChange={(event) => setCode(event.target.value)} placeholder="a hand of six ranks" />
       </label>
       <button type="submit" disabled={table.trim() === ""}>
-        {token.trim() === "" ? "Watch the table" : "Take the seat"}
+        Reach the table
       </button>
     </form>
   );
