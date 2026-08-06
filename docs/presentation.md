@@ -57,7 +57,7 @@ id, a bound seat, a gesture that seat may make. What a game writes is the scene 
 |---|---|
 | `Slot` | one zone laid out: the seat it belongs to, the place it takes among that owner's zones, how its cards lie, what it is called, whether its size shows |
 | `Gesture` | one kind of move as a player makes it: the zone its cards are picked in, and how it is sent |
-| `Plaque` | one player: the seat, the name it plays under, and the zones of theirs the table counts |
+| `Plaque` | one player: the seat, the name and tint it plays under, and the zones of theirs the table counts |
 | `Tally` | one of those counts, under the word the game calls that zone by |
 | `Readout` | one field of the cursor shown, under a word, speaking about the table or about each seat |
 | `Layout` | the whole of it for one observer, checked against itself as it is built |
@@ -68,13 +68,14 @@ from that and belongs to the interface: the seat reading the layout holds the pa
 others a station round the table, and the shared zones the middle of it. So a game states whose cards are whose
 and the page states what that looks like, which is the same division the spreads draw.
 
-Five closed vocabularies carry the choices:
+Six closed vocabularies carry the choices:
 
 | vocabulary | members | decides |
 |---|---|---|
 | `Spread` | `SLOT`, `STACK`, `FAN`, `ROW` | how the cards of a zone lie: one place, a heap, overlapped, side by side |
 | `Commit` | `ZONE`, `SEAT`, `WORD` | whether a move is sent by clicking a zone, clicking a player, or saying it |
 | `Scope` | `TABLE`, `SEAT` | whether a field of the cursor holds one value or one per seat |
+| `Tint` | `ROSE`, `CORAL`, `AMBER`, `LEMON`, `TEAL`, `AZURE`, `INDIGO`, `VIOLET` | which of eight a player is told apart by, where a host holds one for the seat |
 | `Interlude` | `ROUND`, `MATCH` | what a phase play pauses at has come to |
 | `Award` | `HIGHEST`, `LOWEST` | which end of the standing a match is won at — `cardwork.states`, read here |
 
@@ -207,8 +208,9 @@ against the cursor the game actually carries. So a game states the words that ar
 What `Scene.layout` states so that no game states it again: a seat reads the zones it holds, the seats around it
 as the table reads them and the shared ones besides, and is offered the gestures of its own turn; a spectator
 reads every seat as the table reads it and makes no move; every seat of the table takes a plaque, named by where
-it sits until a host holds a name for it. That is the same entitlement the projection gives an observer over the
-cards, and it lives in one place rather than in every game that would have to remember it.
+it sits and playing under no tint until a host holds a name and a colour for it. That is the same entitlement
+the projection gives an observer over the cards, and it lives in one place rather than in every game that would
+have to remember it.
 
 The title, the readouts, the captions, the interludes and the award travel to every observer unchanged: what a
 match comes to and where play pauses on the way are one table's business, so every seat and every spectator reads
@@ -300,7 +302,7 @@ game's to state.
 
 ## 6. What arrives the day it is wanted
 
-Seven places where the vocabulary stops at what the games ask for, each following the line `Visibility` takes
+Eight places where the vocabulary stops at what the games ask for, each following the line `Visibility` takes
 (`architecture.md` §3.3), and one that grew the day a game wanted it:
 
 - **`Commit` says how a move is sent, and two of its three answers are places.** A move naming cards is sent by
@@ -341,6 +343,12 @@ Seven places where the vocabulary stops at what the games ask for, each followin
 - **A lay carries one word, and a gesture one caption.** What a zone is called is a fact about the zone, so it
   stands the same at every seat that holds one; a word about where play stands is a readout, and a word about a
   particular player is the interface's. A label that varied by seat would be a game reaching for both at once.
+- **A tint names one player of eight, and what that name looks like stays the page's.** Eight is what a room
+  hands out one apiece and what a company is capped at for exactly that reason (`architecture.md` §10), so the
+  vocabulary and the largest company are the same size by construction. A layout states which of the eight a
+  seat plays under and the sheet states the colour each one draws as, which is the same division a `Spread`
+  makes with the geography. What arrives the day it is wanted is a table seating more players than a company
+  can be told apart by colour, which wants a second thing to tell them apart by rather than a ninth name here.
 - **A tally belongs to a plaque, so a zone of the table carries none.** A plaque is one seat's, and a count of a
   shared zone put on one would print the same number across the table; the zone is laid out in the middle
   instead, where its lay says whether it counts. What arrives the day it is wanted is a figure about the table

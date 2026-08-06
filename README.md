@@ -265,17 +265,23 @@ Table 'green-baize' is gathering — join code K 7 A Q 3 J
   dealt from seed 20260806
 ```
 
-Everyone opens a line in a tab of their own, names themselves, and that is the whole of joining. The table and
-the code stand in the fragment, which a browser sends to nobody; arriving mints a token that takes the code's
-place there, so a reload rejoins as the same guest and no address the server writes down holds a credential.
-The page comes out of the same application the endpoints do, so nothing is cross-origin.
+Everyone opens a line in a tab of their own, names themselves, and that is the whole of joining: one dialog,
+with the table and the code already filled in from the line they were handed. Somebody who reached the address
+bare is offered the tables gathering there and types the code themselves. The table and the code stand in the
+fragment, which a browser sends to nobody; arriving mints a token that takes the code's place there, so a
+reload rejoins as the same guest and no address the server writes down holds a credential. The page comes out
+of the same application the endpoints do, so nothing is cross-origin.
 
 From there the room is the page: every guest sees who else is at it, any of them takes a seat, and any guest
 holding a seat settles the game, the seating, the decks where the rules admit more than one, and how long the
-match runs. Pressing the deal puts every page at the table at once, each plaque reading the name its guest
-arrived under. A run bound to `0.0.0.0` is reached from another machine at the address it announces, so a table
-of people in one room needs nothing further; `--advertise` states an address instead, for a run behind a name or
-a tunnel.
+match runs. The room hands out a colour apiece as people arrive, and any guest takes another that stands free —
+a company runs to eight, which is how many colours tell people apart. Pressing the deal puts
+every page at the table at once, each plaque reading the name and the colour its guest arrived under. From
+there the colour says who: a player's plaque, their place round the table and the panel they play from all
+stand in it, and the seat whose turn it is stands in theirs at full strength.
+
+A run bound to `0.0.0.0` is reached from another machine at the address it announces, so a table of people in
+one room needs nothing further; `--advertise` states an address instead, for a run behind a name or a tunnel.
 
 A table lives as long as the process: the position is held in memory, and a restart deals a fresh one.
 

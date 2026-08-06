@@ -1368,16 +1368,18 @@ since a person reaches the room and the table at one address:
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/offerings` | Every game this host offers, the tables each seats and the deck counts each is dealt from. Open to anybody. |
+| `GET` | `/tables` | The tables gathering here, by name. Open to anybody, since a name admits nobody and the code still gates the room. |
 | `POST` | `/tables/{id}/guests` | Arrive on the code that admits. Body: `{code, name}`. Answers `{token, gathering}`. The one route open to a stranger. |
 | `GET` | `/tables/{id}/gathering` | The room as this guest reads it: the company, what is settled, where it stands. |
 | `GET` | `/tables/{id}/gathering/events` | SSE of one whole reading per revision, resuming like the table's own stream, ending on the deal. |
 | `PUT` | `/tables/{id}/seat` | Take a seat, or stand up by naming none. Body: `{seat, base_revision}`. |
+| `PUT` | `/tables/{id}/tint` | Take one of the company's colours. Body: `{tint, base_revision}`. |
 | `PUT` | `/tables/{id}/choice` | Settle what is played. Body: `{choice, base_revision}`. |
 | `POST` | `/tables/{id}/deal` | Deal the table the company settled on, which opens it and ends the gathering. Body: `{base_revision}`. |
 
-`PUT` for the seat and the choice because both state a value; `POST` for arriving and dealing because both
-happen once. The gathering routes are carried by a router `create_app` includes where a host gathers its own
-tables, so a deployment serving a table already seated mounts none of them.
+`PUT` for the seat, the tint and the choice because each states a value; `POST` for arriving and dealing
+because both happen once. The gathering routes are carried by a router `create_app` includes where a host
+gathers its own tables, so a deployment serving a table already seated mounts none of them.
 
 Request and response bodies are frozen models that forbid undeclared fields, so a body carrying a field
 the schema leaves out is refused with `422` before a handler runs.
@@ -1402,6 +1404,7 @@ Refusals are mapped kind by kind, one handler each:
 | `NoSay` | `403` | the guest holds no say over what the table plays or when it is dealt |
 | `NameTaken` | `409` | that name is already read at this table |
 | `SeatTaken` | `409` | another guest of the company holds that seat |
+| `TintTaken` | `409` | another guest of the company holds that colour |
 | `GatheringOver` | `409` | the table is dealt and its gathering is done |
 | `SeatsEmpty` | `409` | the deal was called for while a seat stood empty |
 | `StaleGathering` | `409` | the gathering has moved past the revision the command was built on |
@@ -1503,7 +1506,7 @@ of no game — it validates a `Choice` against the `Offering`s it was handed, ex
 
 ```python
 class Opening(Protocol):
-    def open(self, table: TableId, choice: Choice, names: Mapping[int, str]) -> None: ...
+    def open(self, table: TableId, choice: Choice, seated: Mapping[int, Seated]) -> None: ...
 ```
 
 `cardtable.catalogue` is what satisfies it, so the one module naming `cardgames` is still the one module
@@ -1529,11 +1532,22 @@ million codes, which is a number a program reaches and a person does not, so wha
 rather than the length: a `Turnstile` counts wrong codes against the address they came from and stops reading
 them past its allowance.
 
-**The names a company settled reach the plaques without widening the port.** `Plaque.name` reads `"Seat {n}"`
-until a host holds a name for one, so `naming.py` wraps a `Presentation` and reads the gathered names onto the
-plaques of the layout it answers with. `Named` satisfies `Presentation` structurally, so `registry.open` takes
-it where it took the `Scene`. Names settle at the deal and never change, which is what makes it correct: a
-layout answers for the match and a page reads it once as it joins.
+**A company is as large as the tints that tell it apart.** `Tint` is eight names round the colour wheel and
+`COMPANY_MOST` is `len(TINTS)`, so every guest holds a colour from the moment they arrive: `admit` hands out
+the first tint no guest holds, in arrival order, and a guest who wants another takes it over `PUT
+/tables/{id}/tint` while the room stands — a colour another guest holds is refused as their seat would be, and
+the one this guest already holds is admitted the way their own seat is. A tint is a guest's own whether they
+are sitting or standing, so it stands outside the `SayPolicy` the choice and the deal answer to, and it belongs
+to the person rather than to the place: standing up and sitting somewhere else leaves it where it was. What a tint *is* stays a name of eight
+and what one looks like stays the page's, which is the same division `Spread` draws.
+
+**The names and tints a company settled reach the plaques without widening the port.** `Plaque.name` reads
+`"Seat {n}"` and `Plaque.tint` reads nothing until a host holds them for a seat, so `naming.py` wraps a
+`Presentation` and reads the gathered `Seated` — a name and a tint apiece — onto the plaques of the layout it
+answers with. `Named` satisfies `Presentation` structurally, so `registry.open` takes it where it took the
+`Scene`. Both settle at the deal and never change, which is what makes it correct: a layout answers for the
+match and a page reads it once as it joins. So the colour a guest chose in the room is the colour their seat
+plays under for the rest of it.
 
 ### Identity
 
@@ -1690,14 +1704,22 @@ the host mounts. It holds three layers of its own, and each names only what is b
 | layer | states |
 |---|---|
 | `api` | what a table and its gathering answer and what a client sends: the layout vocabulary, the room vocabulary, the projections, the seat, the refusals, and the request and stream plumbing the two clients are built on |
-| `play` | what a client makes of those answers: where an address leaves a tab standing, the hand of ranks a code reads as, the places at a gathering and what holds its deal up, the choice a company may settle, the view a commit leaves, one card read against another, the figures a readout reads, the boundary a commit pauses at |
-| `table` | what appears on screen: the table named, the arrival, the room, the company, the choice, the standing, the three groups of zones, a station, a slot, a card, a card carried by hand, the places a carry may land on, the line saying where play stands, the report a boundary is read at |
+| `play` | what a client makes of those answers: where an address leaves a tab standing, the hand of ranks a code reads as, what a whole arrival is, the places at a gathering and the colours it is told apart by, what holds its deal up, the choice a company may settle, the view a commit leaves, one card read against another, the figures a readout reads, the boundary a commit pauses at |
+| `table` | what appears on screen: the arrival, the room, the company, the colours, the choice, the standing, the three groups of zones, a station, a slot, a card, a card carried by hand, the places a carry may land on, the line saying where play stands, the report a boundary is read at |
 
-**Three states carry a person from an address to a seat**, and `App.tsx` is the whole of the routing: a tab
-standing at no table names one, a tab at a table with nothing to speak through arrives on the code, and a tab
-holding a token is in the room — the gathering until the company deals it, the table from then on. One reading
-of the gathering carries the page across, since `dealt` turns true once: the guest who called for the deal
-crosses on the answer to their own command and the guests watching cross on the frame the stream closes with.
+**Two states carry a person from an address to a seat**, and `App.tsx` is the whole of the routing: a tab
+holding no token arrives, and a tab holding one is in the room — the gathering until the company deals it, the
+table from then on. One reading of the gathering carries the page across, since `dealt` turns true once: the
+guest who called for the deal crosses on the answer to their own command and the guests watching cross on the
+frame the stream closes with.
+
+**Arriving is one dialog, because arriving is one thing to say.** A whole arrival is the table, the code and a
+name, and `Arriving.tsx` asks for exactly the ones the address left out: the announced line names the table
+and carries the code, so a person who opened it types their name and nothing else. A tab that reached the server
+bare is offered what `GET /tables` answered — the usual host gathers the one table, which stands preselected —
+and falls back to naming a table where nothing gathers or the host did not answer. So the fragment fills the
+dialog in rather than standing between two of them, and `play/arriving.ts` holds the gate as a function: the
+three fields, one of them read as a hand of ranks.
 
 **The page draws a lobby while holding the name of no game.** Every control of the choice is drawn from an
 `Offering` — the games listed by their titles, the tables by each game's own seating, the deck counts where a
@@ -1706,7 +1728,8 @@ game admits more than one — so a fifth game reaches the page as another option
 this guest holds a say, what the deal button reads, and what a choice becomes when it is carried onto another
 game. `play/codes.ts` mirrors `cardserver/codes.py` so the page can read a code back to a person as they type
 it and send the arrival once a whole one stands there; whether a code admits them stays the server's answer
-alone.
+alone. `play/tints.ts` mirrors the order the room hands the colours out in for the same reason: the vocabulary
+is generated from the document, and the order a row of swatches stands in is the page's own to hold.
 
 **The types come from the document where a document exists, and by hand where one cannot.** `/layout` is the
 one answer that stands apart from a game's own state, so it publishes a schema and `openapi-typescript`
@@ -1773,11 +1796,21 @@ happens to stop.
 **Whether the table is asking anything of this seat is read where the player is already looking.** The moves a
 view serves are the whole of what a seat may do, so a seat served none is a seat with nothing to do: its own
 panel lowers every card it holds and keeps their colour, which reads as a turn standing somewhere else. A turn
-arriving marks that panel with the yellow a plaque and a station take at the same moment, so where the turn is
-says the same thing in the middle of the table and at the near edge of it. The two quiets a hand can read in are
+arriving marks that panel at the same moment a plaque and a station take it, so where the turn is says the
+same thing in the middle of the table and at the near edge of it. The two quiets a hand can read in are
 two statements rather than one twice over: a card drained of its colour is a card the moves in play name no use
 for, and a hand lowered whole is a hand nothing is being asked of. A spectator holds a panel of nobody's and
 reads the table as it stands.
+
+**Hue says who, and strength says whose turn.** Every player carries their own tint wherever the page draws
+them — the plaque, the station, the place in the room, the panel the reader plays from, the line of the
+standing a round is read out at — as a border and a faint wash while play is elsewhere, and at full strength
+with the ring the moment the turn arrives. So one colour answers both questions at once, and a table of eight
+is read at a glance rather than by the names across the top. A layout carries a name of eight and the sheet
+carries the eight colours: `[data-tint="rose"]` sets one custom property and everything inside it draws from
+that property, which is what keeps a tint the interface's own down to the single line where it becomes a
+colour. A tint rides in `data-tint`, so the classes on an element go on saying exactly what they said. The
+yellow marks prose alone — the trouble, the stream being taken up again, the seat that won.
 
 **A zone is a drawing rather than a passage of text.** A pointer travelling across one carries cards, so the
 sheet takes the browser's own selection off the zones and its drag off the artwork: a run dragged through paints

@@ -22,6 +22,10 @@ class Layout(BaseFrozen):
     gestures, reads the cursor through the readouts and captions the phase from `phases`. What is left over —
     the size of a card, the colour of a highlight, the moment a heap collapses — is the interface's own.
 
+    The line runs between which thing is meant and what it looks like: a plaque states which of eight tints a
+    player is told apart by, and what that tint draws as belongs to the interface, exactly as a spread states
+    how cards lie against each other and where they lie belongs to the page.
+
     Every claim a layout makes about itself is checked as it is built, which leaves an interface free to trust
     it: one slot per zone, a slot belonging to a seat of the table or to the table itself, one slot per place
     among the slots of one owner, one plaque per seat, one gesture per move, every zone a gesture names laid
