@@ -3,6 +3,7 @@ from http import HTTPStatus
 import pytest
 
 from cardtable.catalogue import (
+    a_climbing_match,
     a_passing_match,
     a_shedding_match,
     a_showdown_match,
@@ -102,11 +103,21 @@ def test_a_match_of_shedding_runs_the_rounds_asked_for() -> None:
     assert a_shedding_match(SETTINGS).position.state.rounds == ROUNDS
 
 
+def test_a_match_of_climbing_runs_the_rounds_asked_for() -> None:
+    assert a_climbing_match(SETTINGS).position.state.rounds == ROUNDS
+
+
 def test_every_game_a_host_opens_runs_to_the_ending_its_table_states() -> None:
     """One conclusion opens any of them, which is what a match length stated by the table rather than the rules buys."""
     settings = SETTINGS.model_copy(update={"conclusion": Conclusion(lead=A_LEAD)})
+    matches = (
+        a_passing_match(settings),
+        a_showdown_match(settings),
+        a_shedding_match(settings),
+        a_climbing_match(settings),
+    )
 
-    for match in (a_passing_match(settings), a_showdown_match(settings), a_shedding_match(settings)):
+    for match in matches:
         assert match.position.state.lead == A_LEAD
         assert match.position.state.rounds is None
 

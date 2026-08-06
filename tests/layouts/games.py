@@ -3,12 +3,15 @@ from dataclasses import dataclass
 from random import Random
 from typing import Final
 
+from cardgames.backend.climbing.game import ClimbingGame
+from cardgames.backend.climbing.state import ClimbingPhase
 from cardgames.backend.passing.game import PassingGame
 from cardgames.backend.passing.state import PassingPhase
 from cardgames.backend.shedding.game import SheddingGame
 from cardgames.backend.shedding.state import SheddingPhase
 from cardgames.backend.showdown.game import ShowdownGame
 from cardgames.backend.showdown.state import ShowdownPhase
+from cardgames.frontend.climbing.layout import CLIMBING_SCENE
 from cardgames.frontend.passing.layout import PASSING_SCENE
 from cardgames.frontend.shedding.layout import SHEDDING_SCENE
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
@@ -25,6 +28,7 @@ PLAYERS: Final[int] = 3
 SEED: Final[int] = 7
 ROUNDS: Final[int] = 2
 WINNING_LEAD: Final[int] = 2
+OPENING_LEAD: Final[int] = 0
 
 SEATS: Final[tuple[int, ...]] = tuple(range(PLAYERS))
 OBSERVERS: Final[tuple[int | None, ...]] = SEATS + (None,)
@@ -81,6 +85,23 @@ def a_shedding_table() -> SheddingGame:
     )
 
 
+def a_climbing_table() -> ClimbingGame:
+    """A climbing table of three seats standing on the combination its lead put down.
+
+    A round opens on a lead, where every move offered is a combination played, and the pass a seat gives its
+    turn up with is offered only in answer to one. So the lead is played out here and the table handed on, which
+    leaves the seat on turn offered both of the moves climbing is played by.
+    """
+    game = ClimbingGame(
+        players=PLAYERS,
+        deck=standard_deck(),
+        conclusion=Conclusion(rounds=ROUNDS),
+        rng=Random(SEED),
+    )
+    game.submit(game.legal_moves(game.position)[OPENING_LEAD], base_seq=game.head)
+    return game
+
+
 CASES: Final[tuple[LayoutCase, ...]] = (
     LayoutCase(
         description="passing lays out a hand against the pile and the stack",
@@ -117,5 +138,17 @@ CASES: Final[tuple[LayoutCase, ...]] = (
         counts=1,
         phases=tuple(SheddingPhase) + tuple(MatchPhase),
         award=Award.HIGHEST,
+    ),
+    LayoutCase(
+        description="climbing lays out a hand against the combinations played and the cards set aside",
+        scene=CLIMBING_SCENE,
+        table=a_climbing_table,
+        held=1,
+        seen=1,
+        shared=2,
+        gestures=2,
+        counts=1,
+        phases=tuple(ClimbingPhase) + tuple(MatchPhase),
+        award=Award.LOWEST,
     ),
 )

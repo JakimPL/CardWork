@@ -6,6 +6,7 @@ from typing import Final
 
 from httpx import ASGITransport, AsyncClient
 
+from cardgames.frontend.climbing.layout import CLIMBING_SCENE
 from cardgames.frontend.passing.layout import PASSING_SCENE
 from cardgames.frontend.shedding.layout import SHEDDING_SCENE
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
@@ -69,6 +70,11 @@ CASES: Final[tuple[HostCase, ...]] = (
         description="a game of sets shed from a hand that grows",
         game=GameName.SHEDDING,
         scene=SHEDDING_SCENE,
+    ),
+    HostCase(
+        description="a game of combinations climbed over until one hand runs out",
+        game=GameName.CLIMBING,
+        scene=CLIMBING_SCENE,
     ),
 )
 

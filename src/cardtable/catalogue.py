@@ -1,9 +1,11 @@
 from random import Random
 from typing import Final
 
+from cardgames.backend.climbing.game import ClimbingGame
 from cardgames.backend.passing.game import PassingGame
 from cardgames.backend.shedding.game import SheddingGame
 from cardgames.backend.showdown.game import ShowdownGame
+from cardgames.frontend.climbing.layout import CLIMBING_SCENE
 from cardgames.frontend.passing.layout import PASSING_SCENE
 from cardgames.frontend.shedding.layout import SHEDDING_SCENE
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
@@ -22,6 +24,7 @@ PASSING_DECK: Final[Deck] = standard_decks(
 )
 SHOWDOWN_DECK: Final[Deck] = standard_deck()
 SHEDDING_DECK: Final[Deck] = standard_deck()
+CLIMBING_DECK: Final[Deck] = standard_deck()
 
 
 def a_passing_match(settings: Settings) -> PassingGame:
@@ -49,6 +52,16 @@ def a_shedding_match(settings: Settings) -> SheddingGame:
     return SheddingGame(
         players=settings.players,
         deck=SHEDDING_DECK,
+        conclusion=settings.conclusion,
+        rng=Random(settings.seed),
+    )
+
+
+def a_climbing_match(settings: Settings) -> ClimbingGame:
+    """A match of `climbing` over one standard deck, ending where the settings say it does."""
+    return ClimbingGame(
+        players=settings.players,
+        deck=CLIMBING_DECK,
         conclusion=settings.conclusion,
         rng=Random(settings.seed),
     )
@@ -83,6 +96,14 @@ def opened(game: GameName, settings: Settings, artwork: Artwork) -> Hosted:
             return serve(
                 a_shedding_match(settings),
                 SHEDDING_SCENE,
+                settings,
+                artwork,
+            )
+
+        case GameName.CLIMBING:
+            return serve(
+                a_climbing_match(settings),
+                CLIMBING_SCENE,
                 settings,
                 artwork,
             )
