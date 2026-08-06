@@ -30,6 +30,16 @@ export function readOfferings(): Promise<Offering[]> {
 }
 
 /**
+ * The tables gathering at this host, which is what a page offers somebody who reached it bare.
+ *
+ * Read without a credential, as the offerings are: what admits a person is the code, so naming what is
+ * gathering costs a table nothing and saves the one who was handed no address from guessing at a name.
+ */
+export function readTables(): Promise<string[]> {
+  return asking<string[]>(TABLES, UNCREDENTIALED);
+}
+
+/**
  * Arrive at a table on the code that admits, answering with the token to speak through from then on.
  *
  * This is the one call a stranger makes, and the code is the whole of what it turns on: everything after it

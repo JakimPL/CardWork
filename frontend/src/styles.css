@@ -978,7 +978,8 @@ button.card {
   color: var(--chalk-dim);
 }
 
-.notice input {
+.notice input,
+.notice select {
   flex: 1;
   padding: calc(var(--gap) / 2) var(--gap);
   border: 1px solid var(--edge);

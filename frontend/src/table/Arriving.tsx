@@ -2,41 +2,56 @@ import { type ReactElement, type SyntheticEvent, useState } from "react";
 
 import { arrive } from "../api/lobby";
 import { reasonOf } from "../api/refusal";
-import { codeIn, ranksIn, readOut } from "../play/codes";
+import { arrivalIn } from "../play/arriving";
+import { ranksIn, readOut } from "../play/codes";
 import { arrivedAt, leave } from "../play/useStanding";
 
 /** The longest a name reads at a table, which mirrors `cardserver.schemas.NAME_LONGEST`. */
 const NAME_LONGEST = 24;
 
 interface ArrivingProps {
-  table: string;
+  table: string | null;
   code: string | null;
+  tables: string[] | null;
 }
 
 /**
- * How a person arrives at a table: the name the company will read them by, and the code that admits them.
+ * How a person arrives at a table: the table, the code that admits them, and the name the company reads them by.
  *
- * The address the host announced carries the code, so a guest opening the line they were handed offers a name
- * and nothing else. A tab that reached the table another way asks for the code as well, which is what one
- * person says and another writes down — spaced, hyphenated or in lower case, all of them the same hand of ranks.
- * What is typed reads back rank by rank, and the arrival goes up once a whole code stands there.
+ * The whole of an arrival is stated here at once. The address a host announces carries the table and the code, so
+ * a guest opening the line they were handed names themselves and nothing more; a tab opened at the bare address
+ * is offered the tables gathering, the one a host usually holds already chosen, and names a table itself where
+ * the host answers none.
+ *
+ * A code is what one person says and another writes down — spaced, hyphenated or in lower case, all of them the
+ * same hand of ranks. What is typed reads back rank by rank, and the arrival goes up once a table, a whole code
+ * and a name stand together.
  *
  * The token the arrival mints goes into the address in the code's place, so a reload rejoins as the same guest
  * and no name is asked again.
  */
-export function Arriving({ table, code }: ArrivingProps): ReactElement {
+export function Arriving({ table, code, tables }: ArrivingProps): ReactElement {
+  const [stated, setStated] = useState(table ?? "");
   const [name, setName] = useState("");
   const [offered, setOffered] = useState(code ?? "");
   const [trouble, setTrouble] = useState<string | null>(null);
   const [knocking, setKnocking] = useState(false);
 
+  const gathering = tables ?? [];
+  const joining = stated === "" ? (gathering[0] ?? "") : stated;
+  const arrival = arrivalIn({ table: joining, code: offered, name });
+
   const knock = (event: SyntheticEvent): void => {
     event.preventDefault();
+    if (arrival === null) {
+      return;
+    }
+
     setKnocking(true);
     setTrouble(null);
-    arrive(table, { code: offered.trim(), name: name.trim() })
+    arrive(arrival.table, { code: arrival.code, name: arrival.name })
       .then((admitted) => {
-        arrivedAt({ table, token: admitted.token });
+        arrivedAt({ table: arrival.table, token: admitted.token });
       })
       .catch((refusal: unknown) => {
         setTrouble(reasonOf(refusal));
@@ -46,9 +61,29 @@ export function Arriving({ table, code }: ArrivingProps): ReactElement {
 
   return (
     <form className="notice" onSubmit={knock}>
-      <p>
-        Table <strong>{table}</strong> is gathering. Name yourself to join the company.
-      </p>
+      {table === null ? (
+        <p>Name the table gathering here, yourself, and the code that admits you.</p>
+      ) : (
+        <p>
+          Table <strong>{table}</strong> is gathering. Name yourself to join the company.
+        </p>
+      )}
+      {table === null && (
+        <label>
+          Table
+          {gathering.length === 0 ? (
+            <input value={joining} onChange={(event) => setStated(event.target.value)} placeholder="green-baize" />
+          ) : (
+            <select value={joining} onChange={(event) => setStated(event.target.value)}>
+              {gathering.map((one) => (
+                <option key={one} value={one}>
+                  {one}
+                </option>
+              ))}
+            </select>
+          )}
+        </label>
+      )}
       <label>
         Name
         <input
@@ -65,12 +100,14 @@ export function Arriving({ table, code }: ArrivingProps): ReactElement {
       {ranksIn(offered) !== null && <p className="reading">{readOut(offered)}</p>}
       {trouble !== null && <p className="trouble">{trouble}</p>}
       <div className="choices">
-        <button type="submit" disabled={knocking || name.trim() === "" || codeIn(offered) === null}>
+        <button type="submit" disabled={knocking || arrival === null}>
           {knocking ? "Arriving" : "Arrive at the table"}
         </button>
-        <button type="button" onClick={leave}>
-          Name another table
-        </button>
+        {table !== null && (
+          <button type="button" onClick={leave}>
+            Name another table
+          </button>
+        )}
       </div>
     </form>
   );

@@ -45,17 +45,16 @@ export function standingIn(fragment: string): Standing {
 }
 
 /**
- * The fragment one tab is reached through, which is what a tab joining a table sets.
+ * The fragment one tab is reached through, which is what a tab arriving at a table sets.
  *
- * A token supersedes the code it was minted against, so the code a guest arrived on leaves the address as soon
- * as they hold something to speak through and a reload rejoins on the token with no name asked again.
+ * The table and the token are the whole of what a tab writes down: a code is handed out by whoever gathered the
+ * table, and the token minted against it supersedes it, so a reload rejoins on the token with no name asked
+ * again.
  */
-export function fragmentFor(seat: Seat, code: string | null): string {
+export function fragmentFor(seat: Seat): string {
   const stated = new URLSearchParams({ [TABLE_FIELD]: seat.table });
   if (seat.token !== null) {
     stated.set(TOKEN_FIELD, seat.token);
-  } else if (code !== null) {
-    stated.set(CODE_FIELD, code);
   }
 
   return `#${stated.toString()}`;

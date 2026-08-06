@@ -91,19 +91,18 @@ describe("where a fragment leaves a tab standing", () => {
 });
 
 describe("the fragment a tab is reached through", () => {
-  it.each(STANDING)("reads back as what it was written for: $description", ({ seat, code }) => {
-    expect(standingIn(fragmentFor(seat, code))).toEqual({ seat, code: seat.token === null ? code : null });
+  it.each(STANDING)("reads back as the seat it was written for: $description", ({ seat }) => {
+    expect(standingIn(fragmentFor(seat))).toEqual({ seat, code: null });
   });
 
-  it("drops the code a guest arrived on the moment they hold a token to speak through", () => {
-    const written = fragmentFor({ table: "green-baize", token: "abc-123" }, "K10AJ2");
+  it("writes the table and the token alone, which is the whole of what a tab remembers", () => {
+    expect(fragmentFor({ table: "green-baize", token: "abc-123" })).toBe("#table=green-baize&token=abc-123");
+  });
 
-    expect(written).not.toContain("K10AJ2");
+  it("names the table alone for a tab that has yet to arrive, since a code is the host's to hand out", () => {
+    const written = fragmentFor({ table: "green-baize", token: null });
+
     expect(codeIn(written)).toBeNull();
-    expect(seatIn(written)).toEqual({ table: "green-baize", token: "abc-123" });
-  });
-
-  it("carries the code where the tab has yet to arrive, which is what an announced address does", () => {
-    expect(fragmentFor({ table: "green-baize", token: null }, "K10AJ2")).toBe("#table=green-baize&code=K10AJ2");
+    expect(seatIn(written)).toEqual({ table: "green-baize", token: null });
   });
 });

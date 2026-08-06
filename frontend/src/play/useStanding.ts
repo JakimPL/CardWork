@@ -4,11 +4,8 @@ import type { Seat } from "../api/seat";
 import type { Standing } from "./joining";
 import { fragmentFor, standingIn } from "./joining";
 
-/** The address a tab standing at no table holds, which is the page a table is named from. */
+/** The address a tab standing at no table holds, which is the arrival a table is named at. */
 const UNJOINED = "";
-
-/** The code a tab holding a token has no further use for, since the token is what speaks from then on. */
-const ARRIVED = null;
 
 /**
  * Where this tab stands, which follows the fragment of the address and changes with it.
@@ -28,17 +25,12 @@ export function useStanding(): Standing {
   return useMemo(() => standingIn(fragment), [fragment]);
 }
 
-/** Stand at a table on the code that admits, which is what a tab does before it has a name at one. */
-export function standAt(table: string, code: string | null): void {
-  window.location.hash = fragmentFor({ table, token: null }, code);
-}
-
 /** Speak at a table through the token an arrival minted, which the tab remembers so a reload rejoins on it. */
 export function arrivedAt(seat: Seat): void {
-  window.location.hash = fragmentFor(seat, ARRIVED);
+  window.location.hash = fragmentFor(seat);
 }
 
-/** Leave the table, which puts the tab back at the page a table is named from. */
+/** Leave the table, which puts the tab back at naming a table to arrive at. */
 export function leave(): void {
   window.location.hash = UNJOINED;
 }
