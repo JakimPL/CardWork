@@ -2,9 +2,8 @@ from http import HTTPStatus
 
 from httpx import AsyncClient
 
-from cardserver.sessions import TableSession
+from cardserver.sessions import InService
 from cardwork.presentation.layout import Layout
-from cardwork.states.state import GameState
 
 from ..games.demo import SEATS, hand_of, tray_of
 from .conftest import DEAL, LAYOUT, MOVES, UNSERVED, credentials, sealing
@@ -86,6 +85,6 @@ async def test_a_layout_of_a_table_out_of_service_is_refused(client: AsyncClient
 
 
 async def test_a_session_lays_its_table_out_for_the_seats_the_game_holds(
-    session: TableSession[GameState],
+    session: InService,
 ) -> None:
     assert session.layout(SEATED) == SEALED_SCENE.layout(SEATS, SEATED)

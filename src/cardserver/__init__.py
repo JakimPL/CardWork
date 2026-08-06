@@ -15,14 +15,16 @@ from cardserver.schemas import (
     ErrorBody,
     MoveRequest,
 )
-from cardserver.sessions import TableSession
+from cardserver.sessions import Commit, InService, TableSession
 
 __all__ = [
     "SEAT_HEADER",
     "ArrangementRequest",
     "CardserverError",
     "CommandAccepted",
+    "Commit",
     "ErrorBody",
+    "InService",
     "JournalSealed",
     "MoveRequest",
     "Presentation",

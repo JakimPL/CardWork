@@ -10,16 +10,14 @@ from cardserver.identity import SEAT_HEADER, SeatPolicy, confirm_actor, seated
 from cardserver.registry import TableRegistry
 from cardserver.schemas import ArrangementRequest, CommandAccepted, MoveRequest
 from cardserver.streams import STREAM_START, commits, resume_point
+from cardwork.models.base import BaseFrozen
 from cardwork.presentation.layout import Layout
-from cardwork.states.state import StateT
-from cardwork.transactions.journal import Journal
-from cardwork.views.position import PositionView
 
 EVENT_STREAM: Final[str] = "text/event-stream"
 STREAM_HEADERS: Final[dict[str, str]] = {"Cache-Control": "no-store", "X-Accel-Buffering": "no"}
 
 
-def create_app(registry: TableRegistry[StateT], seats: SeatPolicy) -> FastAPI:
+def create_app(registry: TableRegistry, seats: SeatPolicy) -> FastAPI:
     """An application serving the tables of one registry to the clients one seat policy admits.
 
     The six endpoints are the whole of the protocol: a command goes up over `POST`, which is the move a seat
@@ -73,7 +71,13 @@ def create_app(registry: TableRegistry[StateT], seats: SeatPolicy) -> FastAPI:
         """
         seat = seated(observer)
         session = registry.session(table_id)
-        seq = await session.arrange(command.zone, command.order, seat, command.base_seq, command.idempotency_key)
+        seq = await session.arrange(
+            command.zone,
+            command.order,
+            seat,
+            command.base_seq,
+            command.idempotency_key,
+        )
         return CommandAccepted(seq=seq)
 
     @app.get("/tables/{table_id}/layout")
@@ -88,12 +92,12 @@ def create_app(registry: TableRegistry[StateT], seats: SeatPolicy) -> FastAPI:
         """
         return registry.session(table_id).layout(observer)
 
-    # The response type is generic in the game's state, which leaves FastAPI no schema to build from it.
+    # The answer carries the cursor a game declares, which is one shape per game and so no schema at all.
     @app.get("/tables/{table_id}/view", response_model=None)
     async def read_view(
         table_id: str,
         observer: Annotated[int | None, Depends(observer_of)],
-    ) -> PositionView[StateT]:
+    ) -> BaseFrozen:
         """The table as this client is entitled to see it, stamped with the sequence it stands at."""
         return registry.session(table_id).view(observer)
 
@@ -107,11 +111,15 @@ def create_app(registry: TableRegistry[StateT], seats: SeatPolicy) -> FastAPI:
         """Every commit this client is entitled to, from where it left off and onward as they land."""
         session = registry.session(table_id)
         stream = commits(session, observer, resume_point(last_event_id, since))
-        return StreamingResponse(stream, media_type=EVENT_STREAM, headers=STREAM_HEADERS)
+        return StreamingResponse(
+            stream,
+            media_type=EVENT_STREAM,
+            headers=STREAM_HEADERS,
+        )
 
-    # The response type is generic in the game's state, which leaves FastAPI no schema to build from it.
+    # The answer carries the cursor a game declares, which is one shape per game and so no schema at all.
     @app.get("/tables/{table_id}/journal", response_model=None)
-    async def read_journal(table_id: str) -> Journal[StateT]:
+    async def read_journal(table_id: str) -> BaseFrozen:
         """The table's full record, which opens to everyone once the host has called the game over.
 
         The record reads the same to every client, so the seat behind the request settles nothing here.

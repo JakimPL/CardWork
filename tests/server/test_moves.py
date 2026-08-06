@@ -4,10 +4,9 @@ import pytest
 from httpx import AsyncClient
 
 from cardserver.identity import SEAT_HEADER
-from cardserver.sessions import TableSession
+from cardserver.sessions import InService
 from cardwork.moves.actions import Play
 from cardwork.moves.move import Move
-from cardwork.states.state import GameState
 
 from ..games.demo import SEATS
 from .conftest import DEAL, MOVES, command, credentials, reclaiming, sealing
@@ -20,7 +19,7 @@ async def test_a_seat_s_move_is_answered_with_the_sequence_it_landed_at(client: 
     assert response.json() == {"seq": DEAL}
 
 
-async def test_a_committed_move_reaches_the_table(client: AsyncClient, session: TableSession[GameState]) -> None:
+async def test_a_committed_move_reaches_the_table(client: AsyncClient, session: InService) -> None:
     await client.post(MOVES, json=sealing(0, DEAL, "first"), headers=credentials(0))
 
     assert session.head == DEAL + 1
@@ -94,9 +93,7 @@ async def test_an_unrecognised_credential_is_turned_away(client: AsyncClient) ->
     assert response.json()["error"] == "Unauthenticated"
 
 
-async def test_a_refused_move_leaves_the_table_where_it_stood(
-    client: AsyncClient, session: TableSession[GameState]
-) -> None:
+async def test_a_refused_move_leaves_the_table_where_it_stood(client: AsyncClient, session: InService) -> None:
     beyond_the_hand = Move(player=0, action=Play(group="sealed", indices=frozenset({99})))
 
     await client.post(MOVES, json=command(beyond_the_hand, DEAL, "first"), headers=credentials(0))
@@ -114,7 +111,7 @@ async def test_a_retried_command_is_answered_with_the_sequence_it_first_reached(
     assert again.json() == first.json()
 
 
-async def test_a_retried_command_lands_once(client: AsyncClient, session: TableSession[GameState]) -> None:
+async def test_a_retried_command_lands_once(client: AsyncClient, session: InService) -> None:
     retried = sealing(0, DEAL, "the-same-attempt")
 
     await client.post(MOVES, json=retried, headers=credentials(0))
@@ -123,7 +120,7 @@ async def test_a_retried_command_lands_once(client: AsyncClient, session: TableS
     assert session.head == DEAL + 1
 
 
-async def test_every_seat_may_seal_a_card_of_its_own(client: AsyncClient, session: TableSession[GameState]) -> None:
+async def test_every_seat_may_seal_a_card_of_its_own(client: AsyncClient, session: InService) -> None:
     for seat in range(SEATS):
         response = await client.post(MOVES, json=sealing(seat, session.head, f"seal-{seat}"), headers=credentials(seat))
         assert response.status_code == HTTPStatus.OK

@@ -4,8 +4,7 @@ import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from cardserver.sessions import TableSession
-from cardwork.states.state import GameState
+from cardserver.sessions import InService
 
 from .conftest import DEAL, LONG_GRACE, MOVES, credentials, sealing
 from .harness import PATIENCE, run_lifespan
@@ -22,7 +21,7 @@ async def test_an_application_starts_and_shuts_down(app: FastAPI) -> None:
 
 
 async def test_ending_service_drops_a_timer_still_in_hand(
-    app: FastAPI, client: AsyncClient, session: TableSession[GameState]
+    app: FastAPI, client: AsyncClient, session: InService
 ) -> None:
     await client.post(MOVES, json=sealing(0, DEAL, "first"), headers=credentials(0))
 

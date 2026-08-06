@@ -6,9 +6,8 @@ import pytest
 from httpx import AsyncClient
 
 from cardserver.identity import SEAT_HEADER
-from cardserver.sessions import TableSession
+from cardserver.sessions import InService
 from cardwork.decks.deck import Order
-from cardwork.states.state import GameState
 from cardwork.zones.zone import ZoneId
 from cardwork.zones.zones import hand_of
 
@@ -42,7 +41,7 @@ async def test_an_order_is_answered_with_the_sequence_it_landed_at(client: Async
     assert response.json() == {"seq": DEAL}
 
 
-async def test_an_arrangement_reaches_the_table(client: AsyncClient, session: TableSession[GameState]) -> None:
+async def test_an_arrangement_reaches_the_table(client: AsyncClient, session: InService) -> None:
     await client.post(ARRANGEMENTS, json=sorting(SORTER, DEAL, "first"), headers=credentials(SORTER))
 
     assert session.head == LANDED
@@ -122,9 +121,7 @@ async def test_an_arrangement_is_admitted_from_a_seat_that_has_already_acted(cli
     assert response.status_code == HTTPStatus.OK
 
 
-async def test_an_arrangement_tells_the_other_seats_nothing(
-    client: AsyncClient, session: TableSession[GameState]
-) -> None:
+async def test_an_arrangement_tells_the_other_seats_nothing(client: AsyncClient, session: InService) -> None:
     """A run of placeholders reads the same however it is permuted, so the commit carries no change for them."""
     await client.post(ARRANGEMENTS, json=sorting(SORTER, DEAL, "first"), headers=credentials(SORTER))
 
@@ -133,7 +130,7 @@ async def test_an_arrangement_tells_the_other_seats_nothing(
 
 
 async def test_an_arrangement_carries_the_new_order_to_the_seat_that_asked(
-    client: AsyncClient, session: TableSession[GameState]
+    client: AsyncClient, session: InService
 ) -> None:
     await client.post(ARRANGEMENTS, json=sorting(SORTER, DEAL, "first"), headers=credentials(SORTER))
 
@@ -152,7 +149,7 @@ async def test_a_retried_order_is_answered_with_the_sequence_it_first_reached(cl
     assert again.json() == first.json()
 
 
-async def test_a_retried_order_lands_once(client: AsyncClient, session: TableSession[GameState]) -> None:
+async def test_a_retried_order_lands_once(client: AsyncClient, session: InService) -> None:
     retried = sorting(SORTER, DEAL, "the-same-attempt")
 
     await client.post(ARRANGEMENTS, json=retried, headers=credentials(SORTER))
@@ -161,9 +158,7 @@ async def test_a_retried_order_lands_once(client: AsyncClient, session: TableSes
     assert session.head == LANDED
 
 
-async def test_a_refused_arrangement_leaves_the_table_where_it_stood(
-    client: AsyncClient, session: TableSession[GameState]
-) -> None:
+async def test_a_refused_arrangement_leaves_the_table_where_it_stood(client: AsyncClient, session: InService) -> None:
     await client.post(
         ARRANGEMENTS,
         json=arranging("draw", (1, 0), DEAL, "the-stock"),

@@ -8,7 +8,6 @@ from cardserver.app import create_app
 from cardserver.identity import TokenSeats
 from cardserver.registry import TableRegistry
 from cardtable.paths import SPECIFICATION
-from cardwork.states.state import GameState
 
 NO_GRACE: Final[float] = 0.0
 INDENT: Final[int] = 2
@@ -22,7 +21,7 @@ def document() -> Document:
     A schema follows from the endpoints rather than from any position, so this builds the application with an
     empty registry: what a client sends and what it is answered stands the same whichever game is in service.
     """
-    registry = TableRegistry[GameState](NO_GRACE)
+    registry = TableRegistry(NO_GRACE)
     return create_app(registry, TokenSeats({})).openapi()
 
 

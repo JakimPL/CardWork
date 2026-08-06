@@ -44,7 +44,7 @@ def serve[StateT: GameState](
     the page itself at the root where a build of it exists. The artwork goes on ahead of the page, since the
     page is mounted at the root and everything answering for itself is registered before it.
     """
-    registry = TableRegistry[StateT](settings.grace_seconds)
+    registry = TableRegistry(settings.grace_seconds)
     registry.open(settings.name, table, presentation)
     tokens = tokens_for(table.players)
     seats = TokenSeats({settings.name: {token: seat for seat, token in tokens.items()}})

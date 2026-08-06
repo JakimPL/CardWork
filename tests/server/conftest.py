@@ -12,7 +12,7 @@ from cardserver.identity import SEAT_HEADER, TokenSeats
 from cardserver.protocol import Presentation, Table
 from cardserver.registry import TableRegistry
 from cardserver.schemas import ArrangementRequest, MoveRequest
-from cardserver.sessions import TableSession
+from cardserver.sessions import InService, TableSession
 from cardwork.decks.deck import Order
 from cardwork.moves.actions import Play, Take
 from cardwork.moves.move import Move
@@ -57,12 +57,20 @@ def command(move: Move, base_seq: int, key: str) -> dict[str, object]:
 
 def sealing(seat: int, base_seq: int, key: str) -> dict[str, object]:
     """A command sealing the first card of a seat's hand in its own tray."""
-    return command(Move(player=seat, action=Play(group="sealed", indices=FIRST_CARD)), base_seq, key)
+    return command(
+        Move(player=seat, action=Play(group="sealed", indices=FIRST_CARD)),
+        base_seq,
+        key,
+    )
 
 
 def reclaiming(seat: int, base_seq: int, key: str) -> dict[str, object]:
     """A command lifting a seat's sealed card back into its hand."""
-    return command(Move(player=seat, action=Take(group="sealed", indices=FIRST_CARD)), base_seq, key)
+    return command(
+        Move(player=seat, action=Take(group="sealed", indices=FIRST_CARD)),
+        base_seq,
+        key,
+    )
 
 
 def arranging(zone: ZoneId, order: Order, base_seq: int, key: str) -> dict[str, object]:
@@ -90,18 +98,21 @@ async def served[StateT: GameState](
     that type out to the wire, which is what a real game served in its own module reads for. The window is
     left at nothing, so a round closed by the last seat to act settles as soon as the session is drained.
     """
-    registry = TableRegistry[StateT](NO_GRACE)
+    registry = TableRegistry(NO_GRACE)
     session = registry.open(TABLE, table, presentation)
     seats = TokenSeats({TABLE: {token_of(seat): seat for seat in range(table.players)}})
     app = create_app(registry, seats)
     try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as client:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url=BASE_URL,
+        ) as client:
             yield client, session
     finally:
         await registry.close()
 
 
-async def close_the_round(client: AsyncClient, session: TableSession[GameState]) -> None:
+async def close_the_round(client: AsyncClient, session: InService) -> None:
     """Seal a card at every seat, which leaves the round closed and waiting on the window."""
     for seat in range(SEATS):
         await client.post(
@@ -117,9 +128,13 @@ def grace_fixture() -> float:
 
 
 @pytest.fixture(name="registry")
-async def registry_fixture(grace: float) -> AsyncIterator[TableRegistry[GameState]]:
-    registry = TableRegistry[GameState](grace)
-    registry.open(TABLE, SealedRoundGame(players=SEATS, deck=DECK, rng=Random(SEED)), SEALED_SCENE)
+async def registry_fixture(grace: float) -> AsyncIterator[TableRegistry]:
+    registry = TableRegistry(grace)
+    registry.open(
+        TABLE,
+        SealedRoundGame(players=SEATS, deck=DECK, rng=Random(SEED)),
+        SEALED_SCENE,
+    )
 
     yield registry
 
@@ -127,17 +142,20 @@ async def registry_fixture(grace: float) -> AsyncIterator[TableRegistry[GameStat
 
 
 @pytest.fixture(name="session")
-def session_fixture(registry: TableRegistry[GameState]) -> TableSession[GameState]:
+def session_fixture(registry: TableRegistry) -> InService:
     return registry.session(TABLE)
 
 
 @pytest.fixture(name="app")
-def app_fixture(registry: TableRegistry[GameState]) -> FastAPI:
+def app_fixture(registry: TableRegistry) -> FastAPI:
     seats = TokenSeats({TABLE: {token_of(seat): seat for seat in range(SEATS)}})
     return create_app(registry, seats)
 
 
 @pytest.fixture(name="client")
 async def client_fixture(app: FastAPI) -> AsyncIterator[AsyncClient]:
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url=BASE_URL,
+    ) as client:
         yield client

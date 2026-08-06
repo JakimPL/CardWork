@@ -1,9 +1,7 @@
 from collections.abc import AsyncIterator
 from typing import Final
 
-from cardserver.sessions import TableSession
-from cardwork.states.state import StateT
-from cardwork.views.event import EventView
+from cardserver.sessions import Commit, InService
 
 STREAM_START: Final[int] = 0
 COMMIT_EVENT: Final[str] = "commit"
@@ -22,14 +20,14 @@ def resume_point(
 
 
 def frame(
-    event: EventView[StateT],
+    event: Commit,
 ) -> str:
     """One commit in the wire format of server-sent events, keyed by the sequence it landed at."""
     return f"id: {event.seq}\nevent: {COMMIT_EVENT}\ndata: {event.model_dump_json()}\n\n"
 
 
 async def commits(
-    session: TableSession[StateT],
+    session: InService,
     observer: int | None,
     since: int,
 ) -> AsyncIterator[str]:
