@@ -457,14 +457,16 @@ played by. The counts it does name reach these:
 
 ```python
 CLIMBING_RANKING.ceilings(standard_deck())
-# 1: any card: A♦
-# 2: 2 of a rank: A♦ A♥
-# 3: 3 of a rank: A♦ A♥ A♠
-# 5: a run of 5 together with 5 of a suit: 10♦ J♦ Q♦ K♦ A♦
+# 1: any card: A♣
+# 2: 2 of a rank: A♣ A♠
+# 3: 3 of a rank: A♣ A♠ A♥
+# 5: a run of 5 together with 5 of a suit: 10♣ J♣ Q♣ K♣ A♣
 ```
 
-It reads the deck by the German suit order with the wheel admitted, jokers unwild since its one deck holds
-none, and copies collapsed, so the ace of diamonds stands at the head of every count it names.
+It reads the deck by the German suit order — diamonds, hearts, spades, clubs, weakest first — with the wheel
+admitted, jokers unwild since its one deck holds none, and copies collapsed. So the ace of clubs stands at the
+head of every count it names, and the two of diamonds is the one card every other card in the deck climbs over,
+which is the card that game opens on (`docs/games/climbing.md` §1).
 
 A game states its own evaluation, its own patterns and its own ranking. What it inherits is the reading:
 one tally per question, one instance per shape, and a strength it can compare, order and score.
