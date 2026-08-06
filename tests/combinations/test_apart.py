@@ -1,4 +1,4 @@
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from itertools import combinations, product
 from typing import Final
@@ -32,7 +32,7 @@ from cardwork.cards.cards import (
 from cardwork.cards.game import CardOrJoker, CardsOrJokers
 from cardwork.cards.rank import Rank
 from cardwork.cards.suit import Suit
-from cardwork.combinations.detect import contains, find
+from cardwork.combinations.detect import contains, find, matches, selections
 from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.patterns.any_cards import AnyCards
 from cardwork.combinations.patterns.apart import Apart
@@ -49,6 +49,7 @@ from cardwork.combinations.poker import (
     TWO_PAIR,
 )
 from cardwork.combinations.policy import REGULAR_EVALUATION, Duplicates, Evaluation
+from cardwork.combinations.selection import Selection
 from tests.cases import Case, descriptions
 
 type Holds = Callable[[Cards], bool]
@@ -481,6 +482,103 @@ def test_a_spread_reaching_past_the_facings_a_deck_holds_admits_no_reading(case:
     assert find(case.cards, case.pattern, REGULAR_EVALUATION) is None
 
 
+@dataclass(frozen=True)
+class SelectionCase(Case):
+    """One hand beside every set of its places that is a rule read apart and is all of it.
+
+    A selection is what a game offers a player, so a rule read apart offers the places whose cards face apart:
+    two copies of one card stand at two places, and a pair read apart by suit takes one of them.
+    """
+
+    cards: CardsOrJokers
+    pattern: Pattern
+    offered: tuple[tuple[int, ...], ...]
+
+
+SELECTIONS: Final[tuple[SelectionCase, ...]] = (
+    SelectionCase(
+        description="a card held twice offers a pair read apart no way at all",
+        cards=(KING_OF_SPADES, KING_OF_SPADES),
+        pattern=APART_PAIR,
+        offered=(),
+    ),
+    SelectionCase(
+        description="each copy of a card answers a pair read apart beside a card facing apart from it",
+        cards=(KING_OF_SPADES, KING_OF_SPADES, KING_OF_HEARTS),
+        pattern=APART_PAIR,
+        offered=((0, 2), (1, 2)),
+    ),
+    SelectionCase(
+        description="a rank over three suits offers its pair read apart three ways",
+        cards=(KING_OF_SPADES, KING_OF_HEARTS, KING_OF_DIAMONDS),
+        pattern=APART_PAIR,
+        offered=((0, 1), (0, 2), (1, 2)),
+    ),
+    SelectionCase(
+        description="a joker stands in for the suit a second copy repeats",
+        cards=(KING_OF_SPADES, KING_OF_SPADES, RED_JOKER),
+        pattern=APART_PAIR,
+        offered=((0, 2), (1, 2)),
+    ),
+    SelectionCase(
+        description="a triplet read apart takes one copy of a card and two suits besides",
+        cards=(KING_OF_SPADES, KING_OF_SPADES, KING_OF_HEARTS, KING_OF_DIAMONDS),
+        pattern=APART_TRIPLET,
+        offered=((0, 2, 3), (1, 2, 3)),
+    ),
+    SelectionCase(
+        description="two pairs read apart offer the copy that faces apart within its own pair",
+        cards=(KING_OF_SPADES, KING_OF_SPADES, KING_OF_HEARTS, QUEEN_OF_SPADES, QUEEN_OF_HEARTS),
+        pattern=TWO_APART_PAIRS,
+        offered=((0, 2, 3, 4), (1, 2, 3, 4)),
+    ),
+    SelectionCase(
+        description="four suits beside a joker offer five places apart by suit nothing",
+        cards=(KING_OF_SPADES, KING_OF_HEARTS, KING_OF_DIAMONDS, KING_OF_CLUBS, RED_JOKER),
+        pattern=APART_FIVE_OF_A_RANK,
+        offered=(),
+    ),
+    SelectionCase(
+        description="a suit read apart by rank turns away the copy of a card and reads a joker instead",
+        cards=(TWO_OF_SPADES, TWO_OF_SPADES, THREE_OF_SPADES, RED_JOKER),
+        pattern=APART_THREE_OF_A_SUIT,
+        offered=((0, 2, 3), (1, 2, 3)),
+    ),
+    SelectionCase(
+        description="a kicker takes the copy the pair read apart beside it leaves standing",
+        cards=(KING_OF_SPADES, KING_OF_SPADES, KING_OF_HEARTS),
+        pattern=APART_PAIR_WITH_A_KICKER,
+        offered=((0, 1, 2),),
+    ),
+    SelectionCase(
+        description="two loose places apart by card turn away a card held twice",
+        cards=(KING_OF_SPADES, KING_OF_SPADES),
+        pattern=APART_TWO_LOOSE,
+        offered=(),
+    ),
+    SelectionCase(
+        description="two pair apart by card turn away the pair holding one card twice",
+        cards=(KING_OF_SPADES, KING_OF_HEARTS, QUEEN_OF_SPADES, QUEEN_OF_SPADES),
+        pattern=APART_TWO_PAIR,
+        offered=(),
+    ),
+    SelectionCase(
+        description="one pair repeating a card leaves two pairs read apart nothing to offer",
+        cards=(KING_OF_SPADES, KING_OF_SPADES, QUEEN_OF_SPADES, QUEEN_OF_HEARTS),
+        pattern=TWO_APART_PAIRS,
+        offered=(),
+    ),
+)
+
+
+@pytest.mark.parametrize("case", SELECTIONS, ids=descriptions(SELECTIONS))
+def test_a_rule_read_apart_offers_the_selections_whose_cards_face_apart(case: SelectionCase) -> None:
+    offered = selections(case.cards, case.pattern, REGULAR_EVALUATION)
+
+    assert {tuple(sorted(selection)) for selection in offered} == set(case.offered)
+    assert len(offered) == len(case.offered)
+
+
 def test_a_rule_read_apart_holds_of_one_deck_what_the_rule_it_reads_holds() -> None:
     """Over a deck holding every card once, reading places apart by card asks nothing the rule does not.
 
@@ -623,3 +721,50 @@ def test_the_filling_holds_a_rule_read_apart_of_the_hands_the_rule_itself_holds_
     hand: CardsOrJokers,
 ) -> None:
     assert contains(hand, case.pattern, REGULAR_EVALUATION) is _found(hand, case)
+
+
+def _sets(held: Sequence[CardOrJoker], places: int) -> Iterator[Selection]:
+    """Every set of that many places of the run, whatever the cards standing at them read as."""
+    for taken in combinations(range(len(held)), places):
+        yield frozenset(taken)
+
+
+def _standing(held: Sequence[CardOrJoker], places: Selection) -> CardsOrJokers:
+    """The cards standing at those places of the run."""
+    return tuple(card for place, card in enumerate(held) if place in places)
+
+
+@pytest.mark.parametrize("case", RULES, ids=descriptions(RULES))
+@settings(deadline=None, suppress_health_check=[HealthCheck.too_slow], max_examples=100)
+@given(hand=_hands())
+def test_a_rule_read_apart_offers_the_selections_whose_cards_the_rule_itself_holds_of(
+    case: RuleCase,
+    hand: CardsOrJokers,
+) -> None:
+    offered = set(selections(hand, case.pattern, REGULAR_EVALUATION))
+    answered = {places for places in _sets(hand, case.places) if _found(_standing(hand, places), case)}
+
+    assert offered == answered
+
+
+@pytest.mark.parametrize("case", RULES, ids=descriptions(RULES))
+@pytest.mark.parametrize("evaluation", (REGULAR_EVALUATION, COLLAPSING), ids=("counting", "collapsing"))
+@settings(deadline=None, suppress_health_check=[HealthCheck.too_slow], max_examples=50)
+@given(hand=_hands())
+def test_the_selections_a_rule_read_apart_offers_are_the_ones_the_filling_answers(
+    case: RuleCase,
+    evaluation: Evaluation,
+    hand: CardsOrJokers,
+) -> None:
+    """Whichever places a rule read apart offers, the filling reads the cards standing at them as that rule.
+
+    The two questions are asked of one rule by different means: the filling reads a run of cards into the
+    strongest instance of a reading, and a selection names the places a player would play. A reading that drops
+    repeats is asked besides, where a card held twice answers one place between its copies.
+    """
+    offered = set(selections(hand, case.pattern, evaluation))
+    answered = {
+        places for places in _sets(hand, case.places) if matches(_standing(hand, places), case.pattern, evaluation)
+    }
+
+    assert offered == answered

@@ -1,18 +1,34 @@
 from collections import Counter
 from collections.abc import Iterator, Mapping, Sequence
+from dataclasses import dataclass
 from itertools import combinations
 from typing import Final
 
 from cardwork.cards.card import Card
 from cardwork.cards.game import CardOrJoker
 from cardwork.combinations.demand import Demand
+from cardwork.combinations.facings import Facings
 from cardwork.combinations.policy import Duplicates, Evaluation
 from cardwork.combinations.shape import Shape
+from cardwork.combinations.spread import Spread
 
 type Selection = frozenset[int]
-type Asked = tuple[Demand, int]
 
 FIRST_GROUP: Final[int] = 0
+
+
+@dataclass(frozen=True)
+class Asking:
+    """One demand a shape makes of the places of one spread, beside how many of those places make it.
+
+    Places asking alike within one spread are answered as a group, which counts a choice of cards once rather
+    than once per order of them. The spread comes with the demand, so the cards picked into a group are held to
+    facings of their own where the places of that group read apart.
+    """
+
+    demand: Demand
+    spread: Spread | None
+    places: int
 
 
 class Selecting:
@@ -24,7 +40,9 @@ class Selecting:
     than one.
 
     Demands asking alike are answered together, so a suit five places deep is a choice of five cards rather
-    than an order of them, and a joker free to stand in answers whatever a demand asks.
+    than an order of them, and a joker free to stand in answers whatever a demand asks. Places the shape holds
+    apart are answered by cards showing facings of their own, so a king of spades held twice answers one place
+    of a pair read apart by suit between the two copies.
     """
 
     def __init__(
@@ -42,7 +60,8 @@ class Selecting:
     @property
     def selections(self) -> tuple[Selection, ...]:
         """Every set of places whose cards fill this shape, each of them named once."""
-        taken = (chosen for chosen in self._chosen(FIRST_GROUP, frozenset()) if self._reads_apart(chosen))
+        chosen = self._chosen(FIRST_GROUP, frozenset(), Facings.free())
+        taken = (selection for selection in chosen if self._reads_apart(selection))
         return tuple(dict.fromkeys(taken))
 
     def _admitting(self) -> Mapping[Demand, tuple[int, ...]]:
@@ -59,31 +78,55 @@ class Selecting:
 
         return self._evaluation.wild_jokers
 
-    def _grouped(self) -> tuple[Asked, ...]:
-        """Each demand this shape makes beside how many times it makes it, the narrowest of them leading.
+    def _grouped(self) -> tuple[Asking, ...]:
+        """Each demand this shape makes of the places of one spread, the narrowest of the groups leading.
 
-        Demands asking alike are answered as one group, which counts a choice of cards once rather than once
-        per order of them. Leading with the group the fewest cards answer settles a shape the run falls short
-        of in one step.
+        Demands asking alike within one spread are answered as one group, which counts a choice of cards once
+        rather than once per order of them. Leading with the group the fewest cards answer settles a shape the
+        run falls short of in one step.
         """
-        asked = Counter(self._shape.demands)
-        return tuple(sorted(asked.items(), key=self._answering))
+        asked = Counter(
+            zip(
+                self._shape.demands,
+                self._shape.spreading(),
+                strict=True,
+            )
+        )
+        groups = (Asking(demand=demand, spread=spread, places=places) for (demand, spread), places in asked.items())
+        return tuple(sorted(groups, key=self._answering))
 
-    def _answering(self, asked: Asked) -> int:
+    def _answering(self, asked: Asking) -> int:
         """How many places of the run answer the demand this group asks."""
-        demand, _ = asked
-        return len(self._admitted[demand])
+        return len(self._admitted[asked.demand])
 
-    def _chosen(self, group: int, taken: Selection) -> Iterator[Selection]:
-        """Every way the groups from this one onwards are answered out of the places the run has left."""
+    def _chosen(
+        self,
+        group: int,
+        taken: Selection,
+        facings: Facings,
+    ) -> Iterator[Selection]:
+        """Every way the groups from this one onwards are answered out of the places the run has left.
+
+        A group whose places read apart takes cards showing facings of their own, and the jokers picked into one
+        answer once every card is picked: a way stands where each of its jokers reads as a card showing a facing
+        the cards picked leave free.
+        """
         if group == len(self._asked):
-            yield taken
+            if facings.reads(self._evaluation):
+                yield taken
+
             return
 
-        demand, wanted = self._asked[group]
-        free = tuple(place for place in self._admitted[demand] if place not in taken)
-        for picked in combinations(free, wanted):
-            yield from self._chosen(group + 1, taken | frozenset(picked))
+        asked = self._asked[group]
+        free = tuple(place for place in self._admitted[asked.demand] if place not in taken)
+        for picked in combinations(free, asked.places):
+            showing = facings.picking(asked.spread, asked.demand, self._standing(picked))
+            if showing is not None:
+                yield from self._chosen(group + 1, taken | frozenset(picked), showing)
+
+    def _standing(self, picked: Sequence[int]) -> tuple[CardOrJoker, ...]:
+        """The cards standing at those places of the run."""
+        return tuple(self._cards[place] for place in picked)
 
     def _reads_apart(self, taken: Selection) -> bool:
         """Whether the selection reads as as many cards as it takes, which a reading collapsing repeats asks.
