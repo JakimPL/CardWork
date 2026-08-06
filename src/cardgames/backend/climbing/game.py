@@ -5,6 +5,7 @@ from typing import ClassVar, Final
 from cardgames.backend.climbing.rules import (
     AWARD,
     CLIMBING_RANKING,
+    OPENING_CARD,
     POINTS,
     SEATS_LEAST,
     SEATS_MOST,
@@ -30,12 +31,17 @@ from cardwork.rounds.conclusion import Conclusion
 from cardwork.rounds.game import RoundGame
 from cardwork.rounds.redeal import Redeal
 from cardwork.rounds.seating import followed, rotation
-from cardwork.rounds.state import MatchPhase
+from cardwork.rounds.state import BEFORE_THE_FIRST_ROUND, MatchPhase
 from cardwork.states.state import NOTHING, Points
 from cardwork.zones.zone import Zones
 from cardwork.zones.zones import DISCARD, HANDS, STACK
 
 ONE_SEAT: Final[int] = 1
+
+
+def shown(cards: CardsOrJokers) -> str:
+    """The cards of a play as a refusal names them, which is the run they were named in."""
+    return " ".join(str(card) for card in cards)
 
 
 class ClimbingGame(RoundGame[ClimbingState]):
@@ -57,6 +63,10 @@ class ClimbingGame(RoundGame[ClimbingState]):
     seat still answering to climb over. A pass gives that turn up for as long as the combination on the table
     keeps changing hands, and a pass by every seat but one leaves that seat's combination unanswered, which hands
     it the lead again over an empty table.
+
+    **The match opens on the seat holding `rules.OPENING_CARD`**, which is the one card every other card in the
+    deck climbs over, and that seat leads a combination holding it. Each round after is led by the seat that went
+    out of the one before.
     """
 
     capacity: ClassVar[Capacity] = Capacity(least=SEATS_LEAST, most=SEATS_MOST)
@@ -72,6 +82,10 @@ class ClimbingGame(RoundGame[ClimbingState]):
     ) -> None:
         """A table whose seats take equal shares of the deck, the cards those leave over lying aside.
 
+        The first round opens with the seat that leads it still to be read off the hands, so the settlement here
+        is what names that seat, which is what every driver and adapter beyond this expects of a table it has
+        just opened: one seat with a turn to take.
+
         Args:
             players: how many seats the table holds.
             deck: the cards a round is dealt from, of which every seat takes as many as it divides into.
@@ -81,6 +95,7 @@ class ClimbingGame(RoundGame[ClimbingState]):
         self._hand_size = len(deck) // players
         self._rejected_cards = len(deck) - self._hand_size * players
         super().__init__(players, deck, conclusion=conclusion, rng=rng)
+        self.settle()
 
     def zones(self, players: int, deck: Deck) -> Zones:
         return climbing_zones(players, deck)
@@ -119,26 +134,52 @@ class ClimbingGame(RoundGame[ClimbingState]):
         """Every card gathered and shuffled, then an equal share dealt to each seat from the leader onwards.
 
         What the shares leave over goes to the discard, which is where a round keeps the cards nobody was dealt.
+        A deck dividing unevenly can leave the opening card among them, so the first round of a match is drawn
+        again until some seat holds it — one deal in fifty-two at three seats and one in twenty-six at five.
         """
         counts = {
             **HANDS.dealt(self._hand_size, rotation(leader, position.players)),
             DISCARD: self._rejected_cards,
         }
-        return Redeal(position, pile=STACK, face_down=True).effects(counts, rng)
+        redeal = Redeal(position, pile=STACK, face_down=True)
+        if self._opening_round(position):
+            return redeal.admitted(counts, rng, self._deals_the_opening_card)
+
+        return redeal.effects(counts, rng)
+
+    def next_leader(self, position: Position[ClimbingState], rng: Random) -> int:
+        """The seat leading the round about to open, which is the seat that went out of the one before.
+
+        A match opens on the seat holding the opening card, which is read off the hands once they are dealt
+        (`advance_round`), so the seat drawn here before the first round is the seat that deal begins at.
+        """
+        winner = position.state.winner
+        if winner is None:
+            return super().next_leader(position, rng)
+
+        return winner
 
     def opening_state(
         self,
         position: Position[ClimbingState],
         leader: int,
     ) -> ClimbingState:
-        """The turn a round opens on, which is the seat on lead with the table standing on nothing yet."""
-        return position.state.with_changes(
-            phase=ClimbingPhase.LEAD,
-            to_act=leader,
+        """The turn a round opens on: a seat on lead, or the search for the seat a match opens on.
+
+        A match opens on the seat holding the opening card, and which seat that is stands in the cards this is
+        handed too early to read, since the leader of a round is drawn before its cards go out. So the first
+        round opens with nobody to act and the settlement following the deal names the seat (`advance_round`).
+        Every round after opens on the seat that went out of the one before, which is the leader handed here.
+        """
+        opened = position.state.with_changes(
             on_table=None,
             passed=frozenset(),
             winner=None,
         )
+        if self._opening_round(position):
+            return opened.with_changes(phase=ClimbingPhase.CHOOSING, to_act=frozenset())
+
+        return opened.with_changes(phase=ClimbingPhase.LEAD, to_act=leader)
 
     def advance_round(
         self,
@@ -146,15 +187,47 @@ class ClimbingGame(RoundGame[ClimbingState]):
         move: Move | None,
         rng: Random,
     ) -> Effects[ClimbingState]:
-        """The round closed on the seat that has played its last card, and nothing once it stands closed.
+        """The seat a dealt match opens on, the round closed on a seat that has played its last card, or nothing.
 
         A round comes to rest at the boundary that scores it, so the close is owed once: the phase a decided
         round stands in is the answer that it has been written.
         """
+        if position.state.phase == ClimbingPhase.CHOOSING:
+            return (SetState(state=self._opened(position)),)
+
         if self.round_over(position):
             return ()
 
         return self._decided(position)
+
+    def _opening_round(self, position: Position[ClimbingState]) -> bool:
+        """Whether the round about to open is the first of the match, which is the one opened from a card."""
+        return position.state.round_number == BEFORE_THE_FIRST_ROUND
+
+    def _deals_the_opening_card(self, dealt: Position[ClimbingState]) -> bool:
+        """Whether a draw of the deal handed the opening card to a seat rather than setting it aside."""
+        return self._holding_the_opening_card(dealt) is not None
+
+    def _holding_the_opening_card(self, position: Position[ClimbingState]) -> int | None:
+        """The seat dealt the opening card, and None where the shares left it lying aside."""
+        return next((seat for seat, hand in enumerate(position.held(HANDS)) if OPENING_CARD in hand), None)
+
+    def _opened(self, position: Position[ClimbingState]) -> ClimbingState:
+        """The match opened on the seat the deal handed the opening card, which is the seat that leads it.
+
+        Raises:
+            LogicError: when no seat holds that card, which the deal of the first round is drawn again until
+                one does.
+        """
+        opener = held(
+            self._holding_the_opening_card(position),
+            f"seat holds the {OPENING_CARD} this round was dealt to hand out",
+        )
+        return position.state.with_changes(
+            phase=ClimbingPhase.OPENING,
+            to_act=opener,
+            leader=opener,
+        )
 
     def round_over(self, position: Position[ClimbingState]) -> bool:
         return position.state.phase == ClimbingPhase.DECIDED
@@ -191,9 +264,13 @@ class ClimbingGame(RoundGame[ClimbingState]):
 
         A seat on lead offers every combination its hand holds, at each of the counts this game is played by,
         the strongest patterns leading: a hand of thirteen cards lists its straight flushes before its singles.
-        A seat answering a combination is held to the count on the table and to climbing over what stands there.
+        A seat answering a combination is held to the count on the table and to climbing over what stands there,
+        and the seat opening the match to the combinations of its hand holding the card it opens from.
         """
         match position.state.phase:
+            case ClimbingPhase.OPENING:
+                return self._opens(position, seat)
+
             case ClimbingPhase.LEAD:
                 return self._leads(position, seat)
 
@@ -202,6 +279,16 @@ class ClimbingGame(RoundGame[ClimbingState]):
 
             case _:
                 return ()
+
+    def _opens(self, position: Position[ClimbingState], seat: int) -> Moves:
+        """Every combination the seat opening the match may put down, which is each one holding the opening card.
+
+        A single card is a combination this game is played by, so a hand holding that card always holds a
+        combination made of it and the seat always has a move.
+        """
+        hand = position.board.cards(HANDS.of(seat))
+        holding = tuple(places for places in CLIMBING_RANKING.selections(hand) if OPENING_CARD in named(hand, places))
+        return self._plays(seat, holding)
 
     def _leads(self, position: Position[ClimbingState], seat: int) -> Moves:
         """Every combination the seat on lead may put down, which is every one its hand holds."""
@@ -261,7 +348,8 @@ class ClimbingGame(RoundGame[ClimbingState]):
 
         Raises:
             IllegalMove: when the play names another group, names a position beyond the hand, reads as no
-                combination this game is played by, or is made in a phase admitting none.
+                combination this game is played by, opens the match without the card it opens from, or is made
+                in a phase admitting none.
         """
         if play.group != HANDS.name:
             raise IllegalMove(f"Seat {seat} plays out of its {HANDS.name}, and named {play.group!r}")
@@ -269,10 +357,12 @@ class ClimbingGame(RoundGame[ClimbingState]):
         cards = self._chosen(position, seat, play.indices)
         combination = CLIMBING_RANKING.exactly(cards)
         if combination is None:
-            shown = " ".join(str(card) for card in cards)
-            raise IllegalMove(f"Seat {seat} plays a combination this game is played by, and named {shown}")
+            raise IllegalMove(f"Seat {seat} plays a combination this game is played by, and named {shown(cards)}")
 
         match position.state.phase:
+            case ClimbingPhase.OPENING:
+                self._validate_opening(seat, cards)
+
             case ClimbingPhase.LEAD:
                 return
 
@@ -283,6 +373,17 @@ class ClimbingGame(RoundGame[ClimbingState]):
                 raise IllegalMove(
                     f"Seat {seat} plays on lead or in answer, and the round stands in the {position.state.phase} phase"
                 )
+
+    def _validate_opening(self, seat: int, cards: CardsOrJokers) -> None:
+        """Confirm the combination opening the match holds the card the match is opened from.
+
+        Raises:
+            IllegalMove: when the cards leave that card out of the combination they read as.
+        """
+        if OPENING_CARD not in cards:
+            raise IllegalMove(
+                f"Seat {seat} opens with a combination holding the {OPENING_CARD}, and played {shown(cards)}"
+            )
 
     def _validate_climb(
         self,

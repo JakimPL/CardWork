@@ -20,7 +20,6 @@ from cardwork.cards.cards import (
 from cardwork.cards.game import CardsOrJokers
 from cardwork.effects.fold import fold
 from cardwork.rounds.conclusion import ONE_ROUND
-from cardwork.rounds.seating import next_seat
 from cardwork.rounds.state import MatchPhase
 from cardwork.states.award import Award
 from cardwork.states.state import NOTHING, Points
@@ -183,15 +182,14 @@ def test_a_decided_round_is_scored_into_the_standing_and_the_table_left_between_
     assert closed.state.to_act == frozenset()
 
 
-def test_the_round_after_one_decided_opens_on_the_next_seat_round_the_table(climbing: ClimbingGame) -> None:
-    leader = climbing.state.led_by
-
+def test_the_round_after_one_decided_opens_on_the_seat_that_went_out_of_it(climbing: ClimbingGame) -> None:
     play_a_round(climbing, climbing_first)
     caught = climbing.state.round_points
+    gone_out = climbing.state.winner
     climbing.settle()
 
     assert climbing.state.phase == ClimbingPhase.LEAD
-    assert climbing.state.led_by == next_seat(leader, SEATS)
+    assert climbing.state.led_by == gone_out
     assert climbing.state.round_number == ROUNDS
     assert climbing.state.points == caught
     assert climbing.state.round_points == (NOTHING,) * SEATS

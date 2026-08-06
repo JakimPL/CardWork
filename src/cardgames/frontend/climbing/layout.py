@@ -1,7 +1,7 @@
 from collections.abc import Mapping
 from typing import Final
 
-from cardgames.backend.climbing.rules import AWARD
+from cardgames.backend.climbing.rules import AWARD, OPENING_CARD
 from cardgames.backend.climbing.state import ClimbingPhase, ClimbingState
 from cardwork.moves.kind import ActionKind
 from cardwork.presentation import presets
@@ -32,6 +32,8 @@ READOUTS: Final[tuple[Readout, ...]] = presets.match_readouts(ClimbingState) + (
 )
 
 PHASES: Final[Mapping[str, str]] = {
+    ClimbingPhase.CHOOSING: "Finding the seat that opens",
+    ClimbingPhase.OPENING: f"Put down a combination holding the {OPENING_CARD}",
     ClimbingPhase.LEAD: "Put down any combination",
     ClimbingPhase.FOLLOW: "Climb over the combination on the table, or pass",
     ClimbingPhase.DECIDED: "Round decided",

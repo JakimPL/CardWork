@@ -1,5 +1,7 @@
 from typing import Final
 
+from cardwork.cards.card import Card
+from cardwork.cards.cards import TWO_OF_DIAMONDS
 from cardwork.cards.orders import GERMAN_SUIT_SEQUENCE, RANK_SEQUENCE
 from cardwork.cards.points import REGULAR_POINTS, PointTable
 from cardwork.combinations.pattern import Pattern
@@ -20,6 +22,7 @@ SEATS_LEAST: Final[int] = 2
 SEATS_MOST: Final[int] = 5
 POINTS: Final[PointTable] = REGULAR_POINTS
 AWARD: Final[Award] = Award.LOWEST
+OPENING_CARD: Final[Card] = TWO_OF_DIAMONDS
 
 CLIMBING_PATTERNS: Final[tuple[Pattern, ...]] = (
     HIGH_CARD,

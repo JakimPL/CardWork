@@ -10,8 +10,15 @@ class ClimbingPhase(StrEnum):
     A round runs in two stages: a seat on lead puts down a combination of its own choosing, and the seats
     answering it climb over what stands on the table or pass. The round stands decided once a seat has played
     its last card, which the boundary beyond it scores.
+
+    The first round of a match opens on the seat holding the card the game is opened from, which is a fact about
+    the cards the deal settles. `CHOOSING` is that round dealt with the seat still to be read off the hands, and
+    it stands with nobody to act, since what it waits on is a reading rather than a move. `OPENING` is the turn
+    that seat takes, where what it puts down holds that card.
     """
 
+    CHOOSING = "choosing"
+    OPENING = "opening"
     LEAD = "lead"
     FOLLOW = "follow"
     DECIDED = "decided"

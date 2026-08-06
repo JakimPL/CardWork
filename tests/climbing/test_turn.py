@@ -4,6 +4,7 @@ from typing import Final
 import pytest
 
 from cardgames.backend.climbing.game import ClimbingGame
+from cardgames.backend.climbing.rules import OPENING_CARD
 from cardgames.backend.climbing.state import ClimbingPhase, ClimbingState
 from cardwork.cards.cards import (
     ACE_OF_DIAMONDS,
@@ -39,6 +40,7 @@ from .driving import (
     a_lead_of,
     a_pass,
     a_play,
+    an_opening_of,
     every_hand,
     every_zone,
     give_the_turn_up,
@@ -62,6 +64,10 @@ ODD_CARDS: Final[CardsOrJokers] = (TWO_OF_SPADES, SEVEN_OF_DIAMONDS)
 ONE_CARD: Final[CardsOrJokers] = (KING_OF_CLUBS,)
 A_HIGH_CARD: Final[CardsOrJokers] = (ACE_OF_DIAMONDS,)
 ODD_HANDS: Final[tuple[CardsOrJokers, ...]] = (A_PAIR + ODD_CARDS, A_HIGHER_PAIR, ONE_CARD)
+THE_HIGHER_FIVE: Final[frozenset[int]] = frozenset({0})
+THE_LOWER_FIVE: Final[frozenset[int]] = frozenset({1})
+THE_OPENING_CARD: Final[frozenset[int]] = frozenset({2})
+OPENING_HANDS: Final[tuple[CardsOrJokers, ...]] = (A_PAIR + (OPENING_CARD,), A_HIGHER_PAIR, ONE_CARD)
 ANSWERING_HANDS: Final[tuple[CardsOrJokers, ...]] = (
     ONE_CARD,
     ODD_CARDS,
@@ -216,6 +222,38 @@ def test_playing_cards_reading_as_no_combination_is_refused_and_leaves_the_table
 
     assert climbing.state == standing
     assert every_zone(climbing) == zones
+
+
+def test_opening_a_match_with_a_combination_leaving_the_opening_card_out_is_refused(climbing: ClimbingGame) -> None:
+    position = an_opening_of(climbing, OPENING_HANDS, ON_TURN)
+
+    with pytest.raises(IllegalMove, match=f"opens with a combination holding the {OPENING_CARD}, and played 5♠ 5♥"):
+        climbing.validate(position, a_play(ON_TURN, THE_FIRST_PAIR))
+
+
+def test_the_seat_opening_a_match_is_offered_the_combinations_of_its_hand_holding_the_opening_card(
+    climbing: ClimbingGame,
+) -> None:
+    position = an_opening_of(climbing, OPENING_HANDS, ON_TURN)
+
+    moves = climbing.legal_moves(position)
+
+    assert all(move.player == ON_TURN for move in moves)
+    assert tuple(move.action.indices for move in moves if isinstance(move.action, Play)) == (THE_OPENING_CARD,)
+
+
+def test_a_lead_after_the_one_a_match_opens_on_is_held_to_no_card_at_all(climbing: ClimbingGame) -> None:
+    """The opening card is spent on the turn it opens, and every lead after it puts down what its holder likes."""
+    position = a_lead_of(climbing, OPENING_HANDS, ON_TURN)
+
+    moves = climbing.legal_moves(position)
+
+    assert tuple(move.action.indices for move in moves if isinstance(move.action, Play)) == (
+        THE_FIRST_PAIR,
+        THE_HIGHER_FIVE,
+        THE_LOWER_FIVE,
+        THE_OPENING_CARD,
+    )
 
 
 def test_a_combination_standing_no_higher_than_the_one_on_the_table_is_refused(climbing: ClimbingGame) -> None:

@@ -5,8 +5,9 @@ from typing import Final
 import pytest
 
 from cardgames.backend.climbing.game import ClimbingGame
-from cardgames.backend.climbing.rules import CLIMBING_RANKING, SEATS_LEAST, SEATS_MOST
+from cardgames.backend.climbing.rules import CLIMBING_RANKING, OPENING_CARD, SEATS_LEAST, SEATS_MOST
 from cardgames.backend.climbing.state import ClimbingPhase, ClimbingState
+from cardwork.decks.decks import named
 from cardwork.decks.standard import standard_deck, standard_decks
 from cardwork.effects.effects import Effects
 from cardwork.exceptions import GameValidationError
@@ -29,6 +30,7 @@ from .driving import (
     TWO_SEATS,
     a_match,
     held_by,
+    places_of,
     play_from,
     seat_on_turn,
 )
@@ -40,7 +42,6 @@ NO_CARDS: Final[int] = 0
 ONE_SHARE_SHORT: Final[int] = 1
 READER: Final[int] = 0
 ANOTHER_SEAT: Final[int] = 1
-A_SINGLE: Final[frozenset[int]] = frozenset({0})
 
 
 class ShortDealGame(ClimbingGame):
@@ -94,7 +95,7 @@ def test_a_round_deals_an_equal_share_to_every_seat_and_sets_what_they_leave_ove
     assert all(len(held_by(game, seat)) == case.each for seat in range(case.players))
     assert game.board.count(DISCARD) == case.aside
     assert game.board.count(STACK) == NO_CARDS
-    assert game.state.phase == ClimbingPhase.LEAD
+    assert game.state.phase == ClimbingPhase.OPENING
     assert game.state.to_act == frozenset({game.state.led_by})
     assert game.state.round_number == FIRST_ROUND
     assert game.state.rounds == ROUNDS
@@ -117,15 +118,42 @@ def test_the_deal_of_the_first_round_and_the_cursor_it_opens_land_in_one_transac
     )
 
 
-def test_a_table_opens_offering_the_seat_on_lead_every_combination_its_hand_holds(climbing: ClimbingGame) -> None:
+def test_the_seat_a_match_opens_on_is_named_in_the_settlement_after_the_deal(climbing: ClimbingGame) -> None:
+    """The cards decide the seat, so the deal lands first and the reading of it lands in its own transaction."""
+    choosing = climbing.journal.transactions[1]
+
+    assert choosing.seq == 1
+    assert choosing.move is None
+    assert tuple(effect.kind for effect in choosing.effects) == ("set_state",)
+
+
+@pytest.mark.parametrize("case", DEALS, ids=descriptions(DEALS))
+def test_the_first_round_deals_the_opening_card_to_a_seat_rather_than_setting_it_aside(case: DealCase) -> None:
+    game = a_match(case.players, ROUNDS, SEED)
+
+    assert OPENING_CARD not in game.board.cards(DISCARD)
+    assert OPENING_CARD in held_by(game, game.state.led_by)
+
+
+def test_the_seat_dealt_the_opening_card_is_the_one_the_match_opens_on(climbing: ClimbingGame) -> None:
+    holding = tuple(seat for seat in range(SEATS) if OPENING_CARD in held_by(climbing, seat))
+
+    assert holding == (climbing.state.led_by,)
+    assert climbing.state.to_act == frozenset({climbing.state.led_by})
+
+
+def test_a_table_opens_offering_that_seat_every_combination_of_its_hand_holding_the_opening_card(
+    climbing: ClimbingGame,
+) -> None:
     leader = climbing.state.led_by
+    hand = held_by(climbing, leader)
+    holding = tuple(places for places in CLIMBING_RANKING.selections(hand) if OPENING_CARD in named(hand, places))
     moves = climbing.legal_moves(climbing.position)
 
     assert all(move.player == leader for move in moves)
     assert all(isinstance(move.action, Play) for move in moves)
-    assert tuple(move.action.indices for move in moves if isinstance(move.action, Play)) == CLIMBING_RANKING.selections(
-        held_by(climbing, leader)
-    )
+    assert tuple(move.action.indices for move in moves if isinstance(move.action, Play)) == holding
+    assert holding != CLIMBING_RANKING.selections(hand)
 
 
 def test_a_hand_lies_face_down_and_the_cards_set_aside_with_it(climbing: ClimbingGame) -> None:
@@ -144,15 +172,14 @@ def test_a_seat_reads_its_own_hand_and_the_size_of_every_other(climbing: Climbin
 
 
 def test_a_spectator_reads_the_combination_played_and_the_size_of_everything_else(climbing: ClimbingGame) -> None:
-    played = held_by(climbing, seat_on_turn(climbing))[0]
-    play_from(climbing, A_SINGLE)
+    play_from(climbing, places_of(held_by(climbing, seat_on_turn(climbing)), OPENING_CARD))
 
     view = climbing.view(observer=None)
 
     assert all(card is None for seat in range(SEATS) for card in view.zones[HANDS.of(seat)].cards)
     assert all(card is None for card in view.zones[DISCARD].cards)
     assert view.zones[STACK].cards == climbing.board.zone(STACK).cards
-    assert climbing.board.cards(STACK) == (played,)
+    assert climbing.board.cards(STACK) == (OPENING_CARD,)
 
 
 def test_a_table_seats_two_to_five_players() -> None:

@@ -5,7 +5,7 @@ from typing import Final
 from cardgames.backend.climbing.game import ClimbingGame
 from cardgames.backend.climbing.rules import CLIMBING_RANKING, POINTS
 from cardgames.backend.climbing.state import ClimbingPhase, ClimbingState
-from cardwork.cards.game import CardsOrJokers
+from cardwork.cards.game import CardOrJoker, CardsOrJokers
 from cardwork.combinations.combination import Combination
 from cardwork.decks.deck import Deck, Indices
 from cardwork.decks.decks import to_game_cards
@@ -83,6 +83,15 @@ def a_combination_of(cards: CardsOrJokers) -> Combination:
     return held(CLIMBING_RANKING.exactly(cards), f"combination stands in {cards}")
 
 
+def places_of(cards: CardsOrJokers, wanted: CardOrJoker) -> Indices:
+    """The one place a card stands at in a run holding it, as a play names it.
+
+    Raises:
+        ValueError: when the run holds no such card.
+    """
+    return frozenset({cards.index(wanted)})
+
+
 def a_play(seat: int, places: Indices) -> Move:
     """One seat playing the cards standing at those positions of its own hand."""
     return Move(player=seat, action=Play(group=HANDS.name, indices=places))
@@ -119,6 +128,26 @@ def a_lead_of(
         game,
         hands,
         game.state.with_changes(phase=ClimbingPhase.LEAD, to_act=leader, on_table=None, passed=NO_PASSES),
+        played=(),
+    )
+
+
+def an_opening_of(
+    game: ClimbingGame,
+    hands: Sequence[CardsOrJokers],
+    opener: int,
+) -> Position[ClimbingState]:
+    """The table laid out afresh on the turn a match opens with: those hands, that seat to put down the first one.
+
+    Args:
+        game: the table the position is built from, whose zones and deck it keeps.
+        hands: the cards each seat is to hold, in seat order, the opening card among them.
+        opener: the seat the opening turn is to stand with, which is the one holding that card.
+    """
+    return _laid_out(
+        game,
+        hands,
+        game.state.with_changes(phase=ClimbingPhase.OPENING, to_act=opener, on_table=None, passed=NO_PASSES),
         played=(),
     )
 
