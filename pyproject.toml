@@ -113,13 +113,16 @@ name = "Adapter layers"
 type = "layers"
 layers = [
     "cardserver.app",
+    "cardserver.lobby",
     "cardserver.streams",
     "cardserver.registry",
+    "cardserver.gathering",
     "cardserver.sessions",
     "cardserver.identity",
     "cardserver.errors",
     "cardserver.schemas",
-    "cardserver.protocol",
+    "cardserver.naming",
+    "cardserver.protocol : cardserver.codes",
 ]
 
 [[tool.importlinter.contracts]]

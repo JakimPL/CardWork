@@ -5,13 +5,13 @@ from typing import Final
 
 import pytest
 from fastapi import FastAPI
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, Response
 
 from cardserver.app import create_app
 from cardserver.identity import SEAT_HEADER, TokenSeats
 from cardserver.protocol import Presentation, Table
 from cardserver.registry import TableRegistry
-from cardserver.schemas import ArrangementRequest, MoveRequest
+from cardserver.schemas import ArrangementRequest, Arriving, Claiming, MoveRequest
 from cardserver.sessions import InService, TableSession
 from cardwork.decks.deck import Order
 from cardwork.moves.actions import Play, Take
@@ -21,6 +21,7 @@ from cardwork.zones.zone import ZoneId
 from cardwork.zones.zones import hand_of
 
 from ..games.demo import DECK, HAND_SIZE, SEATS, SealedRoundGame
+from .company import CODE, Gathered, gathered
 from .layout import SEALED_SCENE
 
 TABLE: Final[str] = "green-baize"
@@ -41,13 +42,26 @@ VIEW: Final[str] = f"/tables/{TABLE}/view"
 EVENTS: Final[str] = f"/tables/{TABLE}/events"
 JOURNAL: Final[str] = f"/tables/{TABLE}/journal"
 
+OFFERED: Final[str] = "/offerings"
+GUESTS: Final[str] = f"/tables/{TABLE}/guests"
+GATHERING: Final[str] = f"/tables/{TABLE}/gathering"
+ATTENDANCE: Final[str] = f"/tables/{TABLE}/gathering/events"
+SEAT: Final[str] = f"/tables/{TABLE}/seat"
+CHOICE: Final[str] = f"/tables/{TABLE}/choice"
+DEALING: Final[str] = f"/tables/{TABLE}/deal"
+
 
 def token_of(seat: int) -> str:
     return f"token-for-seat-{seat}"
 
 
+def holding(token: str) -> dict[str, str]:
+    """The header a client speaks its token through, whichever half of the protocol it is asking for."""
+    return {SEAT_HEADER: token}
+
+
 def credentials(seat: int) -> dict[str, str]:
-    return {SEAT_HEADER: token_of(seat)}
+    return holding(token_of(seat))
 
 
 def command(move: Move, base_seq: int, key: str) -> dict[str, object]:
@@ -101,7 +115,7 @@ async def served[StateT: GameState](
     registry = TableRegistry(NO_GRACE)
     session = registry.open(TABLE, table, presentation)
     seats = TokenSeats({TABLE: {token_of(seat): seat for seat in range(table.players)}})
-    app = create_app(registry, seats)
+    app = create_app(registry, seats, None)
     try:
         async with AsyncClient(
             transport=ASGITransport(app=app),
@@ -149,13 +163,68 @@ def session_fixture(registry: TableRegistry) -> InService:
 @pytest.fixture(name="app")
 def app_fixture(registry: TableRegistry) -> FastAPI:
     seats = TokenSeats({TABLE: {token_of(seat): seat for seat in range(SEATS)}})
-    return create_app(registry, seats)
+    return create_app(registry, seats, None)
 
 
 @pytest.fixture(name="client")
 async def client_fixture(app: FastAPI) -> AsyncIterator[AsyncClient]:
     async with AsyncClient(
         transport=ASGITransport(app=app),
+        base_url=BASE_URL,
+    ) as client:
+        yield client
+
+
+async def arriving(client: AsyncClient, name: str) -> Response:
+    """One person arriving at the table on its own code, built through the schema the server validates it with."""
+    return await client.post(GUESTS, json=Arriving(code=CODE, name=name).model_dump(mode="json"))
+
+
+async def arrives(client: AsyncClient, name: str) -> str:
+    """The token one guest's arrival minted, which is what they speak through afterwards."""
+    return str((await arriving(client, name)).json()["token"])
+
+
+async def sits(client: AsyncClient, token: str, seat: int | None, base_revision: int) -> Response:
+    """One guest taking a seat at the gathering, or standing up from the one they hold by naming none."""
+    return await client.put(
+        SEAT,
+        json=Claiming(seat=seat, base_revision=base_revision).model_dump(mode="json"),
+        headers=holding(token),
+    )
+
+
+async def seated_company(
+    client: AsyncClient,
+    names: tuple[str, ...],
+) -> tuple[str, ...]:
+    """A company arriving one after another and taking the seats in the order they arrived.
+
+    Every seat of the table the gathering settled comes to be held, which leaves the deal to be called for and
+    nothing standing in its way. Each claim quotes the revision the arrival before it answered with.
+    """
+    tokens: list[str] = []
+    for seat, name in enumerate(names):
+        admitted = (await arriving(client, name)).json()
+        await sits(client, admitted["token"], seat, admitted["gathering"]["revision"])
+        tokens.append(str(admitted["token"]))
+
+    return tuple(tokens)
+
+
+@pytest.fixture(name="gathered")
+async def gathered_fixture() -> AsyncIterator[Gathered]:
+    held = gathered(TABLE, SEATS)
+
+    yield held
+
+    await held.registry.close()
+
+
+@pytest.fixture(name="visitor")
+async def visitor_fixture(gathered: Gathered) -> AsyncIterator[AsyncClient]:
+    async with AsyncClient(
+        transport=ASGITransport(app=gathered.app),
         base_url=BASE_URL,
     ) as client:
         yield client

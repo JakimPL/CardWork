@@ -48,7 +48,7 @@ def serve[StateT: GameState](
     registry.open(settings.name, table, presentation)
     tokens = tokens_for(table.players)
     seats = TokenSeats({settings.name: {token: seat for seat, token in tokens.items()}})
-    app = create_app(registry, seats)
+    app = create_app(registry, seats, None)
     return Hosted(
         app=app,
         table=settings.name,

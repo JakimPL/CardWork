@@ -22,12 +22,20 @@ def document() -> Document:
     empty registry: what a client sends and what it is answered stands the same whichever game is in service.
     """
     registry = TableRegistry(NO_GRACE)
-    return create_app(registry, TokenSeats({})).openapi()
+    return create_app(registry, TokenSeats({}), None).openapi()
 
 
 def write(specification: Document, into: Path) -> int:
     """Write one document where the interface generates its types from, and answer with how many bytes landed."""
-    body = dumps(specification, indent=INDENT, sort_keys=True, ensure_ascii=False) + "\n"
+    body = (
+        dumps(
+            specification,
+            indent=INDENT,
+            sort_keys=True,
+            ensure_ascii=False,
+        )
+        + "\n"
+    )
     into.parent.mkdir(parents=True, exist_ok=True)
     into.write_text(body, encoding="utf-8")
     return len(body)
@@ -39,7 +47,12 @@ def parser() -> ArgumentParser:
         prog="openapi",
         description="Write the OpenAPI document of a table, which the player interface types are generated from.",
     )
-    arguments.add_argument("--into", type=Path, default=SPECIFICATION, help="the file the document is written to")
+    arguments.add_argument(
+        "--into",
+        type=Path,
+        default=SPECIFICATION,
+        help="the file the document is written to",
+    )
     return arguments
 
 

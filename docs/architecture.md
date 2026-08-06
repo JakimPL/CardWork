@@ -258,7 +258,7 @@ class GameCard(BaseFrozen):
     card: CardOrJoker
     face_down: bool = False
 
-    def with_face(self, face_down: bool) -> "GameCard": ...
+    def with_face(self, face_down: bool) -> GameCard: ...
 ```
 
 Cards are frozen, so a card referenced from a snapshot keeps whatever it was when the snapshot was taken.
@@ -284,7 +284,7 @@ class Zone(BaseFrozen):
     ordered: bool
     cards: GameCards = ()
 
-    def with_cards(self, cards: GameCards) -> "Zone": ...
+    def with_cards(self, cards: GameCards) -> Zone: ...
 
 
 class Board(BaseFrozen):
@@ -292,7 +292,7 @@ class Board(BaseFrozen):
     zones: Zones
 
     def zone(self, zone_id: ZoneId) -> Zone: ...
-    def with_zones(self, *replacements: Zone) -> "Board": ...
+    def with_zones(self, *replacements: Zone) -> Board: ...
     def validate_board(self) -> None: ...
 ```
 
@@ -529,8 +529,8 @@ class Position(BaseFrozen, Generic[StateT]):
     state: StateT
     players: int = Field(ge=1)
 
-    def with_board(self, board: Board) -> "Position[StateT]": ...
-    def with_state(self, state: StateT) -> "Position[StateT]": ...
+    def with_board(self, board: Board) -> Position[StateT]: ...
+    def with_state(self, state: StateT) -> Position[StateT]: ...
 ```
 
 The complete server-side truth at one instant: every card, every point, whose turn it is. This is the
@@ -552,10 +552,10 @@ Four primitives cover everything a simultaneous, partial-knowledge game does to 
 class MoveCards(Effect[StateT]):
     kind: Literal["move_cards"] = "move_cards"
     source: ZoneId
-    indices: NonEmptyIndices          # positions within source
+    indices: NonEmptyIndices  # positions within source
     target: ZoneId
-    at: int | None = None             # insertion index; None appends
-    face_down: bool | None = None     # None keeps each card's current face
+    at: int | None = None  # insertion index; None appends
+    face_down: bool | None = None  # None keeps each card's current face
 
 
 class SetFace(Effect[StateT]):
@@ -568,12 +568,12 @@ class SetFace(Effect[StateT]):
 class Reorder(Effect[StateT]):
     kind: Literal["reorder"] = "reorder"
     zone: ZoneId
-    order: tuple[int, ...]            # an explicit, recorded permutation
+    order: tuple[int, ...]  # an explicit, recorded permutation
 
 
 class SetState(Effect[StateT]):
     kind: Literal["set_state"] = "set_state"
-    state: StateT                     # the whole cursor, built through with_changes
+    state: StateT  # the whole cursor, built through with_changes
 
 
 type AnyEffect[S: GameState] = Annotated[
@@ -610,7 +610,9 @@ A transaction applies a *sequence* of effects, so there is exactly one combinato
 the application step:
 
 ```python
-def fold(effects: Iterable[AnyEffect[StateT]], position: Position[StateT]) -> Position[StateT]: ...
+def fold(
+    effects: Iterable[AnyEffect[StateT]], position: Position[StateT]
+) -> Position[StateT]: ...
 ```
 
 `Journal.replay`, the engine's commit path and speculative search all go through it. It is the single path
@@ -667,9 +669,13 @@ class PassingGame(RoundGame[PassingState]):
     intents: ClassVar[Intents[Take | Give]] = Intents(Take, Give)
 
     def expand(self, position: Table, move: Move, rng: Random) -> Changes:
-        match self.intents.read(move):        # a Take or a Give, and the match is covered by those two
-            case Take() as exchange: ...
-            case Give() as passing: ...
+        match self.intents.read(
+            move
+        ):  # a Take or a Give, and the match is covered by those two
+            case Take() as exchange:
+                ...
+            case Give() as passing:
+                ...
 ```
 
 The declaration is generic in the actions it names, so the vocabulary reaches the types a game is written
@@ -697,7 +703,7 @@ than the no-leak property of §7.
 ```python
 class Transaction(BaseFrozen, Generic[StateT]):
     seq: int
-    move: Move | None          # None for engine-initiated: the deal, settlement
+    move: Move | None  # None for engine-initiated: the deal, settlement
     effects: Effects[StateT]
 ```
 
@@ -716,8 +722,8 @@ class Journal(BaseFrozen, Generic[StateT]):
     @property
     def head(self) -> int: ...
 
-    def append(self, transaction: Transaction[StateT]) -> "Journal[StateT]": ...
-    def truncate(self) -> "Journal[StateT]": ...
+    def append(self, transaction: Transaction[StateT]) -> Journal[StateT]: ...
+    def truncate(self) -> Journal[StateT]: ...
     def replay(self, upto: int | None = None) -> Position[StateT]: ...
 ```
 
@@ -877,8 +883,10 @@ This is the section to reread when in doubt. Everything a client learns, it lear
 class ZoneView(BaseFrozen):
     id: ZoneId
     owner: int | None
-    arrangeable: bool                    # whether this observer may lay the run out itself (§3.4)
-    cards: tuple[GameCard | None, ...]   # None = present, unidentifiable by this observer
+    arrangeable: bool  # whether this observer may lay the run out itself (§3.4)
+    cards: tuple[
+        GameCard | None, ...
+    ]  # None = present, unidentifiable by this observer
 
 
 class PositionView(BaseFrozen, Generic[StateT]):
@@ -886,7 +894,7 @@ class PositionView(BaseFrozen, Generic[StateT]):
     seq: int
     zones: Mapping[ZoneId, ZoneView]
     state: StateT
-    legal: Moves                         # the moves this observer may make, and those alone
+    legal: Moves  # the moves this observer may make, and those alone
 
 
 def project_position(
@@ -966,7 +974,7 @@ class EventView(BaseFrozen, Generic[StateT]):
     move: MoveView | None
     changes: tuple[ZoneChange, ...]
     state: StateT
-    legal: Moves                         # the moves open to this observer once the commit has landed
+    legal: Moves  # the moves open to this observer once the commit has landed
 
 
 def project_transaction(
@@ -1026,7 +1034,9 @@ Steps 6–10 of §6 are pure, so they factor out of the pipeline as one method, 
 of speculation:
 
 ```python
-def step(self, position: Position[StateT], move: Move, rng: Random) -> Position[StateT]: ...
+def step(
+    self, position: Position[StateT], move: Move, rng: Random
+) -> Position[StateT]: ...
 ```
 
 `submit` is that same private path plus the concurrency check and the commit that speculation does not
@@ -1278,10 +1288,14 @@ class Table(Protocol[StateT]):
     def journal(self) -> Journal[StateT]: ...
 
     def submit(self, move: Move, base_seq: int) -> Transaction[StateT]: ...
-    def arrange(self, zone: ZoneId, order: Order, seat: int, base_seq: int) -> Transaction[StateT]: ...
+    def arrange(
+        self, zone: ZoneId, order: Order, seat: int, base_seq: int
+    ) -> Transaction[StateT]: ...
     def settle(self) -> Transactions[StateT]: ...
     def view(self, observer: int | None) -> PositionView[StateT]: ...
-    def events(self, observer: int | None, since: int) -> tuple[EventView[StateT], ...]: ...
+    def events(
+        self, observer: int | None, since: int
+    ) -> tuple[EventView[StateT], ...]: ...
     def mark_published(self) -> None: ...
 ```
 
@@ -1817,7 +1831,9 @@ Transaction(
     seq=0,
     move=None,
     effects=(
-        Reorder(zone="draw", order=(7, 2, 11, 0, ...)),   # RNG consulted once, result recorded
+        Reorder(
+            zone="draw", order=(7, 2, 11, 0, ...)
+        ),  # RNG consulted once, result recorded
         MoveCards(source="draw", indices={0, 1, 2}, target="hand:0", face_down=True),
         MoveCards(source="draw", indices={0, 1, 2}, target="hand:1", face_down=True),
         MoveCards(source="draw", indices={0, 1, 2}, target="hand:2", face_down=True),
