@@ -19,7 +19,7 @@ from cardwork.cards.game import CardsOrJokers
 from cardwork.combinations.combination import Combination
 from cardwork.states.state import NOTHING
 from cardwork.zones.zone import cards_of
-from cardwork.zones.zones import HANDS, STACK
+from cardwork.zones.zones import DISCARD, HANDS, STACK
 
 from .driving import (
     NO_PASSES,
@@ -49,6 +49,7 @@ A_HIGH_CARD: Final[CardsOrJokers] = (ACE_OF_DIAMONDS,)
 
 ANSWERING_HANDS: Final[tuple[CardsOrJokers, ...]] = (ONE_CARD, ODD_CARDS, A_HIGH_CARD, A_LOWER_PAIR)
 GOING_OUT_HANDS: Final[tuple[CardsOrJokers, ...]] = (A_PAIR, A_HIGHER_PAIR, ONE_CARD + ODD_CARDS)
+CLIMBING_OUT_HANDS: Final[tuple[CardsOrJokers, ...]] = (ONE_CARD, A_HIGHER_PAIR, ODD_CARDS)
 
 PAIR_OF_FIVES: Final[Combination] = a_combination_of(A_PAIR)
 
@@ -79,16 +80,18 @@ def test_a_contest_every_seat_but_one_has_passed_over_hands_that_seat_the_lead(f
     assert reopened.state.passed == NO_PASSES
 
 
-def test_the_table_a_reopened_lead_stands_on_holds_the_combination_the_passes_settled(
+def test_a_reopened_lead_stands_on_a_bare_table_with_the_combination_it_settled_out_of_play(
     four_seats: ClimbingGame,
 ) -> None:
-    """A pass moves no card, so the combination nobody answered lies where it was played until the next deal."""
+    """The contest closing takes the combination that won it out of play, so the lead opens on nothing at all."""
     position = a_contest_of(four_seats, ANSWERING_HANDS, FOURTH_SEAT, PAIR_OF_FIVES, NO_PASSES)
+    aside = cards_of(position.board.zone(DISCARD))
 
     reopened = passed_by(four_seats, position, (FOURTH_SEAT, LAID_IT, FOLLOWING))
 
-    assert cards_of(reopened.board.zone(STACK)) == PAIR_OF_FIVES.cards
-    assert reopened.board == position.board
+    assert cards_of(reopened.board.zone(STACK)) == ()
+    assert cards_of(reopened.board.zone(DISCARD)) == aside + PAIR_OF_FIVES.cards
+    assert all(game_card.face_down for game_card in reopened.board.zone(DISCARD).cards)
 
 
 def test_a_seat_that_has_given_its_turn_up_takes_a_turn_again_once_the_lead_reopens(four_seats: ClimbingGame) -> None:
@@ -126,6 +129,19 @@ def test_a_seat_playing_its_last_card_closes_the_round_on_itself(climbing: Climb
     assert out.state.to_act == frozenset()
     assert out.state.passed == NO_PASSES
     assert climbing.round_over(out)
+
+
+def test_a_round_decided_leaves_the_combination_that_won_it_lying_on_the_table(climbing: ClimbingGame) -> None:
+    """The round closes on the play emptying a hand, so what took that seat out is what the table is left showing."""
+    position = a_contest_of(climbing, CLIMBING_OUT_HANDS, FOLLOWING, PAIR_OF_FIVES, NO_PASSES)
+    aside = cards_of(position.board.zone(DISCARD))
+
+    out = climbing.step(position, a_play(FOLLOWING, THE_PAIR), Random(SEED))
+
+    assert out.state.phase == ClimbingPhase.DECIDED
+    assert out.state.winner == FOLLOWING
+    assert cards_of(out.board.zone(STACK)) == A_HIGHER_PAIR
+    assert cards_of(out.board.zone(DISCARD)) == aside + PAIR_OF_FIVES.cards
 
 
 def test_the_round_catches_every_seat_with_the_worth_of_the_cards_left_in_its_hand(climbing: ClimbingGame) -> None:

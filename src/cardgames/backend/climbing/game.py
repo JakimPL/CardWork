@@ -60,9 +60,10 @@ class ClimbingGame(RoundGame[ClimbingState]):
         game = ClimbingGame(players=4, deck=standard_deck(), conclusion=Conclusion(rounds=3), rng=Random(7))
 
     **A turn is one of two moves.** A combination played lands face up on the stack and stands there for the next
-    seat still answering to climb over. A pass gives that turn up for as long as the combination on the table
-    keeps changing hands, and a pass by every seat but one leaves that seat's combination unanswered, which hands
-    it the lead again over an empty table.
+    seat still answering to climb over, and the one it climbed over goes face down among the cards out of play. So
+    the table shows the contest itself, which is the one combination there is to answer. A pass gives that turn up
+    for as long as the combination on the table keeps changing hands, and a pass by every seat but one leaves that
+    seat's combination unanswered, which hands it the lead again over a bare table.
 
     **The match opens on the seat holding `rules.OPENING_CARD`**, which is the one card every other card in the
     deck climbs over, and that seat leads a combination holding it. Each round after is led by the seat that went
@@ -147,7 +148,11 @@ class ClimbingGame(RoundGame[ClimbingState]):
 
         return redeal.effects(counts, rng)
 
-    def next_leader(self, position: Position[ClimbingState], rng: Random) -> int:
+    def next_leader(
+        self,
+        position: Position[ClimbingState],
+        rng: Random,
+    ) -> int:
         """The seat leading the round about to open, which is the seat that went out of the one before.
 
         A match opens on the seat holding the opening card, which is read off the hands once they are dealt
@@ -208,7 +213,10 @@ class ClimbingGame(RoundGame[ClimbingState]):
         """Whether a draw of the deal handed the opening card to a seat rather than setting it aside."""
         return self._holding_the_opening_card(dealt) is not None
 
-    def _holding_the_opening_card(self, position: Position[ClimbingState]) -> int | None:
+    def _holding_the_opening_card(
+        self,
+        position: Position[ClimbingState],
+    ) -> int | None:
         """The seat dealt the opening card, and None where the shares left it lying aside."""
         return next((seat for seat, hand in enumerate(position.held(HANDS)) if OPENING_CARD in hand), None)
 
@@ -419,14 +427,34 @@ class ClimbingGame(RoundGame[ClimbingState]):
 
         return position.board.taken(HANDS.of(seat), places)
 
+    def _swept(self, position: Position[ClimbingState]) -> Effects[ClimbingState]:
+        """Whatever the table stands on carried face down out of play, and nothing at all where it stands bare.
+
+        A combination lies on the table for as long as it is the one to climb over, and leaves it the moment
+        another lands on it or the contest it stood in closes. So the discard holds everything gone — the cards
+        the shares left over and every combination beaten — as a face-down count of what the round has spent.
+        """
+        standing = position.board.count(STACK)
+        if not standing:
+            return ()
+
+        return (
+            MoveCards(
+                source=STACK,
+                indices=frozenset(range(standing)),
+                target=DISCARD,
+                face_down=True,
+            ),
+        )
+
     def _played(
         self,
         position: Position[ClimbingState],
         seat: int,
         play: Play,
     ) -> Effects[ClimbingState]:
-        """The combination laid face up on the stack, and the cursor it leaves the round standing on."""
-        return (
+        """The table swept of what stood on it, the combination laid face up there, and the cursor it leaves."""
+        return self._swept(position) + (
             MoveCards(
                 source=HANDS.of(seat),
                 indices=play.indices,
@@ -481,12 +509,13 @@ class ClimbingGame(RoundGame[ClimbingState]):
 
         The turn goes to the next seat round the table yet to pass either way, and where this pass is the last
         one owed, that seat is the one whose combination the rest of the table gave up on. So a contest every
-        seat but one has passed over hands its winner the lead, and the table it leads onto stands empty.
+        seat but one has passed over hands its winner the lead, and the combination it settled goes out of play
+        with the rest, which leaves that lead standing on a bare table.
         """
         passed = position.state.passed | {seat}
         onwards = self._next_answering(position, seat, passed)
         if len(passed) == position.players - ONE_SEAT:
-            return (SetState(state=self._reopened(position, onwards)),)
+            return self._swept(position) + (SetState(state=self._reopened(position, onwards)),)
 
         return (
             SetState(
@@ -503,7 +532,7 @@ class ClimbingGame(RoundGame[ClimbingState]):
         position: Position[ClimbingState],
         leader: int,
     ) -> ClimbingState:
-        """The lead the passes settle, which stands on nothing as the lead a round opens on does.
+        """The lead the passes settle, which stands on a bare table as the lead a round opens on does.
 
         Args:
             position: the table as the pass closing the contest leaves it.

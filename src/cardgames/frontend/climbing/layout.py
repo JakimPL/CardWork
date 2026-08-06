@@ -20,11 +20,25 @@ from cardwork.zones.zones import DISCARD, HANDS, STACK
 TITLE: Final[str] = "Climbing"
 
 TABLE: Final[tuple[Fixture, ...]] = (
-    Fixture(zone=STACK, seen=Lay(label="Played", spread=Spread.FAN, counted=True)),
+    Fixture(
+        zone=STACK,
+        seen=Lay(
+            label="On the table",
+            spread=Spread.FAN,
+            counted=False,
+        ),
+    ),
     Fixture.heap(DISCARD, "Aside"),
 )
 
-SEATED: Final[tuple[Setting, ...]] = (Setting.hand(HANDS, "Hand", mine="Your hand", tally="Cards"),)
+SEATED: Final[tuple[Setting, ...]] = (
+    Setting.hand(
+        HANDS,
+        "Hand",
+        mine="Your hand",
+        tally="Cards",
+    ),
+)
 
 READOUTS: Final[tuple[Readout, ...]] = presets.match_readouts(ClimbingState) + (
     Readout.of(ClimbingState, "rounds", "Rounds", scope=Scope.TABLE),
@@ -58,7 +72,7 @@ GESTURES: Final[tuple[Making, ...]] = (
         picked=None,
         commit=Commit.WORD,
         target=None,
-        caption="Give your turn up",
+        caption="Pass",
     ),
 )
 

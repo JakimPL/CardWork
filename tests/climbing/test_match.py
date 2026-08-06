@@ -45,6 +45,8 @@ from .driving import (
 LAID_IT: Final[int] = 0
 THE_PAIR: Final[frozenset[int]] = frozenset({0, 1})
 SEEDS: Final[range] = range(8)
+NO_CARDS: Final[int] = 0
+CARDS_LEFT_OVER: Final[int] = 1
 
 A_PAIR: Final[CardsOrJokers] = (FIVE_OF_SPADES, FIVE_OF_HEARTS)
 A_HIGHER_PAIR: Final[CardsOrJokers] = (NINE_OF_CLUBS, NINE_OF_SPADES)
@@ -196,6 +198,20 @@ def test_the_round_after_one_decided_opens_on_the_seat_that_went_out_of_it(climb
     assert climbing.state.on_table is None
     assert climbing.state.passed == frozenset()
     assert climbing.state.winner is None
+
+
+def test_the_deal_of_the_next_round_gathers_the_cards_a_round_spent_back_into_the_pile(
+    climbing: ClimbingGame,
+) -> None:
+    """Every combination beaten goes out of play as a round runs, and the deal that follows takes them all back."""
+    play_a_round(climbing, climbing_first)
+    spent = climbing.board.count(DISCARD)
+    climbing.settle()
+
+    assert spent > CARDS_LEFT_OVER
+    assert climbing.board.count(DISCARD) == CARDS_LEFT_OVER
+    assert climbing.board.count(STACK) == NO_CARDS
+    climbing.board.validate_board()
 
 
 def test_a_round_leaves_every_seat_holding_cards_caught_with_what_they_are_worth(climbing: ClimbingGame) -> None:

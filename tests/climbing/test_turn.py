@@ -29,7 +29,7 @@ from cardwork.moves.actions import Discard, Play
 from cardwork.moves.move import Move
 from cardwork.rounds.seating import next_seat
 from cardwork.zones.zone import cards_of
-from cardwork.zones.zones import HANDS, STACK
+from cardwork.zones.zones import DISCARD, HANDS, STACK
 
 from .driving import (
     NO_PASSES,
@@ -126,11 +126,33 @@ def test_a_climb_lands_on_the_stack_and_leaves_the_seats_that_gave_their_turn_up
 
     climbed = four_seats.step(position, a_play(LAST_SEAT, THE_FIRST_PAIR), Random(SEED))
 
-    assert cards_of(climbed.board.zone(STACK)) == PAIR_OF_FIVES.cards + A_HIGHER_PAIR
+    assert cards_of(climbed.board.zone(STACK)) == A_HIGHER_PAIR
     assert climbed.state.on_table == PAIR_OF_NINES
     assert climbed.state.passed == frozenset({FOLLOWING})
     assert climbed.state.to_act == frozenset({FOURTH_SEAT})
     climbed.board.validate_board()
+
+
+def test_a_climb_takes_the_combination_it_climbed_over_face_down_out_of_play(four_seats: ClimbingGame) -> None:
+    """The table shows the contest, so the beaten combination joins the cards a round has spent."""
+    position = a_contest_of(four_seats, ANSWERING_HANDS, LAST_SEAT, PAIR_OF_FIVES, frozenset({FOLLOWING}))
+    aside = cards_of(position.board.zone(DISCARD))
+
+    climbed = four_seats.step(position, a_play(LAST_SEAT, THE_FIRST_PAIR), Random(SEED))
+
+    assert cards_of(climbed.board.zone(DISCARD)) == aside + PAIR_OF_FIVES.cards
+    assert all(game_card.face_down for game_card in climbed.board.zone(DISCARD).cards)
+
+
+def test_a_lead_lands_on_a_table_holding_nothing_and_takes_no_card_out_of_play(climbing: ClimbingGame) -> None:
+    """A lead opens on a bare table, so the combination it puts down is the whole of what stands there."""
+    position = a_lead_of(climbing, ODD_HANDS, ON_TURN)
+    aside = cards_of(position.board.zone(DISCARD))
+
+    laid = climbing.step(position, a_play(ON_TURN, THE_FIRST_PAIR), Random(SEED))
+
+    assert cards_of(laid.board.zone(STACK)) == A_PAIR
+    assert cards_of(laid.board.zone(DISCARD)) == aside
 
 
 def test_the_turn_of_a_contest_walks_past_the_seats_that_have_passed(four_seats: ClimbingGame) -> None:
