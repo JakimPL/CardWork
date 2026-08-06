@@ -158,6 +158,28 @@ describe("the cards a player may press", () => {
   });
 });
 
+describe("the panel a player plays from", () => {
+  it("marks itself while the table stands on this seat, as a plaque and a seat round the table do", () => {
+    expect(drawn(A_TURN, null, "own")).toContain("zones own acting");
+  });
+
+  it("keeps that mark through the picking of the cards a move is made of", () => {
+    expect(drawn(A_TURN, { zone: HAND, indices: [0] }, "own")).toContain("zones own acting");
+  });
+
+  it("stands its cards quiet where the table asks this seat for nothing, and marks none of them out", () => {
+    const hand = drawn(POSITION, null, "own");
+
+    expect(hand).toContain("zones own idle");
+    expect(faded(hand)).toBe(0);
+  });
+
+  it("leaves the zones the table shares reading one way, since the turn belongs to a seat rather than to them", () => {
+    expect(drawn(A_TURN, null, "shared")).toContain('class="zones shared"');
+    expect(drawn(POSITION, null, "shared")).toContain('class="zones shared"');
+  });
+});
+
 describe("a hand a set is picked out of", () => {
   it("fades the card of the odd rank from the moment the turn arrives", () => {
     const hand = rendered(SETS, A_SET, null, "own");

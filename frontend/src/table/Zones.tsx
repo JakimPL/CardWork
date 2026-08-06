@@ -4,7 +4,7 @@ import type { Slot as Arrangement } from "../api/layout";
 import type { PositionView } from "../api/views";
 import type { Arrivals } from "../play/arrivals";
 import type { Offered } from "../play/selection";
-import { wordsOf } from "../play/selection";
+import { onTurn, wordsOf } from "../play/selection";
 import type { Playing } from "../play/usePlay";
 import { classes } from "./classes";
 import type { Placement } from "./placing";
@@ -39,12 +39,22 @@ interface ZonesProps {
  *
  * That panel holds the moves a player says as well as the cards they play: a move landing on no place is drawn
  * at the end of it and counted in the width like a card, so it lies among the cards it is said instead of.
+ *
+ * It says whose turn it is besides, since a player looking at their own cards is looking at the one place on the
+ * page that is theirs: a turn there marks the panel as it marks a plaque and a seat round the table, and a panel
+ * the table asks nothing of stands its cards quiet. The moves this seat is served are what both readings rest on,
+ * so the panel reads live for exactly as long as there is something in it to do.
  */
 export function Zones({ place, slots, view, arrivals, playing }: ZonesProps): ReactElement {
-  const said = place === OWN ? wordsOf(playing.standing) : [];
+  const mine = place === OWN;
+  const said = mine ? wordsOf(playing.standing) : [];
+  const turn = mine && onTurn(playing.standing);
   const lines = linesOf(place, slots);
   return (
-    <div className={classes("zones", place)} style={spanning(measuring(lines, view, said))}>
+    <div
+      className={classes("zones", place, mine && (turn ? "acting" : "idle"))}
+      style={spanning(measuring(lines, view, said))}
+    >
       {lines.map((line, index) => (
         <div key={naming(line)} className="line">
           {line.map((slot) => (

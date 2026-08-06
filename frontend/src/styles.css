@@ -36,6 +36,7 @@
   --hint: #8fd0ff;
   --drained: 0.3;
   --quieted: 0.6;
+  --waiting: 0.78;
   --gap: clamp(4px, 0.8vh, 12px);
   --least: 48px;
   --dealt: clamp(var(--least), 22vh, 200px);
@@ -271,11 +272,32 @@ body {
   gap: calc(var(--gap) * 2);
 }
 
+/*
+ * The panel a player plays from, which says whose turn it is where the player is already looking.
+ *
+ * A turn arriving marks the panel as it marks a plaque and a seat round the table, so the outline round a player's
+ * own cards is the same yellow read at the same moment. It lies close round the cards it holds, since the mark is
+ * about the hand rather than about the width of the page. A panel with no move in it stands its cards quiet
+ * instead, which is written among the cards themselves further down.
+ *
+ * The panel keeps the room its outline takes out of the width its cards are drawn to, as the seats round the table
+ * keep theirs, so a hand of any size lies inside the page.
+ */
+
 .zones.own {
   --upright: var(--dealt);
-  --room: calc(100vw - var(--gap) * 12);
+  --room: calc(100vw - var(--gap) * 14 - 2px);
 
+  align-self: flex-start;
   align-items: flex-start;
+  padding: calc(var(--gap) / 2) var(--gap);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+}
+
+.zones.own.acting {
+  border-color: var(--acting);
+  background: rgb(240 192 64 / 12%);
 }
 
 .zones.shared {
@@ -342,6 +364,15 @@ body {
   box-shadow: 0 0 0 2px rgb(111 207 151 / 45%);
 }
 
+/*
+ * One zone where the layout puts it, and the place beside a hand where a turn is said in words.
+ *
+ * A zone is a drawing rather than a passage of text: a pointer travelling across it carries cards, and the reading
+ * a browser makes of a drag over words has nothing to add to that. So a run dragged across paints no selection of
+ * its own, and what a player is left holding is the cards. The names on the table stay text and stay selectable,
+ * since a name is something a reader may want to take away with them.
+ */
+
 .slot {
   --card-width: calc(var(--card-height) * var(--card-aspect-width) / var(--card-aspect-height));
   --raised: calc(var(--card-height) * -0.06);
@@ -353,6 +384,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: calc(var(--gap) / 2);
+  user-select: none;
 }
 
 .slot-label {
@@ -481,6 +513,9 @@ body {
  *
  * A pack of the old pixel artwork is drawn square, one pixel to a block of them, which is how those cards were
  * drawn to be read. A pack carrying its own corners is drawn to the edge of the place it lies in.
+ *
+ * The card is what a hand takes hold of and the picture travels with it, so a drag begun on the picture is a drag
+ * on the card under it and the run it came out of is what the hand is laying out.
  */
 
 .card.drawn {
@@ -494,6 +529,7 @@ body {
   width: 100%;
   height: 100%;
   border-radius: inherit;
+  -webkit-user-drag: none;
 }
 
 .card.pixelated .art {
@@ -553,6 +589,19 @@ button.card {
 
 .card.dimmed {
   filter: saturate(var(--drained)) brightness(var(--quieted));
+}
+
+/*
+ * Every card of a panel the table is asking nothing of, which is a turn standing elsewhere read among a player's
+ * own cards.
+ *
+ * A hand waiting on another seat is lowered as a whole and keeps its colour, so what it reads as is a turn that is
+ * somebody else's — where a card lowered among its neighbours reads as one this turn has no use for. So a player
+ * glancing down at their cards is told which of the two they are looking at.
+ */
+
+.zones.own.idle .card {
+  filter: brightness(var(--waiting));
 }
 
 .card.selected {

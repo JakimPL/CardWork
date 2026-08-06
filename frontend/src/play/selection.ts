@@ -123,6 +123,17 @@ export function picksIn(standing: Prospect, zone: ZoneId): boolean {
   return standing.offers.some((offer) => offer.picked === zone);
 }
 
+/**
+ * Whether the table stands ready for a move from this seat, which is what its own panel reads live for.
+ *
+ * The moves a seat is served are the whole of what it may do, so a turn is there for as long as one of them
+ * stands. A seat served none is one the table is asking nothing of, whether it is waiting on another player or
+ * on a round to be dealt, and a player reads that where their own cards are.
+ */
+export function onTurn(standing: Prospect): boolean {
+  return standing.offers.length > 0;
+}
+
 /** The move a place sends, and none where pointing at that place sends nothing yet. */
 export function offerTo(standing: Prospect, target: Target): Offered | null {
   return standing.armed.find((offer) => offer.target !== null && keyOf(offer.target) === keyOf(target)) ?? null;
