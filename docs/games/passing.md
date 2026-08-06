@@ -164,6 +164,12 @@ Both pick in the hand, because the positions either intent names address the car
 own positions are named by no move at all. So a card is chosen in one place and sent by pointing at where it
 goes — the pile to trade it, the next seat's plaque to pass it — and a selection alone commits nothing.
 
+**The scene is three statements and two moves.** `Setting.hand(HANDS, "Hand", mine="Your hand", tally="Cards")`
+gives every seat the hand it plays from, under all three readings at once: the cards at the seat holding it,
+the backs and their count across the table, the word *Cards* on the plaques. A `Fixture.heap` apiece states the
+pile and the stack. None of the five names a seat, since the layer binds one as it lays each observer out
+(`presentation.md` §3).
+
 The standing, what the round in play has scored, the round in play and the seat a round was won by are readouts
 over `PassingState`. The four phases of §4 are captioned there as well, which is what a player reads in place of
 `"between_rounds"`.

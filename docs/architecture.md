@@ -20,17 +20,18 @@ This document is organised as principles first, then the mechanisms each princip
 part to internalise: when a design question arises that the rest of the document leaves open, the six
 rules answer it.
 
-Five documents state the parts a game reaches for and the games themselves, and this one states what they
+Seven documents state the parts a game reaches for and the games themselves, and this one states what they
 all rest on:
 
 | document | states |
 |---|---|
 | `docs/combinations.md` | what a run of cards reads as: patterns, jokers, duplicates, rankings, points |
 | `docs/rounds.md` | a match played as a series of rounds, each dealt afresh and scored into a standing |
-| `docs/presentation.md` | how a game states its own table for a player: slots, spreads, gestures, plaques |
+| `docs/presentation.md` | how a game states its own table for a player: settings, spreads, gestures, plaques |
 | `docs/games/passing.md` | a game of four cards, in which a fourth circulates and three reading alike win |
 | `docs/games/showdown.md` | a game of ten sealed turns, every seat committing one card at once |
 | `docs/games/shedding.md` | a game of matched sets, a turn shedding several cards of one rank or drawing one |
+| `docs/games/climbing.md` | a game of combinations, each answered by a stronger one of as many cards or passed |
 
 ---
 
@@ -120,7 +121,7 @@ The bands are a way to read the stack; the order is the contract. High to low:
 
 | Layer | Holds | Answers |
 |---|---|---|
-| `presentation` | `Scene`, `Layout`, `Slot`, `Gesture`, `Plaque`, `Readout` | how a game is laid out for a player |
+| `presentation` | `Scene`, `Setting`, `Making` as a game states them; `Layout`, `Slot`, `Gesture`, `Plaque`, `Readout` as an observer is served them | how a game is laid out for a player |
 | `rounds` | `RoundGame`, `RoundState`, `Redeal`, seating | how a match of rounds runs |
 | `games` | `Game`: setup hooks, rules hooks, and the concrete engine; `Capacity`, `Intents` | how a table plays |
 | `views` | `PositionView`, `EventView`, per-observer projection | what an observer is told |
@@ -167,9 +168,17 @@ layout is data a game states and an interface reads, so the geometry stays with 
 no measurement. A game states one `Scene` and the layer lays out every observer from it, which is what keeps the
 entitlement of a spectator out of each game's hands (`docs/presentation.md`).
 
+**A game states that scene as data, and the seat is the layer's to bind.** A zone is laid out once, addressed
+by the `Family` the layers below already reach every seat's copy of it through: a `Setting` carries the lay its
+owner reads, the lay the rest of the table reads and the word its count goes under, and a `Making` names a move
+the same way, so one statement becomes a `Gesture` at each seat. Where a zone stands among its owner's is the
+index of its declaration, which leaves a page ordinal out of a game's hands altogether. A scene answers for
+itself as the module stating it loads, so a mistake in a layout is met where it was written rather than when a
+client asks for one.
+
 **`cardgames` is a distribution of its own, and the import goes one way.** A game imports the framework,
-which is what keeps every mechanism here general enough for the game after these two. Each game stands
-apart from the other besides, so a rule both of them want is a rule that has moved down into `cardwork`.
+which is what keeps every mechanism here general enough for the game after the ones written. Each game stands
+apart from every other besides, so a rule two of them want is a rule that has moved down into `cardwork`.
 
 **A game is stated before it is shown.** `cardgames.backend.<game>` holds the rules — the zones, the cursor,
 the moves, the scoring — and `cardgames.frontend.<game>` holds the `Layout` those rules are read through.
@@ -183,7 +192,7 @@ language, so no contract can hold it to the packages above and two artefacts do 
 document the endpoints publish, which the layout vocabulary is generated from, and about ninety lines
 mirroring the projections by hand, since those carry a game's own state and publish no schema (§10, *The
 page*). Everything a game states about how it is read reaches the page as data, so the page holds the name of
-neither game.
+no game at all.
 
 **`cardtable` names all three, and nothing names it.** A game class and FastAPI have to meet somewhere, and
 the two contracts above put that somewhere outside `cardgames` and outside `cardserver` alike: the host is
@@ -221,7 +230,7 @@ aspirational:
    in `cardwork` where the third will find it.
 8. **Showdown stands apart** — the same claim over showdown's rules and its layout.
 9. **Shedding stands apart** — and over shedding's.
-10. **Climbing stands apart** — and over climbing's, which is rules alone until it is given a layout.
+10. **Climbing stands apart** — and over climbing's.
 11. **Nothing names the host** — none of `cardwork`, `cardserver` or `cardgames` names `cardtable`, so the
    composition root stays a leaf nothing depends on and a second host costs no change below it.
 12. **Host layers** — `cardtable` layers in its own right, high to low: `cli`, `catalogue`, `hosting`,
@@ -637,7 +646,7 @@ a `str` on the wire and a `StrEnum` in the game that reads it, which keeps the v
 while the action stays general. `indices` may be empty here alone among the intents that name positions, since
 a declaration over a whole hand covers everything the seat holds.
 
-Neither game here sends one, and the reason is worth stating: a declaration earns an intent where the seat's
+No game here sends one, and the reason is worth stating: a declaration earns an intent where the seat's
 word decides something. A win the cards already read decides nothing — a seat holding one gains nothing by
 withholding it — so `cardgames.backend.passing` awards it instead of asking for it (`docs/games/passing.md` §1).
 
@@ -1234,12 +1243,13 @@ The games in `cardgames` are the worked examples, and between them they exercise
 | `cardgames.backend.passing` | a sequential turn: one exchange with the pile, then a pass round the table | an outcome a rules question over `combinations` decides, and a match ending on a lead rather than a count |
 | `cardgames.backend.showdown` | a simultaneous turn: every seat commits one sealed card, and they turn over together | `to_act` holding every seat, `HIDDEN` zones, and a turn settled behind no move at all |
 | `cardgames.backend.shedding` | a turn of two minds: shed a set of one rank, or draw a card and pass it on | a move naming several cards, a hand that grows, and a game that added no primitive below it |
-| `cardgames.backend.climbing` | a combination put down on lead, and the seats after it climbing over what stands there or passing | a `Ranking` asked for every move a hand can make, a `Combination` carried in the cursor, and a round closing on the seat that empties its hand |
+| `cardgames.backend.climbing` | a combination put down on lead, and the seats after it climbing over what stands there or passing | a `Ranking` asked for every move a hand can make, a `Combination` carried in the cursor, a turn given up by word, and a standing of penalties won at the low end |
 
-**Climbing is stated as far as its cards reach.** It stands a table up, deals, and answers for every move a
-seat may make; the turn a landed combination hands on is rules work still to write, and it has no layout and
-no entry in the host catalogue, so it is read here rather than played. The other three are played end to end
-over the endpoints in the suite (§13).
+**All four are played end to end over the endpoints in the suite** (§13), and each is opened by name through
+`cardtable` (§10, *The host*). Climbing is the one that reads the standing the other way about: a round closes
+on the seat that plays its last card and scores every seat the worth of the cards it is caught holding, so its
+`award` is `Award.LOWEST` and the same `points` tuple names a winner at the other end
+(`docs/games/climbing.md`).
 
 ---
 
@@ -1533,7 +1543,7 @@ the host mounts. It holds three layers of its own, and each names only what is b
 
 **The types come from the document where a document exists, and by hand where one cannot.** `/layout` is the
 one answer that stands apart from a game's own state, so it publishes a schema and `openapi-typescript`
-generates the whole layout vocabulary from it — a slot, a gesture, a plaque, a readout, a move and the three
+generates the whole layout vocabulary from it — a slot, a gesture, a plaque, a readout, a move and the six
 closed vocabularies besides. `/view` and `/events` are generic in the state a game declares, which leaves
 FastAPI nothing to build a schema from, so `api/views.ts` mirrors them: a page reading a game's own cursor
 reads fields the framework never declared, which is exactly what a readout names for it. `make types` writes
@@ -1911,7 +1921,7 @@ play was good **given what the player knew**.
 
 ## 13. Invariants under test
 
-Most of the suite is ordinary unit coverage. Nine properties are the ones worth naming, because each
+Most of the suite is ordinary unit coverage. Ten properties are the ones worth naming, because each
 stands in for a class of bug rather than a case:
 
 | Property | Guards |
@@ -1924,6 +1934,7 @@ stands in for a class of bug rather than a case:
 | A pattern, a compound of patterns, a `Combination`, a `Ranking` and a game's own pattern nested in a built-in one each survive a JSON round-trip to an equal value | a rule that cannot be read back, which would keep a ranking or a combination out of a cursor and off the wire |
 | The places a `Ranking` offers over a generated hand are exactly the places it reads as a combination, under Hypothesis | a move list and the ranking it is drawn from drifting apart, so a pattern added to the rules is never offered |
 | Card conservation over `starting_deck` on every dealt table | a zone layout that loses or duplicates a card |
+| Every move a game offers an observer is made by exactly one gesture of the layout that observer is served, picking in a zone its projection holds and committing onto one it reads | a scene and the rules drifting apart, so a move the rules admit reaches a player as a card that arms nothing |
 | A stream resumed from `Last-Event-ID` delivers exactly what a client missed | the resumption path, which a dropped stream and a tab coming back into view both travel |
 
 The adapter's suite drives the real routes in-process — through an HTTP transport for the
@@ -1939,7 +1950,7 @@ into service through `create_app` and played over the endpoints: a game's own st
 view, its own refusals arrive as the statuses of §6, and a blind holding stays unread by the seat that owns
 it over the wire as it does on the table.
 
-The host is held to the same standard from the other end. A table opened through `cardtable.catalogue` is
-served the layout the game's own module states, a token speaks for the seat it was issued for and for no
-other, and a move read out of a seat's own `legal` lands through the endpoints — so the wiring of rules,
-scene and transport is a test rather than a first run in a browser.
+The host is held to the same standard from the other end, over each of the four games it opens. A table
+opened through `cardtable.catalogue` is served the layout the game's own module states, a token speaks for the
+seat it was issued for and for no other, and a move read out of a seat's own `legal` lands through the
+endpoints — so the wiring of rules, scene and transport is a test rather than a first run in a browser.

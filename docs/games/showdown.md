@@ -180,6 +180,14 @@ states the pairing rather than a rule deriving it (`presentation.md` §1).
 placeholder standing at its true index (`architecture.md` §7), so a player picks the third of five backs and
 the commitment lands on the card lying there.
 
+**The blind is also what a `Setting` is shaped for.** Three families stand at every seat here, and this one
+reads differently in each of the three ways a zone reaches a player: a row of whole cards at the seat picking
+by position, a heap under its size across the table, and the word *Blind* on every plaque. One value holds all
+three, so they stay in step by construction; the tray beside it is a single `Setting.sealed`, since a sealed
+card says the same thing to whoever reads it (`presentation.md` §3). The two gestures come out of the same
+`HOLDINGS` the rules read a commitment against, so a third holding would be stated once and offered from both
+ends.
+
 **A round is read out at the two phases the match itself stands in**, which `presets.match_interludes` states in
 one line: the ten turns of a round add up to a figure worth stopping over, so what each seat took of the round and
 the standing it was added into stand over the table until the player has read them. The match belongs to the seat

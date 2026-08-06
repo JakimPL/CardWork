@@ -261,8 +261,16 @@ which a settlement writes where the stock has run out with no seat holding a set
 hands as they lie rather than accumulated as the round runs, so `round_points` is written once, in the
 transaction that closes the round. `docs/games/shedding.md` states the game whole.
 
+**A game of climbing combinations** (`cardgames.backend.climbing`) is played to a count of rounds as well, and
+is the one here that reads the standing at the other end. Its `round_over` reads a phase of its own, written by
+the play that empties a hand, and the `round_points` that phase carries is a penalty apiece: the worth of the
+cards each seat is caught holding, and nothing at all for the seat that went out. So it states
+`Award.LOWEST`, and `score_round` adds the tally into the standing exactly as it does for the three above —
+which is the point of keeping the direction on the state, since a game scoring what it is caught with counts
+into the same tuple as a game scoring what it wins. `docs/games/climbing.md` states the game whole.
+
 Between them they override none of `next_leader`, `score_round` and `match_over`: a seat drawn for the first
 round and the next seat after, with the round's tally added into the standing and the ending read off the
-clauses the table stated, is what all three of them wanted. The three clauses are one vocabulary, so any of
+clauses the table stated, is what all four of them wanted. The three clauses are one vocabulary, so any of
 these games runs to any of the three endings — a two-round `passing` match and a `shedding` match to fifty
 points are both a line of configuration, not a line of code.

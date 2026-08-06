@@ -171,7 +171,13 @@ Two gestures, running opposite ways:
 **The draw is the first gesture that takes a card rather than lays one down**, so it picks on the shared table
 and commits onto a zone of the seat's own. The layout vocabulary needed nothing new for it: a gesture names the
 zone its indices address and the place a player points at to send it, and which of the two belongs to the seat
-was never part of the pairing.
+was never part of the pairing. Both are stated over the family and the zone rather than over a seat's own ids —
+`picked=HANDS`, `target=DISCARD` — so one statement is offered at every seat (`presentation.md` §3).
+
+**The scene is one holding and two piles.** `Setting.hand(HANDS, "Hand", mine="Your hand", tally="Cards")`
+states the hand, a `Fixture.heap` apiece the stock and the discard, and the pair above is the turn. It is the
+same holding passing states, under the same builder and in the same words: the two games agree on what a hand
+looks like because each reaches for one statement of it.
 
 **Multi-card selection reads the rules straight off the list.** A hand of 5♠ 5♥ 5♦ 9♣ offers four sets, and the
 interface narrows them as the selection grows (`architecture.md` §10):

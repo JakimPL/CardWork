@@ -438,9 +438,10 @@ A pattern built per question is what lets one line stand for a pair, a triplet a
 in it answers to no size at all. Its evaluation leaves jokers unwild, since the one standard deck it is played
 with holds none.
 
-**A game of climbing combinations** (`cardgames.backend.climbing`) recognises eight patterns across five
-counts, and a seat answering the table is held to the count standing on it. Four of the questions above are
-the whole of its card rules:
+**A game of climbing combinations** (`cardgames.backend.climbing`) recognises seven patterns across four
+counts — one card, a pair, a triplet, and five cards reading as a straight, a flush, a full house or a
+straight flush — and a seat answering the table is held to the count standing on it. Four of the questions
+above are the whole of its card rules:
 
 ```python
 CLIMBING_RANKING.selections(hand)  # every combination a seat on lead can put down
@@ -449,10 +450,21 @@ CLIMBING_RANKING.exactly(played)  # the combination those cards are, or none
 CLIMBING_RANKING.climbs(played, on_table)  # whether it stands above what it answers
 ```
 
-Its ranking lists no quadruplet, so four cards are contested as two pair and `ceilings` reads `A♦ A♥ K♦ K♥`
-at that count — a ranking answers for the patterns it names and for no others, at every count. It reads the
-deck by the German suit order with the wheel admitted, jokers unwild since its one deck holds none, and
-copies collapsed.
+**A ranking answers for the patterns it names, at the counts those take.** This one names nothing of four
+cards, so four cards read as a combination in no way at all: `sizes()` answers `1, 2, 3, 5`, `sized(4)` says
+which counts are taken instead of guessing at one, and a play of four is refused as a combination this game is
+played by. The counts it does name reach these:
+
+```python
+CLIMBING_RANKING.ceilings(standard_deck())
+# 1: any card: A♦
+# 2: 2 of a rank: A♦ A♥
+# 3: 3 of a rank: A♦ A♥ A♠
+# 5: a run of 5 together with 5 of a suit: 10♦ J♦ Q♦ K♦ A♦
+```
+
+It reads the deck by the German suit order with the wheel admitted, jokers unwild since its one deck holds
+none, and copies collapsed, so the ace of diamonds stands at the head of every count it names.
 
 A game states its own evaluation, its own patterns and its own ranking. What it inherits is the reading:
 one tally per question, one instance per shape, and a strength it can compare, order and score.

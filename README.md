@@ -10,12 +10,13 @@ Four packages:
 - **`cardgames`** — the games written on it, each stated twice over: `backend` holds a game's rules and
   `frontend` the layout a player reads them through. `passing` is a game of four cards played in turn;
   `showdown`, a game of ten turns played at once; `shedding`, a game of matched sets laid down several cards
-  at a time.
+  at a time; `climbing`, a game of combinations answered by stronger ones.
 - **`cardtable`** — the host: it opens a table of a chosen game, hands out a token per seat, and serves
-  the player interface beside the endpoints. The one place a game and a transport meet.
+  the player interface beside the endpoints. The one place a game and a transport meet. All four games are
+  playable in a browser.
 
 `docs/architecture.md` is the design and the reasoning behind it; `docs/combinations.md`, `docs/rounds.md`,
-`docs/presentation.md` and `docs/games/` state the parts a game reaches for and the three games themselves.
+`docs/presentation.md` and `docs/games/` state the parts a game reaches for and the four games themselves.
 What follows is enough to start.
 
 ## Getting set up
@@ -87,26 +88,40 @@ intent a client may send reaches the rules.
 ## Laying a game out
 
 A game states how it is played under `cardgames.backend.<game>` and how it is read under
-`cardgames.frontend.<game>`, which is one `Scene`:
+`cardgames.frontend.<game>`, which is one `Scene` and no function at all:
 
 ```python
 MYGAME_SCENE: Final[Scene] = Scene(
     title="My game",
-    shared=(presets.heap(DISCARD, "Discard", place=0),),   # the zones every observer reads alike
-    held=slots_of,           # seat -> the zones it holds, where they sit, how their cards lie
-    gestures=gestures_of,    # seat -> which move a selection sends, and what is clicked to send it
-    counts=counts_of,        # seat -> the zones of its own the table reads the size of
+    table=(Fixture.heap(DISCARD, "Discard"),),   # the zones of the table, read alike by everybody
+    seated=(                                     # the zone families the seats hold, stated once for all
+        Setting.hand(HANDS, "Hand", mine="Your hand", tally="Cards"),
+    ),
+    gestures=(                                   # which move a selection sends, and what is pressed to send it
+        Making(
+            kind=ActionKind.DISCARD,
+            group=HANDS,
+            picked=HANDS,
+            commit=Commit.ZONE,
+            target=DISCARD,
+            caption="Discard these cards",
+        ),
+    ),
     readouts=READOUTS,       # Readout.of(MyState, "suit", "Trump", scope=Scope.TABLE)
     phases=PHASES,           # what each phase is called in words
+    interludes=INTERLUDES,   # which of those phases play pauses at
+    award=Award.HIGHEST,     # which end of the standing the match is won at
 )
 
 layout = MYGAME_SCENE.layout(players=3, observer=1)
 ```
 
-`Scene.layout` reads those three functions at one seat and builds that observer's `Layout`: its own zones
-beside the shared ones, its own gestures, and a plaque for every seat. A spectator gets the shared table and
-no gesture, which is the entitlement the projection gives it over the cards — stated once here rather than in
-each game.
+**A zone is stated once, addressed by the `Family` that stands it at every seat**, and `Scene.layout` binds the
+seat: the observer reads its own zones under `held`, every other seat under `seen`, the table's own besides,
+and is offered a `Gesture` built from each `Making`. A spectator gets the table and no gesture, which is the
+entitlement the projection gives it over the cards. Where a zone sits among its owner's is the index of its
+declaration, so a game orders its zones by moving a line. The scene checks itself as the module loads, which is
+where a mistake in a layout is met.
 
 The rules name the layout nowhere, so a game plays with no screen attached; the layout names the rules for
 their zone ids and phases, so no string is written twice. `docs/presentation.md` states the vocabulary.
@@ -149,6 +164,7 @@ Rules that more than one game wants live in the framework, each in a layer of it
 | `cardgames.backend.passing` | a sequential turn: one exchange with the pile, then a pass round the table | a game whose rules ask a question about cards |
 | `cardgames.backend.showdown` | a simultaneous turn: every seat commits one sealed card, and they turn over together | a game whose turn belongs to the whole table |
 | `cardgames.backend.shedding` | a turn of two minds: shed a set of one rank, or draw a card and pass it on | a game whose move names several cards, and one that asked the layers below it for nothing |
+| `cardgames.backend.climbing` | a combination put down on lead, climbed over by the seats after it or passed | a game whose contest sits in the cursor, a turn given up by word, and a standing of penalties won at the low end |
 
 `tests/games/demo.py` is a smaller exercise game: a simultaneous round with sealed commitments, a reveal,
 scoring and take-backs.
@@ -252,7 +268,7 @@ npm --prefix frontend run dev     # a development server, proxying /tables to th
 
 A game states how it is read and the page draws whatever it is handed: the layout names the zones, where
 they sit and how their cards lie, the plaques and the words for each phase, so the page holds the name of
-neither game. What it is served is what its seat may know — a card it may not read arrives as a placeholder
+no game at all. What it is served is what its seat may know — a card it may not read arrives as a placeholder
 at that card's own position, and draws as a back.
 
 The table fits one screen at any size and scrolls nowhere: cards are measured from the shorter side of the
