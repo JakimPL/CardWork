@@ -15,3 +15,4 @@ class Card(BaseFrozen):
 
 
 type Cards = tuple[Card, ...]
+type Facing = Card | Rank | Suit

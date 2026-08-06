@@ -73,6 +73,10 @@ class Loose(Simple, ABC):
     words themselves stand on. Its own words being left open is what keeps it out of the rules in play.
     """
 
+    @property
+    def alike(self) -> bool:
+        return True
+
     def shapes(self, evaluation: Evaluation) -> Iterator[Shape]:
         yield Shape(demands=(ANY_CARD,) * self.places, low_ace=False)
 

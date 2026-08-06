@@ -1,4 +1,4 @@
-from cardwork.cards.card import Card, Cards
+from cardwork.cards.card import Card, Cards, Facing
 from cardwork.cards.game import CardsOrJokers, GameCard, is_joker
 from cardwork.cards.joker import Joker, Jokers
 from cardwork.cards.order import ByRank, BySuit
@@ -32,6 +32,7 @@ __all__ = [
     "Card",
     "Cards",
     "CardsOrJokers",
+    "Facing",
     "GameCard",
     "Joker",
     "Jokers",

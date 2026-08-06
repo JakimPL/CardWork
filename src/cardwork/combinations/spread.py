@@ -3,11 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from cardwork.cards.card import Card
-from cardwork.cards.rank import Rank
-from cardwork.cards.suit import Suit
-
-type Facing = Card | Rank | Suit
+from cardwork.cards.card import Card, Facing
 
 
 class Facet(StrEnum):

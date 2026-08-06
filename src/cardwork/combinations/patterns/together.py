@@ -10,6 +10,7 @@ from cardwork.combinations.shape import Shape
 from cardwork.ordering.preorder import Key
 
 LEADING_PART: Final[int] = 0
+ONE_PART: Final[int] = 1
 
 
 class Together(Compound):
@@ -30,9 +31,26 @@ class Together(Compound):
 
         return self
 
+    @model_validator(mode="after")
+    def _one_part_holds_the_places_apart(self) -> Self:
+        """Confirm the parts leave the places reading apart one way.
+
+        Raises:
+            ValueError: when two parts hold places apart, which leaves the shared places holding apart twice.
+        """
+        holding = tuple(str(part) for part in self.parts if part.spread)
+        if len(holding) > ONE_PART:
+            raise ValueError(f"Places read apart one way, and these parts each hold them apart: {holding}")
+
+        return self
+
     @property
     def size(self) -> int:
         return self.parts[LEADING_PART].size
+
+    @property
+    def alike(self) -> bool:
+        return all(part.alike for part in self.parts)
 
     def shapes(self, evaluation: Evaluation) -> Iterator[Shape]:
         listings = self._listings(evaluation)

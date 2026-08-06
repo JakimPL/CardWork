@@ -19,6 +19,10 @@ class SameSuit(Simple):
     kind: Literal["same_suit"] = "same_suit"
     places: AlikePlaces
 
+    @property
+    def alike(self) -> bool:
+        return True
+
     def shapes(self, evaluation: Evaluation) -> Iterator[Shape]:
         for suit in reversed(evaluation.suits):
             yield Shape(

@@ -1,13 +1,13 @@
-from collections.abc import Container
 from typing import Final
 
 from cardwork.cards.card import Card
-from cardwork.cards.game import CardOrJoker
+from cardwork.cards.game import CardsOrJokers
 from cardwork.combinations.assembly.filling import Filling
+from cardwork.combinations.assembly.naming import Naming
+from cardwork.combinations.assembly.seating import Seating
 from cardwork.combinations.combination import Combination
-from cardwork.combinations.demand import Demand
 from cardwork.combinations.matching import UNPLACED, Matching
-from cardwork.combinations.pattern import Pattern
+from cardwork.combinations.pattern import Pattern, Reading
 from cardwork.combinations.shape import Shape
 from cardwork.combinations.tally import Tally
 from cardwork.ordering.preorder import Key
@@ -25,12 +25,17 @@ class Assembly:
     joker covers each place they leave open, so the shape stands as far as the jokers reach. A joker to spare
     then takes a place from the card standing there wherever that reads stronger by the pattern's own measure,
     which is what turns two spades and a joker into an ace-high flush.
+
+    Places the shape holds apart take cards facing apart: the cards reach them through gates the matching seats
+    one card at a time, and a joker there reads as a card whose facing its spread leaves free. The shape falls
+    short where those facings run out, which is what four suits do to five of a rank read apart by suit.
     """
 
     def __init__(self, counted: Tally, pattern: Pattern, shape: Shape) -> None:
         self._counted = counted
         self._pattern = pattern
         self._shape = shape
+        self._spreading = shape.spreading()
 
     def combination(self) -> Combination | None:
         """The strongest combination this shape makes of the cards, or None where they fall short of it."""
@@ -39,11 +44,14 @@ class Assembly:
             return None
 
         filling = self._read(self._improve(standing))
+        if filling is None:
+            return None
+
         return Combination(
             pattern=self._pattern,
             cards=filling.cards,
             reading=filling.reading,
-            strength=self._strength(filling),
+            strength=self._pattern.strength(filling.reading, self._counted.evaluation),
             low_ace=self._shape.low_ace,
         )
 
@@ -54,12 +62,9 @@ class Assembly:
             The places as the cards fill them, and None for the whole shape where more places are left open
             than there are jokers to cover them.
         """
-        admitted = tuple(
-            tuple(place for place, demand in enumerate(self._shape.demands) if demand.admits(card))
-            for card in self._counted.naturals
-        )
+        seating = Seating.of(self._counted.naturals, self._shape, self._spreading)
         standing: Standing = [None] * self._shape.size
-        for offer, place in enumerate(Matching(admitted, self._shape.size).placements):
+        for offer, place in enumerate(Matching(seating.seats, self._shape.size, seating.gates).placements):
             if place != UNPLACED:
                 standing[place] = self._counted.naturals[offer]
 
@@ -89,47 +94,86 @@ class Assembly:
         each place a card holds is offered to a joker in turn and the strongest reading of them all answers,
         which settles one joker and leaves the next to the same question.
         """
-        reached = self._strength(self._read(standing))
+        reached = self._strength(standing)
         stronger: Standing | None = None
         for place, card in enumerate(standing):
             if card is None:
                 continue
 
             offered: Standing = [*standing[:place], None, *standing[place + 1 :]]
-            strength = self._strength(self._read(offered))
-            if strength > reached:
+            strength = self._strength(offered)
+            if strength is not None and (reached is None or strength > reached):
                 reached = strength
                 stronger = offered
 
         return stronger
 
-    def _read(self, standing: Standing) -> Filling:
-        """The cards the places hold, beside what each reads as, a joker standing where a place is open."""
-        cards: list[CardOrJoker] = []
-        reading: list[Card] = []
-        named = {card for card in standing if card is not None}
+    def _read(self, standing: Standing) -> Filling | None:
+        """The cards the places hold, beside what each of them reads as.
+
+        Returns:
+            The filling, and None where a joker stands at a place the reading leaves nothing to stand for.
+        """
+        reading = self._reading(standing)
+        if reading is None:
+            return None
+
+        return Filling(cards=self._holding(standing), reading=reading)
+
+    def _holding(self, standing: Standing) -> CardsOrJokers:
+        """The cards the places came to hold, a joker standing where the held cards left a place open."""
         wilds = iter(self._counted.wilds)
-        for demand, card in zip(self._shape.demands, standing, strict=True):
-            stands_for = card if card is not None else self._wild_reading(demand, named)
-            named.add(stands_for)
-            cards.append(card if card is not None else next(wilds))
+        return tuple(card if card is not None else next(wilds) for card in standing)
+
+    def _reading(self, standing: Standing) -> Reading | None:
+        """What each place reads as: the card holding it, or what the joker at an open place stands for.
+
+        Each joker read joins the naming, so the one after it reads apart from what it stands for.
+
+        Returns:
+            The reading, and None where a place reading apart is left no card its joker can stand for, which is
+            what four suits do to five of a rank read apart by suit.
+        """
+        naming = Naming.of(standing, self._spreading)
+        reading: list[Card] = []
+        for place, card in enumerate(standing):
+            if card is not None:
+                reading.append(card)
+                continue
+
+            stands_for = self._wild_reading(place, naming)
+            if stands_for is None:
+                return None
+
+            naming.take(place, stands_for)
             reading.append(stands_for)
 
-        return Filling(cards=tuple(cards), reading=tuple(reading))
+        return tuple(reading)
 
-    def _wild_reading(self, demand: Demand, named: Container[Card]) -> Card:
-        """What a joker stands for at this place: the strongest card the demand admits and the reading lacks.
+    def _wild_reading(self, place: int, naming: Naming) -> Card | None:
+        """What a joker stands for at this place: the strongest card the demand admits and the naming leaves.
 
-        Where the reading already names every card the demand admits, the strongest of them stands again, which
-        a flush longer than a suit is deep asks for.
+        Where the naming leaves none of them free and the place reads apart in nothing, the strongest card the
+        demand admits stands again, which a flush longer than a suit is deep asks for.
+
+        Returns:
+            The card the joker reads as, and None where the place reads apart in a spread and every card the
+            demand admits either stands in the reading already or faces as one of that spread's places does.
         """
-        candidates = demand.candidates(self._counted.evaluation)
-        for card in candidates:
-            if card not in named:
-                return card
+        candidates = self._shape.demands[place].candidates(self._counted.evaluation)
+        free = next((card for card in candidates if naming.leaves(place, card)), None)
+        if free is not None:
+            return free
 
-        return candidates[STRONGEST]
+        if self._spreading[place] is None:
+            return candidates[STRONGEST]
 
-    def _strength(self, filling: Filling) -> Key:
-        """Where the pattern places an instance reading this way."""
+        return None
+
+    def _strength(self, standing: Standing) -> Key | None:
+        """Where the pattern places an instance standing this way, and None where it reads as none."""
+        filling = self._read(standing)
+        if filling is None:
+            return None
+
         return self._pattern.strength(filling.reading, self._counted.evaluation)

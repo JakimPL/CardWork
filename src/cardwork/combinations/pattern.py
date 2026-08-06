@@ -80,6 +80,22 @@ class Pattern(BaseFrozen, ABC):
     def size(self) -> int:
         """How many cards the rule takes."""
 
+    @property
+    @abstractmethod
+    def alike(self) -> bool:
+        """Whether every place of every reading this rule admits asks the same of the card that fills it.
+
+        Two of a rank ask alike, and so do five of a suit and three loose places; a run asks each of its places
+        for a rank of its own. `Apart` reads this before it holds places apart by rank or by suit: where the
+        places ask alike, every card showing one facing answers every one of them, and the filling settles
+        which card takes which place.
+        """
+
+    @property
+    def spread(self) -> bool:
+        """Whether this rule holds any of its places apart, which `Apart` states and a compound carries on."""
+        return False
+
     @abstractmethod
     def shapes(self, evaluation: Evaluation) -> Iterator[Shape]:
         """Every reading this rule admits over that reading of the deck, the strongest first."""

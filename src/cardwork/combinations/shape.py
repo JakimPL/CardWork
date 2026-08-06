@@ -91,6 +91,20 @@ class Shape:
         """How many places the reading fills."""
         return len(self.demands)
 
+    def spreading(self) -> tuple[Spread | None, ...]:
+        """The spread each place reads apart in, and None where a place reads apart in none.
+
+        The spreads name the places they hold apart, and the filling of a reading asks the other way round:
+        which spread a place stands in settles the gate a card reaches it through and what a joker there reads
+        apart from. Every place reads apart one way at the most, which is what makes this one spread a place.
+        """
+        spreading: list[Spread | None] = [None] * self.size
+        for spread in self.spreads:
+            for place in spread.places:
+                spreading[place] = spread
+
+        return tuple(spreading)
+
     @property
     def ranks(self) -> frozenset[Rank]:
         """The ranks this reading names."""

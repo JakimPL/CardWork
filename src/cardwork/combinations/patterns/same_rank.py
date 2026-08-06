@@ -21,6 +21,10 @@ class SameRank(Simple):
     kind: Literal["same_rank"] = "same_rank"
     places: AlikePlaces
 
+    @property
+    def alike(self) -> bool:
+        return True
+
     def shapes(self, evaluation: Evaluation) -> Iterator[Shape]:
         for rank in reversed(evaluation.ranks):
             yield Shape(

@@ -27,6 +27,10 @@ class OneSuit(Pattern):
     def size(self) -> int:
         return self.places
 
+    @property
+    def alike(self) -> bool:
+        return True
+
     def shapes(self, evaluation: Evaluation) -> Iterator[Shape]:
         yield Shape(demands=(Demand.of_suit(self.suit),) * self.places, low_ace=False)
 

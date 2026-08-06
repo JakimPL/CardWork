@@ -47,14 +47,37 @@ class Apart(Pattern):
 
     @model_validator(mode="after")
     def _the_places_stand_apart_from_each_other(self) -> Self:
-        """Confirm the part holds the places a spread reads over.
+        """Confirm the part holds places a spread reads over, and holds none of them apart already.
 
         Raises:
-            ValueError: when the part takes fewer than two places, which one card reads apart from nothing at.
+            ValueError: when the part takes fewer than two places, which one card reads apart from nothing at,
+                or when the part holds places apart already, which leaves them holding apart twice.
         """
         if self.part.size < ALIKE_PLACES:
             raise ValueError(
                 f"Places read apart from {ALIKE_PLACES} of them upwards, and this rule takes {self.part.size}"
+            )
+
+        if self.part.spread:
+            raise ValueError(f"A place reads apart one way, and {self.part} holds places apart already")
+
+        return self
+
+    @model_validator(mode="after")
+    def _the_places_read_apart_ask_alike(self) -> Self:
+        """Confirm a spread by rank or by suit reads over places asking alike.
+
+        Where the places ask alike, every card showing one facing answers every one of them, and the filling
+        settles which card takes which place. Where they ask differently, one facing answers some of the places
+        and not others, and which cards a reading holds is settled by more than the filling can read.
+
+        Raises:
+            ValueError: when a spread by rank or by suit reads over places asking differently.
+        """
+        if self.facet is not Facet.CARD and not self.part.alike:
+            raise ValueError(
+                f"A spread by {self.facet.value} reads over places asking alike, and {self.part} asks "
+                f"differently of them; hold each of its parts apart instead, or read them apart by card"
             )
 
         return self
@@ -62,6 +85,14 @@ class Apart(Pattern):
     @property
     def size(self) -> int:
         return self.part.size
+
+    @property
+    def alike(self) -> bool:
+        return self.part.alike
+
+    @property
+    def spread(self) -> bool:
+        return True
 
     def shapes(self, evaluation: Evaluation) -> Iterator[Shape]:
         for shape in self.part.shapes(evaluation):

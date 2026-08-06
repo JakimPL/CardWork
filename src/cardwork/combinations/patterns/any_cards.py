@@ -18,6 +18,10 @@ class AnyCards(Simple):
 
     kind: Literal["any_cards"] = "any_cards"
 
+    @property
+    def alike(self) -> bool:
+        return True
+
     def shapes(self, evaluation: Evaluation) -> Iterator[Shape]:
         yield Shape(demands=(ANY_CARD,) * self.places, low_ace=False)
 

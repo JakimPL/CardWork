@@ -23,6 +23,10 @@ class Beside(Compound):
     def size(self) -> int:
         return sum(part.size for part in self.parts)
 
+    @property
+    def alike(self) -> bool:
+        return False
+
     def shapes(self, evaluation: Evaluation) -> Iterator[Shape]:
         listings = self._listings(evaluation)
         for chosen in self._choices(listings):

@@ -29,6 +29,10 @@ class Run(Simple):
     kind: Literal["run"] = "run"
     places: RunPlaces
 
+    @property
+    def alike(self) -> bool:
+        return False
+
     def shapes(self, evaluation: Evaluation) -> Iterator[Shape]:
         for stretch in evaluation.stretches(self.places):
             yield Shape(

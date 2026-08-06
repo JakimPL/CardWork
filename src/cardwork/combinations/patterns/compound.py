@@ -24,6 +24,10 @@ class Compound(Pattern, ABC):
 
     parts: Parts
 
+    @property
+    def spread(self) -> bool:
+        return any(part.spread for part in self.parts)
+
     def _listings(
         self,
         evaluation: Evaluation,

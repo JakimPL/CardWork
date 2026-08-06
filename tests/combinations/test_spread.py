@@ -4,7 +4,7 @@ from typing import Final
 import pytest
 from pydantic import ValidationError
 
-from cardwork.cards.card import Card
+from cardwork.cards.card import Card, Facing
 from cardwork.cards.cards import KING_OF_HEARTS, KING_OF_SPADES
 from cardwork.cards.rank import Rank
 from cardwork.cards.suit import Suit
@@ -13,11 +13,13 @@ from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.patterns.any_cards import AnyCards
 from cardwork.combinations.patterns.apart import Apart
 from cardwork.combinations.patterns.beside import Beside
+from cardwork.combinations.patterns.run import Run
+from cardwork.combinations.patterns.same_suit import SameSuit
 from cardwork.combinations.patterns.together import Together
 from cardwork.combinations.poker import FLUSH, HIGH_CARD, PAIR, STRAIGHT, TWO_PAIR
 from cardwork.combinations.policy import REGULAR_EVALUATION
 from cardwork.combinations.shape import Shape
-from cardwork.combinations.spread import Facet, Facing, Spread
+from cardwork.combinations.spread import Facet, Spread
 from tests.cases import Case, descriptions
 
 FIRST_PAIR: Final[Spread] = Spread(facet=Facet.SUIT, places=frozenset({0, 1}))
@@ -33,6 +35,7 @@ TWO_LOOSE_APART: Final[Shape] = Shape(demands=TWO_LOOSE.demands, low_ace=False, 
 
 APART_PAIR: Final[Pattern] = Apart.of_suit(PAIR)
 TWO_APART_PAIRS: Final[Pattern] = Beside(parts=(APART_PAIR, APART_PAIR))
+RUN_OF_FOUR: Final[Pattern] = Run(places=4)
 
 
 @dataclass(frozen=True)
@@ -189,11 +192,11 @@ APART_SHAPES: Final[tuple[ApartShapesCase, ...]] = (
         spread=Spread(facet=Facet.CARD, places=frozenset({0, 1})),
     ),
     ApartShapesCase(
-        description="two pair apart by suit read one way per pair of ranks",
-        pattern=Apart.of_suit(TWO_PAIR),
+        description="two pair apart by card read one way per pair of ranks",
+        pattern=Apart.of_card(TWO_PAIR),
         size=4,
         shapes=len(Rank) * (len(Rank) - 1) // 2,
-        spread=Spread(facet=Facet.SUIT, places=frozenset({0, 1, 2, 3})),
+        spread=Spread(facet=Facet.CARD, places=frozenset({0, 1, 2, 3})),
     ),
     ApartShapesCase(
         description="a run apart by card reads one way per stretch, the wheel besides",
@@ -254,9 +257,9 @@ APART_WORDS: Final[tuple[ApartWordsCase, ...]] = (
         words="any 2 cards apart by card",
     ),
     ApartWordsCase(
-        description="two pair of four suits",
-        pattern=Apart.of_suit(TWO_PAIR),
-        words="2 of a rank beside 2 of a rank apart by suit",
+        description="two pair holding no card twice",
+        pattern=Apart.of_card(TWO_PAIR),
+        words="2 of a rank beside 2 of a rank apart by card",
     ),
     ApartWordsCase(
         description="two pair each of two suits",
@@ -272,49 +275,105 @@ def test_a_rule_read_apart_states_itself_in_words(case: ApartWordsCase) -> None:
     assert repr(case.pattern) == case.words
 
 
-def test_a_rule_of_one_place_reads_apart_from_nothing_and_is_refused() -> None:
-    with pytest.raises(ValidationError, match="Places read apart from 2 of them upwards, and this rule takes 1"):
-        Apart.of_card(HIGH_CARD)
-
-
 @dataclass(frozen=True)
 class RefusedApartCase(Case):
-    """One rule stating a spread over places another spread already holds apart."""
+    """One rule a spread reads over that the filling settles no reading of, refused as the rule is stated."""
 
-    pattern: Pattern
+    part: Pattern
+    facet: Facet
     complaint: str
 
 
 REFUSED_APARTS: Final[tuple[RefusedApartCase, ...]] = (
     RefusedApartCase(
+        description="one place reads apart from nothing",
+        part=HIGH_CARD,
+        facet=Facet.CARD,
+        complaint="Places read apart from 2 of them upwards, and this rule takes 1",
+    ),
+    RefusedApartCase(
         description="a rule read apart twice over holds its places apart once",
-        pattern=Apart.of_card(Apart.of_suit(PAIR)),
-        complaint=r"place reads apart one way, and \(0, 1\) read apart more than one",
+        part=Apart.of_suit(PAIR),
+        facet=Facet.CARD,
+        complaint="place reads apart one way, and 2 of a rank apart by suit holds places apart already",
     ),
     RefusedApartCase(
-        description="two rules read apart taken together hold one set of places apart twice",
-        pattern=Together(
-            parts=(
-                Apart.of_rank(AnyCards(places=2)),
-                Apart.of_suit(AnyCards(places=2)),
-            )
-        ),
-        complaint=r"place reads apart one way, and \(0, 1\) read apart more than one",
+        description="a rule whose parts read apart holds the whole and the parts apart at once",
+        part=TWO_APART_PAIRS,
+        facet=Facet.SUIT,
+        complaint="place reads apart one way, and .* holds places apart already",
     ),
     RefusedApartCase(
-        description="a rule read apart over parts read apart holds the whole and the parts apart at once",
-        pattern=Apart.of_suit(TWO_APART_PAIRS),
-        complaint=r"place reads apart one way, and \(0, 1, 2, 3\) read apart more than one",
+        description="two pair ask for two ranks, so one suit answers some of their places alone",
+        part=TWO_PAIR,
+        facet=Facet.SUIT,
+        complaint="spread by suit reads over places asking alike, and 2 of a rank beside 2 of a rank asks",
+    ),
+    RefusedApartCase(
+        description="a run asks each place for a rank of its own, so one suit answers some of them alone",
+        part=RUN_OF_FOUR,
+        facet=Facet.SUIT,
+        complaint="spread by suit reads over places asking alike, and a run of 4 asks",
+    ),
+    RefusedApartCase(
+        description="a run read apart by rank asks differently of its places likewise",
+        part=RUN_OF_FOUR,
+        facet=Facet.RANK,
+        complaint="spread by rank reads over places asking alike, and a run of 4 asks",
     ),
 )
 
 
 @pytest.mark.parametrize("case", REFUSED_APARTS, ids=descriptions(REFUSED_APARTS))
-def test_a_rule_holding_one_place_apart_twice_is_refused_where_its_readings_are_built(
-    case: RefusedApartCase,
-) -> None:
-    with pytest.raises(ValueError, match=case.complaint):
-        tuple(case.pattern.shapes(REGULAR_EVALUATION))
+def test_a_rule_a_spread_settles_no_reading_of_is_refused_as_it_is_stated(case: RefusedApartCase) -> None:
+    with pytest.raises(ValidationError, match=case.complaint):
+        Apart(part=case.part, facet=case.facet)
+
+
+def test_two_rules_read_apart_are_refused_from_being_read_together() -> None:
+    with pytest.raises(ValidationError, match="Places read apart one way, and these parts each hold them apart"):
+        Together(parts=(Apart.of_rank(AnyCards(places=2)), Apart.of_suit(AnyCards(places=2))))
+
+
+@dataclass(frozen=True)
+class AlikeCase(Case):
+    """One rule beside whether every place of every reading it admits asks the same of the card filling it."""
+
+    pattern: Pattern
+    alike: bool
+
+
+ALIKE: Final[tuple[AlikeCase, ...]] = (
+    AlikeCase(description="a pair asks one rank of both places", pattern=PAIR, alike=True),
+    AlikeCase(description="a flush asks one suit of every place", pattern=FLUSH, alike=True),
+    AlikeCase(description="loose places ask for any card alike", pattern=AnyCards(places=3), alike=True),
+    AlikeCase(description="a run asks each place for a rank of its own", pattern=RUN_OF_FOUR, alike=False),
+    AlikeCase(description="parts standing beside each other ask their own", pattern=TWO_PAIR, alike=False),
+    AlikeCase(
+        description="parts read together ask alike where each of them does",
+        pattern=Together(parts=(PAIR, SameSuit(places=2))),
+        alike=True,
+    ),
+    AlikeCase(
+        description="a suited run asks each place for a card of its own",
+        pattern=Together(parts=(RUN_OF_FOUR, SameSuit(places=4))),
+        alike=False,
+    ),
+    AlikeCase(description="a rule read apart asks what its part asks", pattern=APART_PAIR, alike=True),
+)
+
+
+@pytest.mark.parametrize("case", ALIKE, ids=descriptions(ALIKE))
+def test_a_rule_states_whether_its_places_ask_alike(case: AlikeCase) -> None:
+    assert case.pattern.alike is case.alike
+
+
+def test_a_rule_states_whether_it_holds_any_of_its_places_apart() -> None:
+    assert PAIR.spread is False
+    assert TWO_PAIR.spread is False
+    assert APART_PAIR.spread is True
+    assert TWO_APART_PAIRS.spread is True
+    assert Together(parts=(APART_PAIR, SameSuit(places=2))).spread is True
 
 
 def test_a_rule_read_apart_stands_as_the_rule_its_part_and_facet_state() -> None:
