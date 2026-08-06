@@ -26,6 +26,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Tables
+         * @description The tables gathering here, which is what a page offers somebody who reached the server bare.
+         *
+         *     Read without a credential, as the offerings are: what admits a person is the code, so naming what is
+         *     gathering costs a table nothing and saves the one who was handed no line from guessing.
+         */
+        get: operations["read_tables_tables_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tables/{table_id}/arrangements": {
         parameters: {
             query?: never;
@@ -247,6 +270,26 @@ export interface paths {
          * @description Take a seat at the table, or stand up from the one held by naming none.
          */
         put: operations["claim_seat_tables__table_id__seat_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tables/{table_id}/tint": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Take Tint
+         * @description Take one of the company's tints, which every guest may do for their own.
+         */
+        put: operations["take_tint_tables__table_id__tint_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -558,11 +601,12 @@ export interface components {
         };
         /**
          * Guest
-         * @description One person at a gathering as the whole company reads them: the name, the seat, and whether they are here.
+         * @description One person at a gathering as the company reads them: the name, the tint, the seat, and whether they are here.
          *
-         *     The name is what a guest arrived under and the whole of their identity at the table. The seat is the one
-         *     they have taken, and none while they are standing. Presence follows the stream a page holds open, so the
-         *     company reads as the room does.
+         *     The name is what a guest arrived under and the whole of their identity at the table. The tint is what tells
+         *     them apart from the rest of the company at a glance, and no two guests hold one. The seat is the one they
+         *     have taken, and none while they are standing. Presence follows the stream a page holds open, so the company
+         *     reads as the room does.
          */
         Guest: {
             /** Name */
@@ -571,6 +615,7 @@ export interface components {
             present: boolean;
             /** Seat */
             seat: number | null;
+            tint: components["schemas"]["Tint"];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -693,11 +738,14 @@ export interface components {
         };
         /**
          * Plaque
-         * @description One player as the whole table reads them: the seat, the name it plays under, and the zones it holds.
+         * @description One player as the whole table reads them: the seat, the name and tint it plays under, and the zones it holds.
          *
          *     Every seat takes a plaque, the observer's own among them, so the standing reads across the table in one
          *     row. What the plaque shows beside the counts — the score, a game's own per-seat tally — comes from the
          *     readouts scoped to a seat, which leaves a plaque stating who is there rather than what is worth showing.
+         *
+         *     A seat is named by where it sits and plays under no tint until a host holds one for it, since who is at a
+         *     seat and how a company tells itself apart are both settled above the rules.
          */
         Plaque: {
             /** Counts */
@@ -706,6 +754,7 @@ export interface components {
             name: string;
             /** Seat */
             seat: number;
+            tint: components["schemas"]["Tint"] | null;
         };
         /** Play */
         Play: {
@@ -821,6 +870,28 @@ export interface components {
             /** Zone */
             zone: string;
         };
+        /**
+         * Tint
+         * @description One player as the table tells them apart from the next, beside the name they play under.
+         *
+         *     A seat is read by its name, and a company round one table reads faster for a mark that carries at a
+         *     glance: the plaque, the cards and the place a player holds all say the same one of these. Which player
+         *     holds which is settled where a company gathers, and a table stands under as many tints as it seats.
+         *
+         *     What a tint comes to on a screen is the interface's, as the colour of a highlight is: these name eight
+         *     players apart and say nothing about how any of them is drawn.
+         * @enum {string}
+         */
+        Tint: "rose" | "coral" | "amber" | "lemon" | "teal" | "azure" | "indigo" | "violet";
+        /**
+         * Tinting
+         * @description A guest taking one of the company's tints, which is the mark the table tells them apart by.
+         */
+        Tinting: {
+            /** Base Revision */
+            base_revision: number;
+            tint: components["schemas"]["Tint"];
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -859,6 +930,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Offering"][];
+                };
+            };
+        };
+    };
+    read_tables_tables_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
                 };
             };
         };
@@ -1229,6 +1320,43 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["Claiming"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GatheringView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    take_tint_tables__table_id__tint_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Seat-Token"?: string | null;
+            };
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Tinting"];
             };
         };
         responses: {

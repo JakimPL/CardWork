@@ -79,6 +79,15 @@ class SeatTaken(CardserverError):
         self.held_by = held_by
 
 
+class TintTaken(CardserverError):
+    """Raised when a tint is taken while another guest of the company holds it."""
+
+    def __init__(self, tint: str, held_by: str) -> None:
+        super().__init__(f"The {tint} tint is held by {held_by!r}")
+        self.tint = tint
+        self.held_by = held_by
+
+
 class NoSuchSeat(CardserverError):
     """Raised when a seat is claimed that the table the gathering settled on holds nowhere."""
 
@@ -134,6 +143,7 @@ REFUSALS: Final[tuple[tuple[type[Exception], HTTPStatus], ...]] = (
     (NoSay, HTTPStatus.FORBIDDEN),
     (NameTaken, HTTPStatus.CONFLICT),
     (SeatTaken, HTTPStatus.CONFLICT),
+    (TintTaken, HTTPStatus.CONFLICT),
     (GatheringOver, HTTPStatus.CONFLICT),
     (SeatsEmpty, HTTPStatus.CONFLICT),
     (StaleGathering, HTTPStatus.CONFLICT),

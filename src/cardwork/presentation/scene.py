@@ -19,6 +19,7 @@ from cardwork.presentation.tally import Tally
 from cardwork.states.award import Award
 
 SEAT_NAME: Final[str] = "Seat {seat}"
+UNTINTED: Final[None] = None
 
 
 class Scene(BaseFrozen):
@@ -120,13 +121,14 @@ class Scene(BaseFrozen):
     def _plaques(self, players: int) -> tuple[Plaque, ...]:
         """A plaque for every seat of the table, counting the zones that seat holds.
 
-        A seat is named by where it sits, which is the whole of what a table knows of a player until a host
-        holds a name for one.
+        A seat is named by where it sits and plays under no tint, which is the whole of what a table knows of a
+        player until a host holds a name and a tint for one.
         """
         return tuple(
             Plaque(
                 seat=seat,
                 name=SEAT_NAME.format(seat=seat),
+                tint=UNTINTED,
                 counts=self._counted_at(seat),
             )
             for seat in range(players)

@@ -25,9 +25,9 @@ import {
 } from "./tables";
 
 const SEATS: Standing[] = [
-  { seat: 0, name: "North", counts: [] },
-  { seat: 1, name: "East", counts: [] },
-  { seat: 2, name: "South", counts: [] },
+  { seat: 0, name: "North", tint: null, counts: [] },
+  { seat: 1, name: "East", tint: null, counts: [] },
+  { seat: 2, name: "South", tint: null, counts: [] },
 ];
 
 const TURN = aLayout({ gestures: [TAKING, GIVING], plaques: SEATS });

@@ -155,6 +155,7 @@ PLAQUES: Final[tuple[Plaque, ...]] = tuple(
     Plaque(
         seat=seat,
         name=f"Seat {seat}",
+        tint=None,
         counts=counts_of(seat),
     )
     for seat in range(SEATS)

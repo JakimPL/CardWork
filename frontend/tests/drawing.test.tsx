@@ -204,7 +204,7 @@ describe("the line saying where play stands", () => {
   });
 
   it("names the seat to act by the name its plaque carries, which the gathering settled", () => {
-    const named = aLayout({ ...LAYOUT, plaques: [{ seat: 1, name: "Grace", counts: [] }] });
+    const named = aLayout({ ...LAYOUT, plaques: [{ seat: 1, name: "Grace", tint: null, counts: [] }] });
     const status = drawn(<StatusLine layout={named} view={DEALT} connection="following" trouble={null} />);
 
     expect(status).toContain("Grace");

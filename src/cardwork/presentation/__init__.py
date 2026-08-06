@@ -13,6 +13,7 @@ from cardwork.presentation.setting import Setting
 from cardwork.presentation.slot import Slot
 from cardwork.presentation.spread import Spread
 from cardwork.presentation.tally import Tally
+from cardwork.presentation.tint import Tint
 
 __all__ = [
     "Commit",
@@ -30,4 +31,5 @@ __all__ = [
     "Slot",
     "Spread",
     "Tally",
+    "Tint",
 ]

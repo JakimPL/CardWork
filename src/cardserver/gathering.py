@@ -14,10 +14,12 @@ from cardserver.errors import (
     SeatsEmpty,
     SeatTaken,
     StaleGathering,
+    TintTaken,
     Unadmitted,
     Unauthenticated,
     UnknownTable,
 )
+from cardserver.naming import Seated
 from cardserver.protocol import TableId
 from cardserver.schemas import (
     Admitted,
@@ -29,11 +31,14 @@ from cardserver.schemas import (
     GatheringView,
     Guest,
     Offering,
+    Tinting,
 )
 from cardwork.exceptions import GameValidationError
+from cardwork.presentation.tint import Tint
 
 TOKEN_BYTES: Final[int] = 32
-COMPANY_MOST: Final[int] = 12
+TINTS: Final[tuple[Tint, ...]] = tuple(Tint)
+COMPANY_MOST: Final[int] = len(TINTS)
 WRONG_CODES_ALLOWED: Final[int] = 10
 TURNSTILE_WINDOW: Final[float] = 60.0
 FIRST_REVISION: Final[int] = 0
@@ -98,14 +103,14 @@ class Opening(Protocol):
         self,
         table: TableId,
         choice: Choice,
-        names: Mapping[int, str],
+        seated: Mapping[int, Seated],
     ) -> None:
         """Deal the table one gathering settled on and put it into service under that name.
 
         Args:
             table: the name the table is served under, which is the one its gathering stands for.
             choice: what the company settled to play.
-            names: the name each seat is read by, which the plaques of the table's layout carry.
+            seated: the name and tint each seat is read by, which the plaques of the table's layout carry.
 
         Raises:
             GameValidationError: when the rules refuse the table or the deck the choice asks for.
@@ -138,6 +143,7 @@ class Gathering:
         self._offerings = offerings
         self._opening = opening
         self._seats: dict[str, int | None] = {}
+        self._tints: dict[str, Tint] = {}
         self._tokens: dict[str, str] = {}
         self._watching: dict[str, int] = {}
         self._revision = FIRST_REVISION
@@ -160,24 +166,25 @@ class Gathering:
         return admits(self._code, offered)
 
     def admit(self, name: str) -> str:
-        """Take one guest into the company under a name, and mint the token they will speak through.
+        """Take one guest into the company under a name and the first free tint, and mint their token.
 
-        The code is read before this rather than inside it, since a wrong one is what a turnstile counts.
+        The code is read before this rather than inside it, since a wrong one is what a turnstile counts. A
+        company is gathered up to the tints that tell it apart, so the guest arriving is handed one and may take
+        another for as long as the room stands.
 
         Raises:
             GatheringOver: once the table has been dealt.
-            Unadmitted: when the company already holds as many guests as a gathering takes.
+            Unadmitted: when every tint is held, which is a company as large as a gathering takes.
             NameTaken: when the name is already read at this table.
         """
         self._confirm_gathering()
-        if len(self._seats) >= COMPANY_MOST:
-            raise Unadmitted(f"This table gathers a company of {COMPANY_MOST}, and that many are already at it")
-
+        tint = self._a_free_tint()
         if name in self._seats:
             raise NameTaken(name)
 
         token = token_urlsafe(TOKEN_BYTES)
         self._seats[name] = STANDING
+        self._tints[name] = tint
         self._tokens[token] = name
         self._publish()
         return token
@@ -245,6 +252,23 @@ class Gathering:
         self._seats[guest] = seat
         self._publish()
 
+    def tint(self, guest: str, chosen: Tint, base_revision: int) -> None:
+        """Give one guest the tint they asked for, which the company then tells them apart by.
+
+        A tint is a guest's own whether they are sitting or standing, so this asks nothing of the seating: what
+        it asks is that no one else at the table is already read by it.
+
+        Raises:
+            GatheringOver: once the table has been dealt.
+            StaleGathering: when the gathering has moved past the revision this was built on.
+            TintTaken: when another guest of the company holds it.
+        """
+        self._confirm_gathering()
+        self._confirm_revision(base_revision)
+        self._confirm_tint(guest, chosen)
+        self._tints[guest] = chosen
+        self._publish()
+
     def choose(self, choice: Choice, base_revision: int) -> None:
         """Settle what the table plays, standing up whoever sat past the seats it comes to hold.
 
@@ -297,12 +321,36 @@ class Gathering:
     def _company(self) -> tuple[Guest, ...]:
         """Everyone at the gathering, in the order they arrived."""
         return tuple(
-            Guest(name=name, seat=seat, present=self._watching.get(name, 0) > 0) for name, seat in self._seats.items()
+            Guest(
+                name=name,
+                tint=self._tints[name],
+                seat=seat,
+                present=self._watching.get(name, 0) > 0,
+            )
+            for name, seat in self._seats.items()
         )
 
-    def _seated(self) -> Mapping[int, str]:
-        """The name every taken seat is read by."""
-        return {seat: name for name, seat in self._seats.items() if seat is not None}
+    def _seated(self) -> Mapping[int, Seated]:
+        """The name and tint every taken seat is read by."""
+        return {
+            seat: Seated(name=name, tint=self._tints[name]) for name, seat in self._seats.items() if seat is not None
+        }
+
+    def _a_free_tint(self) -> Tint:
+        """The first tint no guest of the company holds, which is the one an arrival is handed.
+
+        The tints are also the room a gathering holds: a company is as large as the marks that tell it apart,
+        so the arrival finding none left is the arrival there is no room for.
+
+        Raises:
+            Unadmitted: when every tint is held.
+        """
+        held = set(self._tints.values())
+        for tint in TINTS:
+            if tint not in held:
+                return tint
+
+        raise Unadmitted(f"This table gathers a company of {COMPANY_MOST}, and that many are already at it")
 
     def _offered(self, choice: Choice) -> Choice:
         """The choice as it stands once confirmed against what the host offers.
@@ -359,7 +407,17 @@ class Gathering:
             if held == seat and name != guest:
                 raise SeatTaken(seat, name)
 
-    def _confirm_seated(self, seated: Mapping[int, str]) -> None:
+    def _confirm_tint(self, guest: str, chosen: Tint) -> None:
+        """Confirm the tint is nobody else's, which is what keeps a company telling itself apart.
+
+        Raises:
+            TintTaken: when another guest of the company holds it.
+        """
+        for name, held in self._tints.items():
+            if held == chosen and name != guest:
+                raise TintTaken(chosen.value, name)
+
+    def _confirm_seated(self, seated: Mapping[int, Seated]) -> None:
         """Confirm every seat of the table is taken.
 
         Raises:
@@ -445,6 +503,15 @@ class Gatherings:
         self._gatherings[table] = gathering
         return gathering
 
+    def gathering(self) -> tuple[TableId, ...]:
+        """The tables gathering here, which are the ones a company may still be admitted to.
+
+        A table's name is not what admits anybody — the code is — so this is answered to a stranger: somebody
+        who reached the server without the line it printed is told what there is to arrive at, and told nothing
+        of who is at it.
+        """
+        return tuple(table for table, gathering in self._gatherings.items() if not gathering.dealt)
+
     def at(self, table: TableId) -> Gathering:
         """The gathering of one table.
 
@@ -528,6 +595,24 @@ class Gatherings:
         """
         gathering = self.at(table)
         gathering.claim(guest, claiming.seat, claiming.base_revision)
+        return gathering.view(guest)
+
+    def tint(
+        self,
+        table: TableId,
+        guest: str,
+        tinting: Tinting,
+    ) -> GatheringView:
+        """Give one guest the tint they asked for, which any guest may ask for their own.
+
+        Raises:
+            UnknownTable: when this host gathers no table of that name.
+            GatheringOver: once the table has been dealt.
+            StaleGathering: when the gathering has moved past the revision this was built on.
+            TintTaken: when another guest of the company holds it.
+        """
+        gathering = self.at(table)
+        gathering.tint(guest, tinting.tint, tinting.base_revision)
         return gathering.view(guest)
 
     def choose(

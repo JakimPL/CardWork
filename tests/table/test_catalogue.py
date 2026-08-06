@@ -33,8 +33,8 @@ from .tables import (
     SETTINGS,
     VIEW,
     HostCase,
-    a_company,
     a_seat_to_act,
+    a_seated_company,
     playing,
     settled,
     submit,
@@ -52,7 +52,7 @@ async def test_a_seat_is_served_the_layout_the_game_states_for_it(case: HostCase
     async with playing(case.game) as dealt:
         response = await dealt.client.get(LAYOUT, headers=dealt.credentials(SEATED))
 
-    named = Named(case.scene, a_company(PLAYERS))
+    named = Named(case.scene, a_seated_company(PLAYERS))
     assert Layout.model_validate(response.json()) == named.layout(PLAYERS, SEATED)
 
 
@@ -61,7 +61,7 @@ async def test_a_spectator_is_served_the_layout_the_game_states_for_one(case: Ho
     async with playing(case.game) as dealt:
         response = await dealt.client.get(LAYOUT)
 
-    named = Named(case.scene, a_company(PLAYERS))
+    named = Named(case.scene, a_seated_company(PLAYERS))
     assert Layout.model_validate(response.json()) == named.layout(PLAYERS, WATCHING)
 
 
@@ -180,6 +180,6 @@ def test_a_settled_choice_is_dealt_as_the_game_it_names(case: HostCase) -> None:
     """A gathering names a game and this is where the rules of that name are found, dealt and put in service."""
     tables = TableRegistry(NO_GRACE)
 
-    Deals(tables, SEED).open(SETTINGS.name, settled(case.game, PLAYERS, ONE_DECK), a_company(PLAYERS))
+    Deals(tables, SEED).open(SETTINGS.name, settled(case.game, PLAYERS, ONE_DECK), a_seated_company(PLAYERS))
 
     assert tables.session(SETTINGS.name).layout(FIRST_SEAT).title == case.scene.title

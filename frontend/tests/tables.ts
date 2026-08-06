@@ -57,7 +57,7 @@ export function aTableOf(players: number, observer: number): Layout {
     observer,
     players,
     slots: seats.map(aHolding),
-    plaques: seats.map((seat) => ({ seat, name: `Seat ${seat}`, counts: [] })),
+    plaques: seats.map((seat) => ({ seat, name: `Seat ${seat}`, tint: null, counts: [] })),
   });
 }
 
@@ -65,6 +65,7 @@ export function aTableOf(players: number, observer: number): Layout {
 export const PLAQUES: Plaque[] = SEATS.map((seat) => ({
   seat,
   name: `Seat ${seat}`,
+  tint: null,
   counts: [{ zone: handOf(seat), label: "Cards" }],
 }));
 

@@ -19,7 +19,7 @@ from cardwork.exceptions import GameValidationError
 from cardwork.games.capacity import Capacity
 from tests.cases import Case, descriptions
 
-from .tables import NO_GRACE, SEED, TABLE, a_company, settled
+from .tables import NO_GRACE, SEED, TABLE, a_seated_company, settled
 
 SEATINGS: Final[dict[str, Capacity]] = {
     GameName.CLIMBING.value: ClimbingGame.capacity,
@@ -62,7 +62,9 @@ def _is_dealt(case: DealCase) -> bool:
     """Whether the rules deal the table one offered case asks for, which is what a company meets at the deal."""
     tables = TableRegistry(NO_GRACE)
     try:
-        Deals(tables, SEED).open(TABLE, settled(GameName(case.game), case.seats, case.decks), a_company(case.seats))
+        Deals(tables, SEED).open(
+            TABLE, settled(GameName(case.game), case.seats, case.decks), a_seated_company(case.seats)
+        )
     except GameValidationError:
         return False
 
@@ -99,7 +101,7 @@ def test_a_table_a_host_offers_is_dealt_or_refused_in_words(case: DealCase) -> N
     choice = settled(GameName(case.game), case.seats, case.decks)
 
     try:
-        Deals(tables, SEED).open(TABLE, choice, a_company(case.seats))
+        Deals(tables, SEED).open(TABLE, choice, a_seated_company(case.seats))
     except GameValidationError as refusal:
         assert str(refusal).strip()
         return

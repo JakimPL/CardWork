@@ -1,4 +1,5 @@
 import json
+from collections.abc import Mapping
 from http import HTTPStatus
 from typing import Any, Final
 
@@ -6,8 +7,11 @@ import pytest
 from httpx import AsyncClient, Response
 from pydantic import ValidationError
 
-from cardserver.schemas import Choice, Choosing, Dealing, Offering
+from cardserver.gathering import TINTS
+from cardserver.naming import Seated
+from cardserver.schemas import Choice, Choosing, Dealing, Offering, Tinting
 from cardwork.games.capacity import Capacity
+from cardwork.presentation.tint import Tint
 from cardwork.rounds.conclusion import Conclusion
 
 from ..games.demo import SEATS
@@ -31,6 +35,8 @@ from .conftest import (
     MOVES,
     OFFERED,
     TABLE,
+    TABLES,
+    TINT,
     arrives,
     arriving,
     holding,
@@ -46,6 +52,11 @@ COMPANY: Final[tuple[str, ...]] = ("Ada", "Grace", "Alan")
 STANDING: Final[None] = None
 A_SMALLER_TABLE: Final[int] = 2
 PAST_THE_TABLE: Final[int] = SEATS + 1
+
+SEATED_COMPANY: Final[Mapping[int, Seated]] = {
+    seat: Seated(name=name, tint=TINTS[seat]) for seat, name in enumerate(COMPANY)
+}
+A_FREE_TINT: Final[Tint] = TINTS[-1]
 
 
 def payload(written: str) -> dict[str, Any]:
@@ -83,6 +94,15 @@ async def deals(client: AsyncClient, token: str, base_revision: int) -> Response
     return await client.post(
         DEALING,
         json=Dealing(base_revision=base_revision).model_dump(mode="json"),
+        headers=holding(token),
+    )
+
+
+async def takes(client: AsyncClient, token: str, tint: Tint, base_revision: int) -> Response:
+    """One guest taking a tint of the company's."""
+    return await client.put(
+        TINT,
+        json=Tinting(tint=tint, base_revision=base_revision).model_dump(mode="json"),
         headers=holding(token),
     )
 
@@ -187,6 +207,59 @@ async def test_a_command_built_on_a_revision_the_gathering_moved_past_is_refused
     assert answered.status_code == HTTPStatus.CONFLICT
 
 
+async def test_a_guest_takes_a_tint_no_one_else_holds(visitor: AsyncClient, gathered: Gathered) -> None:
+    token = await arrives(visitor, "Ada")
+    answered = await takes(visitor, token, A_FREE_TINT, gathered.gathering.revision)
+
+    assert answered.status_code == HTTPStatus.OK
+    assert guest_named(answered.json(), "Ada")["tint"] == A_FREE_TINT.value
+
+
+async def test_a_tint_another_guest_holds_is_left_as_it_was(visitor: AsyncClient, gathered: Gathered) -> None:
+    held = await arrives(visitor, "Ada")
+    asking = await arrives(visitor, "Grace")
+    answered = await takes(visitor, asking, TINTS[0], gathered.gathering.revision)
+
+    assert answered.status_code == HTTPStatus.CONFLICT
+    assert guest_named(await read_by(visitor, held), "Ada")["tint"] == TINTS[0].value
+
+
+async def test_a_guest_takes_the_tint_they_already_hold_and_keeps_it(
+    visitor: AsyncClient,
+    gathered: Gathered,
+) -> None:
+    token = await arrives(visitor, "Ada")
+    answered = await takes(visitor, token, TINTS[0], gathered.gathering.revision)
+
+    assert answered.status_code == HTTPStatus.OK
+    assert guest_named(answered.json(), "Ada")["tint"] == TINTS[0].value
+
+
+async def test_a_tint_is_a_guest_s_own_whether_they_are_sitting_or_standing(
+    visitor: AsyncClient,
+    gathered: Gathered,
+) -> None:
+    """A tint belongs to a guest rather than to a seat, so standing up leaves it where it was."""
+    token = await arrives(visitor, "Ada")
+    await takes(visitor, token, A_FREE_TINT, gathered.gathering.revision)
+    await sits(visitor, token, 1, gathered.gathering.revision)
+    answered = await sits(visitor, token, STANDING, gathered.gathering.revision)
+
+    assert guest_named(answered.json(), "Ada")["tint"] == A_FREE_TINT.value
+
+
+async def test_a_tint_taken_on_a_revision_the_gathering_moved_past_is_refused(
+    visitor: AsyncClient,
+    gathered: Gathered,
+) -> None:
+    token = await arrives(visitor, "Ada")
+    stale = gathered.gathering.revision
+    await arrives(visitor, "Grace")
+    answered = await takes(visitor, token, A_FREE_TINT, stale)
+
+    assert answered.status_code == HTTPStatus.CONFLICT
+
+
 async def test_a_guest_standing_at_no_seat_settles_nothing(visitor: AsyncClient, gathered: Gathered) -> None:
     token = await arrives(visitor, "Ada")
     answered = await chooses(visitor, token, a_sealed_round(A_SMALLER_TABLE), gathered.gathering.revision)
@@ -282,7 +355,7 @@ async def test_the_deal_opens_the_table_the_company_settled_on(visitor: AsyncCli
 
     assert [table for table, _, _ in dealt] == [TABLE]
     assert dealt[0][1] == a_sealed_round(SEATS)
-    assert dealt[0][2] == dict(enumerate(COMPANY))
+    assert dealt[0][2] == SEATED_COMPANY
 
 
 async def test_the_table_reads_every_plaque_by_the_name_its_guest_arrived_under(
@@ -295,6 +368,18 @@ async def test_the_table_reads_every_plaque_by_the_name_its_guest_arrived_under(
     layout = (await visitor.get(LAYOUT, headers=holding(tokens[0]))).json()
 
     assert [plaque["name"] for plaque in layout["plaques"]] == list(COMPANY)
+
+
+async def test_the_table_reads_every_plaque_under_the_tint_its_guest_holds(
+    visitor: AsyncClient,
+    gathered: Gathered,
+) -> None:
+    tokens = await seated_company(visitor, COMPANY)
+    await deals(visitor, tokens[0], gathered.gathering.revision)
+
+    layout = (await visitor.get(LAYOUT, headers=holding(tokens[0]))).json()
+
+    assert [plaque["tint"] for plaque in layout["plaques"]] == [tint.value for tint in TINTS[: len(COMPANY)]]
 
 
 async def test_the_token_that_took_a_seat_is_the_one_that_plays_it(
@@ -353,12 +438,27 @@ async def test_a_gathering_over_is_asked_for_nothing_more(visitor: AsyncClient, 
 
     asked = (
         await sits(visitor, tokens[0], 2, standing),
+        await takes(visitor, tokens[0], A_FREE_TINT, standing),
         await chooses(visitor, tokens[0], a_sealed_round(A_SMALLER_TABLE), standing),
         await deals(visitor, tokens[0], standing),
         await arriving(visitor, "Late"),
     )
 
     assert [answered.status_code for answered in asked] == [HTTPStatus.CONFLICT] * len(asked)
+
+
+async def test_a_table_gathering_is_named_to_whoever_reached_the_server_bare(visitor: AsyncClient) -> None:
+    assert (await visitor.get(TABLES)).json() == [TABLE]
+
+
+async def test_a_table_dealt_is_named_to_nobody_arriving_since_its_gathering_is_over(
+    visitor: AsyncClient,
+    gathered: Gathered,
+) -> None:
+    tokens = await seated_company(visitor, COMPANY)
+    await deals(visitor, tokens[0], gathered.gathering.revision)
+
+    assert (await visitor.get(TABLES)).json() == []
 
 
 async def test_a_gathering_over_still_reads_for_the_company_that_settled_it(

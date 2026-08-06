@@ -10,8 +10,9 @@ from cardgames.frontend.climbing.layout import CLIMBING_SCENE
 from cardgames.frontend.passing.layout import PASSING_SCENE
 from cardgames.frontend.shedding.layout import SHEDDING_SCENE
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
-from cardserver.gathering import FIRST_REVISION
+from cardserver.gathering import FIRST_REVISION, TINTS
 from cardserver.identity import SEAT_HEADER
+from cardserver.naming import Seated
 from cardserver.schemas import (
     Admitted,
     Arriving,
@@ -119,6 +120,15 @@ CHOICE: Final[Choice] = settled(GameName.PASSING, PLAYERS, ONE_DECK)
 def a_company(players: int) -> Mapping[int, str]:
     """The name every seat of a table that size is taken under, in the order the seats are claimed."""
     return {seat: NAMES[seat] for seat in range(players)}
+
+
+def a_seated_company(players: int) -> Mapping[int, Seated]:
+    """The name and tint every seat is read by once such a company has arrived and sat in turn.
+
+    The tints follow the arrivals rather than the seats, and these guests arrive in the order they sit, so the
+    seat taken first plays under the first tint of the palette.
+    """
+    return {seat: Seated(name=NAMES[seat], tint=TINTS[seat]) for seat in range(players)}
 
 
 @dataclass(frozen=True)

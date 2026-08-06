@@ -43,10 +43,12 @@ EVENTS: Final[str] = f"/tables/{TABLE}/events"
 JOURNAL: Final[str] = f"/tables/{TABLE}/journal"
 
 OFFERED: Final[str] = "/offerings"
+TABLES: Final[str] = "/tables"
 GUESTS: Final[str] = f"/tables/{TABLE}/guests"
 GATHERING: Final[str] = f"/tables/{TABLE}/gathering"
 ATTENDANCE: Final[str] = f"/tables/{TABLE}/gathering/events"
 SEAT: Final[str] = f"/tables/{TABLE}/seat"
+TINT: Final[str] = f"/tables/{TABLE}/tint"
 CHOICE: Final[str] = f"/tables/{TABLE}/choice"
 DEALING: Final[str] = f"/tables/{TABLE}/deal"
 

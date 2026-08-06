@@ -94,7 +94,7 @@ describe("the seats round the table", () => {
       observer: 0,
       players: 4,
       slots: [aHolding(1), aHolding(3)],
-      plaques: [0, 1, 2, 3].map((seat) => ({ seat, name: `Seat ${seat}`, counts: [] })),
+      plaques: [0, 1, 2, 3].map((seat) => ({ seat, name: `Seat ${seat}`, tint: null, counts: [] })),
     });
     const ring = ringOf(table);
 

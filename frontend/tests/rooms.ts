@@ -1,9 +1,15 @@
-import type { Choice, Conclusion, GatheringView, Guest, Offering } from "../src/api/gathering";
+import type { Choice, Conclusion, GatheringView, Guest, Offering, Tint } from "../src/api/gathering";
 
 /** The table these tests gather, and the guest whose page they are read as. */
 export const TABLE = "green-baize";
 export const CODE = "KQAJ72";
 export const MINE = "Ada";
+
+/** The tints in the order a company arriving is handed them, which mirrors `cardserver.gathering.TINTS`. */
+export const TINTS: Tint[] = ["rose", "coral", "amber", "lemon", "teal", "azure", "indigo", "violet"];
+
+/** The tint a guest holds where a test says nothing about it, which is the one the first arrival takes. */
+const FIRST_TINT: Tint = "rose";
 
 /** The games this host offers, one of them dealt from one deck or two and one of them played at one size. */
 export const PASSING: Offering = { game: "passing", title: "Passing", seats: { least: 2, most: 8 }, decks: [1, 2] };
@@ -18,9 +24,9 @@ export function aChoice(choice: Partial<Choice> = {}): Choice {
   return { game: PASSING.game, players: 3, decks: 1, conclusion: RUNS_TO, ...choice };
 }
 
-/** One guest of the company: the name they arrived under, the seat they hold, and whether their page is open. */
-export function aGuest(name: string, seat: number | null, present = true): Guest {
-  return { name, seat, present };
+/** One guest of the company: the name and tint they arrived under, the seat they hold, and whether their page is open. */
+export function aGuest(name: string, seat: number | null, present = true, tint: Tint = FIRST_TINT): Guest {
+  return { name, tint, seat, present };
 }
 
 /** A gathering as one of its guests reads it, at whatever company and choice a test states. */
@@ -39,6 +45,8 @@ export function aGathering(company: Guest[], gathering: Partial<GatheringView> =
 
 /** A gathering whose every seat is taken, which is the one thing the deal waits on. */
 export function aSeatedGathering(players: number): GatheringView {
-  const company = [...Array(players).keys()].map((seat) => aGuest(seat === 0 ? MINE : `Guest ${seat}`, seat));
+  const company = TINTS.slice(0, players).map((tint, seat) =>
+    aGuest(seat === 0 ? MINE : `Guest ${seat}`, seat, true, tint),
+  );
   return aGathering(company, { choice: aChoice({ players }) });
 }

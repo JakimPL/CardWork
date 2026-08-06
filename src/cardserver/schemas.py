@@ -8,6 +8,7 @@ from cardwork.exceptions import GameValidationError
 from cardwork.games.capacity import ONE_SEAT, Capacity
 from cardwork.models.base import BaseFrozen
 from cardwork.moves.move import Move
+from cardwork.presentation.tint import Tint
 from cardwork.rounds.conclusion import Conclusion
 from cardwork.zones.zone import ZoneId
 
@@ -125,14 +126,16 @@ class Offering(BaseFrozen):
 
 
 class Guest(BaseFrozen):
-    """One person at a gathering as the whole company reads them: the name, the seat, and whether they are here.
+    """One person at a gathering as the company reads them: the name, the tint, the seat, and whether they are here.
 
-    The name is what a guest arrived under and the whole of their identity at the table. The seat is the one
-    they have taken, and none while they are standing. Presence follows the stream a page holds open, so the
-    company reads as the room does.
+    The name is what a guest arrived under and the whole of their identity at the table. The tint is what tells
+    them apart from the rest of the company at a glance, and no two guests hold one. The seat is the one they
+    have taken, and none while they are standing. Presence follows the stream a page holds open, so the company
+    reads as the room does.
     """
 
     name: str
+    tint: Tint
     seat: int | None
     present: bool
 
@@ -193,6 +196,13 @@ class Claiming(BaseFrozen):
     """A guest taking a seat, or standing up from the one they hold by naming none."""
 
     seat: Annotated[int, Field(ge=0)] | None
+    base_revision: Annotated[int, Field(ge=0)]
+
+
+class Tinting(BaseFrozen):
+    """A guest taking one of the company's tints, which is the mark the table tells them apart by."""
+
+    tint: Tint
     base_revision: Annotated[int, Field(ge=0)]
 
 

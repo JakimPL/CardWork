@@ -7,7 +7,7 @@ from fastapi import FastAPI
 
 from cardserver.app import create_app
 from cardserver.gathering import Gathering, Gatherings, SeatedSay, Turnstile
-from cardserver.naming import Named
+from cardserver.naming import Named, Seated
 from cardserver.protocol import TableId
 from cardserver.registry import TableRegistry
 from cardserver.schemas import Choice, Offering
@@ -74,21 +74,21 @@ class Deals:
     """An opening that deals the demo game, which is what a gathering at these tests becomes.
 
     What it was handed is kept as well as opened, so a test reads the seating a deal settled straight off it,
-    and reads it through a layout where the point is that the names reach one.
+    and reads it through a layout where the point is that the names and tints reach one.
     """
 
     def __init__(self, registry: TableRegistry) -> None:
         self._registry = registry
-        self.dealt: list[tuple[TableId, Choice, Mapping[int, str]]] = []
+        self.dealt: list[tuple[TableId, Choice, Mapping[int, Seated]]] = []
 
     def open(
         self,
         table: TableId,
         choice: Choice,
-        names: Mapping[int, str],
+        seated: Mapping[int, Seated],
     ) -> None:
-        """Deal the demo game at the table the choice settled, with its seats named."""
-        self.dealt.append((table, choice, names))
+        """Deal the demo game at the table the choice settled, with its seats named and tinted."""
+        self.dealt.append((table, choice, seated))
         self._registry.open(
             table,
             SealedRoundGame(
@@ -96,7 +96,7 @@ class Deals:
                 deck=DECK,
                 rng=Random(DEALT_FROM),
             ),
-            Named(SEALED_SCENE, names),
+            Named(SEALED_SCENE, seated),
         )
 
 

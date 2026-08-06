@@ -3,7 +3,7 @@ from typing import Final
 
 from httpx import AsyncClient
 
-from cardserver.gathering import COMPANY_MOST, TURNSTILE_WINDOW, WRONG_CODES_ALLOWED
+from cardserver.gathering import COMPANY_MOST, TINTS, TURNSTILE_WINDOW, WRONG_CODES_ALLOWED
 from cardserver.schemas import NAME_LONGEST, Arriving
 
 from .company import CODE, WRONG_CODE, Gathered
@@ -11,6 +11,7 @@ from .conftest import GATHERING, GUESTS, TABLE, arriving, holding
 
 A_MOMENT: Final[float] = 1.0
 NAMED: Final[str] = "Ada"
+FIRST_TINT: Final[str] = TINTS[0].value
 
 
 async def offering(client: AsyncClient, code: str, name: str) -> HTTPStatus:
@@ -31,7 +32,17 @@ async def test_the_code_admits_a_guest_and_mints_the_token_they_speak_through(vi
 async def test_a_guest_arrives_standing_at_no_seat(visitor: AsyncClient) -> None:
     admitted = (await arriving(visitor, NAMED)).json()
 
-    assert admitted["gathering"]["company"] == [{"name": NAMED, "seat": None, "present": False}]
+    assert admitted["gathering"]["company"] == [
+        {"name": NAMED, "tint": FIRST_TINT, "seat": None, "present": False},
+    ]
+
+
+async def test_a_company_is_handed_the_tints_in_the_order_it_arrived(visitor: AsyncClient) -> None:
+    """A tint is what a company tells itself apart by, so the first to arrive takes the first of them."""
+    for guest, tint in zip(("Ada", "Grace", "Alan"), TINTS, strict=False):
+        admitted = (await arriving(visitor, guest)).json()
+
+        assert admitted["gathering"]["company"][-1]["tint"] == tint.value
 
 
 async def test_a_guest_is_told_the_code_so_they_can_pass_it_on(visitor: AsyncClient) -> None:
@@ -90,7 +101,10 @@ async def test_a_field_the_gathering_never_asked_for_admits_nobody(visitor: Asyn
     assert answered.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
 
 
-async def test_a_company_is_gathered_up_to_the_room_it_holds(visitor: AsyncClient) -> None:
+async def test_a_company_is_gathered_up_to_the_tints_that_tell_it_apart(visitor: AsyncClient) -> None:
+    """A guest holds a tint of their own, so the room a company holds is as many guests as there are tints."""
+    assert COMPANY_MOST == len(TINTS)
+
     for guest in range(COMPANY_MOST):
         assert await offering(visitor, CODE, f"guest-{guest}") == HTTPStatus.OK
 

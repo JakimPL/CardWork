@@ -12,7 +12,7 @@ from cardgames.frontend.passing.layout import PASSING_SCENE
 from cardgames.frontend.shedding.layout import SHEDDING_SCENE
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
 from cardserver.gathering import Gatherings, SeatedSay, Turnstile
-from cardserver.naming import Named
+from cardserver.naming import Named, Seated
 from cardserver.protocol import Presentation, Table, TableId
 from cardserver.registry import TableRegistry
 from cardserver.schemas import Choice, Offering
@@ -129,14 +129,14 @@ class Deals:
         self,
         table: TableId,
         choice: Choice,
-        names: Mapping[int, str],
+        seated: Mapping[int, Seated],
     ) -> None:
         """Deal the table one gathering settled on and put it into service under that name.
 
         Args:
             table: the name the table is served under, which is the one its gathering stands for.
             choice: what the company settled to play.
-            names: the name each seat is read by, which the plaques of the table's layout carry.
+            seated: the name and tint each seat is read by, which the plaques of the table's layout carry.
 
         Raises:
             GameValidationError: when the rules refuse the table or the deck the choice asks for.
@@ -147,7 +147,7 @@ class Deals:
                     table,
                     a_climbing_match(choice, self._seed),
                     CLIMBING_SCENE,
-                    names,
+                    seated,
                 )
 
             case GameName.PASSING:
@@ -155,7 +155,7 @@ class Deals:
                     table,
                     a_passing_match(choice, self._seed),
                     PASSING_SCENE,
-                    names,
+                    seated,
                 )
 
             case GameName.SHOWDOWN:
@@ -163,7 +163,7 @@ class Deals:
                     table,
                     a_showdown_match(choice, self._seed),
                     SHOWDOWN_SCENE,
-                    names,
+                    seated,
                 )
 
             case GameName.SHEDDING:
@@ -171,7 +171,7 @@ class Deals:
                     table,
                     a_shedding_match(choice, self._seed),
                     SHEDDING_SCENE,
-                    names,
+                    seated,
                 )
 
     def _put_into_service[StateT: GameState](
@@ -179,10 +179,10 @@ class Deals:
         table: TableId,
         game: Table[StateT],
         presentation: Presentation,
-        names: Mapping[int, str],
+        seated: Mapping[int, Seated],
     ) -> None:
-        """Open one dealt game under a name, read through its own arrangement under the names its seats took."""
-        self._registry.open(table, game, Named(presentation, names))
+        """Open one dealt game under a name, read through its arrangement as its seats were taken."""
+        self._registry.open(table, game, Named(presentation, seated))
 
 
 def opened(settings: Settings, choice: Choice, artwork: Artwork) -> Hosted:

@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 
 from cardserver.gathering import Gatherings
 from cardserver.identity import SEAT_HEADER
+from cardserver.protocol import TableId
 from cardserver.schemas import (
     Admitted,
     Arriving,
@@ -13,6 +14,7 @@ from cardserver.schemas import (
     Dealing,
     GatheringView,
     Offering,
+    Tinting,
 )
 from cardserver.streams import (
     EVENT_STREAM,
@@ -58,6 +60,15 @@ def gathering_routes(gatherings: Gatherings) -> APIRouter:
         """
         return gatherings.offerings
 
+    @router.get("/tables")
+    async def read_tables() -> tuple[TableId, ...]:
+        """The tables gathering here, which is what a page offers somebody who reached the server bare.
+
+        Read without a credential, as the offerings are: what admits a person is the code, so naming what is
+        gathering costs a table nothing and saves the one who was handed no line from guessing.
+        """
+        return gatherings.gathering()
+
     @router.post("/tables/{table_id}/guests")
     async def arrive(
         table_id: str,
@@ -99,6 +110,15 @@ def gathering_routes(gatherings: Gatherings) -> APIRouter:
     ) -> GatheringView:
         """Take a seat at the table, or stand up from the one held by naming none."""
         return gatherings.claim(table_id, guest, claiming)
+
+    @router.put("/tables/{table_id}/tint")
+    async def take_tint(
+        table_id: str,
+        tinting: Tinting,
+        guest: Annotated[str, Depends(guest_of)],
+    ) -> GatheringView:
+        """Take one of the company's tints, which every guest may do for their own."""
+        return gatherings.tint(table_id, guest, tinting)
 
     @router.put("/tables/{table_id}/choice")
     async def settle_choice(

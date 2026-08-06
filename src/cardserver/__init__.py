@@ -10,6 +10,7 @@ from cardserver.errors import (
     SeatsEmpty,
     SeatTaken,
     StaleGathering,
+    TintTaken,
     Unadmitted,
     Unauthenticated,
     UnknownTable,
@@ -24,7 +25,7 @@ from cardserver.gathering import (
     Turnstile,
 )
 from cardserver.identity import SEAT_HEADER, SeatPolicy, TokenSeats
-from cardserver.naming import Named
+from cardserver.naming import Named, Seated
 from cardserver.protocol import Presentation, Table, TableId
 from cardserver.registry import TableRegistry
 from cardserver.schemas import (
@@ -41,6 +42,7 @@ from cardserver.schemas import (
     Guest,
     MoveRequest,
     Offering,
+    Tinting,
 )
 from cardserver.sessions import Commit, InService, TableSession
 
@@ -76,6 +78,7 @@ __all__ = [
     "SayPolicy",
     "SeatPolicy",
     "SeatTaken",
+    "Seated",
     "SeatedSay",
     "SeatsEmpty",
     "StaleGathering",
@@ -83,6 +86,8 @@ __all__ = [
     "TableId",
     "TableRegistry",
     "TableSession",
+    "TintTaken",
+    "Tinting",
     "TokenSeats",
     "Turnstile",
     "Unadmitted",
