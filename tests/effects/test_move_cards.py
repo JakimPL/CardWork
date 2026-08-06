@@ -5,7 +5,12 @@ import pytest
 from pydantic import ValidationError
 
 from cardwork.boards.board import Board
-from cardwork.cards.cards import ACE_OF_SPADES, KING_OF_HEARTS, QUEEN_OF_CLUBS, TWO_OF_SPADES
+from cardwork.cards.cards import (
+    ACE_OF_SPADES,
+    KING_OF_HEARTS,
+    QUEEN_OF_CLUBS,
+    TWO_OF_SPADES,
+)
 from cardwork.cards.game import CardOrJoker, GameCard
 from cardwork.effects.effects import MoveCards
 from cardwork.positions.position import Position
@@ -126,9 +131,14 @@ def test_move_cards_leaves_each_card_on_its_own_face_when_it_names_none() -> Non
     mixed = Zone(
         id="mixed",
         visibility=PILE,
+        ordered=True,
         cards=(GameCard(card=ACE_OF_SPADES, face_down=True), GameCard(card=KING_OF_HEARTS, face_down=False)),
     )
-    target = Zone(id="target", visibility=PILE)
+    target = Zone(
+        id="target",
+        visibility=PILE,
+        ordered=True,
+    )
     position: Position[GameState] = Position(
         board=Board(starting_deck=(ACE_OF_SPADES, KING_OF_HEARTS), zones={"mixed": mixed, "target": target}),
         state=GameState(phase="play"),

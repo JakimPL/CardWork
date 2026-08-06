@@ -1,12 +1,21 @@
 from abc import ABC, abstractmethod
 from random import Random
-from typing import Final, Generic
+from typing import ClassVar, Final, Generic
 
 from cardwork.boards.board import Board
-from cardwork.decks.deck import Deck
-from cardwork.effects.effects import Effects
+from cardwork.decks.deck import Deck, Order
+from cardwork.effects.effects import Effects, Reorder
 from cardwork.effects.fold import fold
-from cardwork.exceptions import NotYourTurn, StalePosition, UndoUnavailable
+from cardwork.exceptions import (
+    ArrangementRefused,
+    GameValidationError,
+    NotYourTurn,
+    StalePosition,
+    UndoUnavailable,
+)
+from cardwork.games.capacity import Capacity
+from cardwork.games.intents import Intents
+from cardwork.moves.actions import AnyAction
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
 from cardwork.states.state import StateT
@@ -14,13 +23,14 @@ from cardwork.transactions.journal import Journal
 from cardwork.transactions.transaction import Transaction, Transactions
 from cardwork.views.event import EventView
 from cardwork.views.position import PositionView
-from cardwork.views.project import project_position, project_transaction
-from cardwork.zones.zone import Zones
+from cardwork.views.projection import project_position, project_transaction
+from cardwork.zones.resolution import arrangeable_by
+from cardwork.zones.zone import ZoneId, Zones
 
 SETTLE_LIMIT: Final[int] = 64
 
 
-class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
+class Game(ABC, Generic[StateT]):
     """One table under way: the record of everything committed to it, and the rules driving what may be.
 
     A game subclasses this with its own state type and fills in the rules hooks — how the table is laid
@@ -30,7 +40,20 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
 
     The surface is wide because this is the single face a driver, an adapter and a solver all talk to:
     reading the table, committing to it, watching it, and the rules hooks a subclass answers.
+
+    `intents` states the vocabulary a game is played with: it names the actions the rules answer to, and the
+    engine refuses a move carrying another ahead of the rules that would read it. A game annotating the
+    declaration with the actions it names has them reach its own signatures, so a `match` over an intent is
+    covered by the cases the game stated. Left at None it states a condition on nothing, and every intent a
+    client may send reaches the rules.
+
+    `capacity` states the tables the game is played at, and the engine holds every table it opens to it. A
+    game states one, since a seating range is something a game has settled: one stating none is a game that
+    stands no table up at all.
     """
+
+    capacity: ClassVar[Capacity]
+    intents: ClassVar[Intents[AnyAction] | None] = None
 
     _history: list[Position[StateT]]
     _journal: Journal[StateT]
@@ -44,12 +67,15 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
         *,
         rng: Random | None = None,
     ) -> None:
-        self._basic_initial_validation(players, deck)
-        self._validate_players(players)
+        self.capacity.confirm(players)
+        self._basic_initial_validation(deck)
         self._validate_initial_deck(deck)
 
         origin = Position(
-            board=Board(zones=self.zones(players, deck), starting_deck=deck),
+            board=Board(
+                zones=self.zones(players, deck),
+                starting_deck=deck,
+            ),
             state=self._initialize(players),
             players=players,
         )
@@ -60,8 +86,18 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
         self._rng = rng if rng is not None else Random()
 
         deal = self._deal_cards(origin, self._rng)
+        effects = deal + self.advance(
+            fold(deal, origin),
+            None,
+            self._rng,
+        )
+
         self._commit(
-            Transaction(seq=0, move=None, effects=deal + self.advance(fold(deal, origin), None)),
+            Transaction(
+                seq=0,
+                move=None,
+                effects=effects,
+            ),
         )
 
         self._basic_final_validation(self.position)
@@ -95,12 +131,17 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
         """The table as one observer is entitled to see it, stamped with the sequence it stands at.
 
         The stamp is what a client quotes back as `base_seq`, which ties the move it submits to the
-        position it was looking at.
+        position it was looking at, and the moves the view carries are the ones that stamp accepts.
 
         Args:
             observer: the seat receiving the view, or None for a spectator.
         """
-        return project_position(self.position, self.head, observer)
+        return project_position(
+            self.position,
+            self.head,
+            observer,
+            self.legal_moves(self.position),
+        )
 
     def events(
         self,
@@ -111,7 +152,8 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
 
         A client that dropped at a known sequence number reads the stream from there and arrives at the
         knowledge a fresh view would give it, so reconnecting costs what staying connected costs. Each
-        event is the difference between two snapshots the engine already holds.
+        event is the difference between two snapshots the engine already holds, and carries the moves the
+        later of the two admits, so a client reading the stream is never a round trip behind its options.
 
         Args:
             observer: the seat receiving the events, or None for a spectator.
@@ -129,6 +171,7 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
                 self.snapshot(transaction.seq),
                 self.snapshot(transaction.seq + 1),
                 observer,
+                self.legal_moves(self.snapshot(transaction.seq + 1)),
             )
             for transaction in self._journal.transactions[since:]
         )
@@ -166,13 +209,52 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
         Raises:
             StalePosition: when further commits have landed since `base_seq`.
             NotYourTurn: when `authorize` withholds the turn from this seat.
-            IllegalMove: when `validate` rejects what the move asks for.
+            IllegalMove: when the move carries an intent this game is played without, or when `validate`
+                rejects what the move asks for.
         """
         if base_seq != self.head:
             raise StalePosition(base_seq, self.head)
 
         effects = self._transact(self.position, move, self._rng)
         transaction = Transaction(seq=self.head, move=move, effects=effects)
+        self._commit(transaction)
+        return transaction
+
+    def arrange(
+        self,
+        zone: ZoneId,
+        order: Order,
+        seat: int,
+        base_seq: int,
+    ) -> Transaction[StateT]:
+        """Lay one of a seat's own zones out in the order it asks for, and hand back the record.
+
+        A seat arranges a zone whose run no rule reads, so the table stands as it stood: the same cards at
+        the same faces under the same cursor, and every other seat reads the zone exactly as before. That is
+        what admits an arrangement at any moment of a round whoever holds the turn, and what keeps it out of
+        the moves the rules offer — a card a seat may sort is not thereby a card it may play. It reaches the
+        journal all the same, since the record is what a position is rebuilt from.
+
+        Args:
+            zone: the zone to lay out, which is one this seat arranges.
+            order: the positions the zone holds, in the order they come to lie.
+            seat: the seat asking, which an adapter reads off the credential rather than off the request.
+            base_seq: the sequence the seat read the zone at, which pins the order to the run it was read in.
+
+        Raises:
+            StalePosition: when further commits have landed since `base_seq`.
+            ArrangementRefused: when the seat arranges no such zone, or when the order is any sequence
+                other than a permutation of the positions that zone holds.
+        """
+        if base_seq != self.head:
+            raise StalePosition(base_seq, self.head)
+
+        self._confirm_arrangement(zone, order, seat)
+        transaction: Transaction[StateT] = Transaction(
+            seq=self.head,
+            move=None,
+            effects=(Reorder(zone=zone, order=order),),
+        )
         self._commit(transaction)
         return transaction
 
@@ -190,7 +272,7 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
         """
         settled: list[Transaction[StateT]] = []
         for _ in range(SETTLE_LIMIT):
-            effects = self.advance(self.position, None)
+            effects = self.advance(self.position, None, self._rng)
             if not effects:
                 return tuple(settled)
 
@@ -217,7 +299,8 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
 
         Raises:
             NotYourTurn: when `authorize` withholds the turn from this seat.
-            IllegalMove: when `validate` rejects what the move asks for.
+            IllegalMove: when the move carries an intent this game is played without, or when `validate`
+                rejects what the move asks for.
         """
         return fold(self._transact(position, move, rng), position)
 
@@ -228,9 +311,10 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
         move back sends a further move retracting it, which leaves the record every seat reads strictly
         append-only.
 
-        The generator keeps whatever it drew for the dropped commit, so submitting the same move again
-        draws afresh and may resolve differently. Replay stays exact throughout, since a transaction
-        records the outcome of every draw that went into it.
+        The generator keeps whatever it drew for the dropped commit, so reaching that position again draws
+        afresh and may resolve differently — the same move re-submitted, and the same settlement asked for
+        a second time, each shuffle and each seat drawn anew. Replay stays exact throughout, since a
+        transaction records the outcome of every draw that went into it.
 
         Raises:
             UndoUnavailable: when every commit the journal holds has already been published.
@@ -259,8 +343,17 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
         if move.player not in position.state.to_act:
             raise NotYourTurn(move.player, position.state.to_act)
 
-    def legal_moves(self, position: Position[StateT]) -> Moves:  # pylint: disable=unused-argument
-        """Every move the rules admit from this position, and an empty run from a game that lists none.
+    def legal_moves(self, position: Position[StateT]) -> Moves:
+        """Every move the rules admit from this position, seat by seat in the order the cursor names them.
+
+        The moves of each seat that owes an action are gathered here, which leaves a game stating the moves
+        of one seat and saying nothing about the walk across the table. A game whose list is read another
+        way — one offering a move to a seat waiting out of turn — states the whole of it here instead.
+        """
+        return tuple(move for seat in sorted(position.state.to_act) for move in self.moves_of(position, seat))
+
+    def moves_of(self, position: Position[StateT], seat: int) -> Moves:  # pylint: disable=unused-argument
+        """Every move one seat may make from this position, and an empty run from a game that lists none.
 
         Enumeration is optional: a game with a wide or awkward move space serves clients that propose a
         move and let `validate` answer. A game that does enumerate gains a searchable engine, since
@@ -282,29 +375,69 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
     ) -> Effects[StateT]:
         """The full run of effects one move commits: what it does, followed by what the rules owe after."""
         self.authorize(position, move)
+        self._confirm_intent(move)
         self.validate(position, move)
         effects = self.expand(position, move, rng)
-        return effects + self.advance(fold(effects, position), move)
+        return effects + self.advance(fold(effects, position), move, rng)
 
-    def _basic_initial_validation(self, players: int, deck: Deck) -> None:
-        if players < 1:
-            raise ValueError(f"Expected at least 1 player, got {players}")
+    def _confirm_intent(self, move: Move) -> None:
+        """Confirm the move carries one of the intents this game is played with.
 
+        The vocabulary is read ahead of the content, so a game's `validate` states the rules of the intents it
+        plays and the engine answers for every other one. A game stating no vocabulary states a condition on
+        nothing here, and its rules answer whatever a client sends.
+
+        Raises:
+            IllegalMove: when the move carries an intent this game's `intents` leaves out.
+        """
+        if self.intents is not None:
+            self.intents.read(move)
+
+    def _confirm_arrangement(
+        self,
+        zone: ZoneId,
+        order: Order,
+        seat: int,
+    ) -> None:
+        """Confirm a seat holds a zone it may lay out, and that the order names each of its positions once.
+
+        Naming the seat's own standing rather than the board's contents is what keeps a refusal from
+        reporting which zones the table holds to a client that guessed at one.
+
+        Raises:
+            ArrangementRefused: when the seat arranges no zone of that name, or when the order is any
+                sequence other than a permutation of the positions the zone holds.
+        """
+        held = self.board.zones.get(zone)
+        if held is None or not arrangeable_by(held, seat):
+            raise ArrangementRefused(f"Seat {seat} holds no zone {zone!r} of this table to arrange")
+
+        if sorted(order) != list(range(len(held.cards))):
+            raise ArrangementRefused(
+                f"Order {order} is not a permutation of the {len(held.cards)} cards seat {seat} holds in {zone!r}"
+            )
+
+    def _basic_initial_validation(self, deck: Deck) -> None:
+        """Confirm the table is dealt from a deck holding a card.
+
+        Raises:
+            GameValidationError: when the deck is empty.
+        """
         if not deck:
-            raise ValueError("Deck cannot be empty")
+            raise GameValidationError("A table is dealt from a deck holding a card, and this one holds none")
 
     def _basic_final_validation(self, position: Position[StateT]) -> None:
         """Confirm the dealt table holds every card it started with and scores the seats it seated.
 
         Raises:
-            ValueError: when the zones hold a multiset of cards apart from the starting deck, or when
+            GameValidationError: when the zones hold a multiset of cards apart from the starting deck, or when
                 the points table is sized for a different table.
         """
         position.board.validate_board()
 
         points = position.state.points
         if points is not None and len(points) != position.players:
-            raise ValueError(
+            raise GameValidationError(
                 f"Points table size {len(points)} does not match the number of players: {position.players}"
             )
 
@@ -313,12 +446,12 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
         """Zone layout and visibility policy for this game."""
 
     @abstractmethod
-    def _validate_players(self, players: int) -> None:
-        """Conditions on the number of players."""
-
-    @abstractmethod
     def _validate_initial_deck(self, deck: Deck) -> None:
-        """Additional checks for supported initial decks."""
+        """Additional checks for supported initial decks.
+
+        Raises:
+            GameValidationError: when this game is not played with the deck it was handed.
+        """
 
     @abstractmethod
     def _deal_cards(
@@ -334,7 +467,11 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
 
     @abstractmethod
     def _final_validation(self, position: Position[StateT]) -> None:
-        """Game-specific checks on the position after the deal."""
+        """Game-specific checks on the position after the deal.
+
+        Raises:
+            GameValidationError: when the deal leaves the table in a standing this game does not open from.
+        """
 
     @abstractmethod
     def validate(self, position: Position[StateT], move: Move) -> None:
@@ -354,12 +491,16 @@ class Game(ABC, Generic[StateT]):  # pylint: disable=too-many-public-methods
         self,
         position: Position[StateT],
         move: Move | None,
+        rng: Random,
     ) -> Effects[StateT]:
         """The changes the rules owe once a position is reached: whose turn it becomes, which phase opens, what scores.
 
         Args:
             position: the position the move's own effects have already been folded into.
             move: the move that led here, and None while the table settles on its own.
+            rng: the generator to consume where the rules draw as they carry the table onward — the shuffle
+                that opens the next round, the seat that leads it. Every draw reaches the journal inside the
+                effect it decided, so replay reproduces it from the record.
 
         Returns:
             The effects carrying the table onward, and an empty run once it has come to rest.

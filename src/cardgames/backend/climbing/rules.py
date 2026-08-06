@@ -1,0 +1,55 @@
+from typing import Final
+
+from cardwork.cards.card import Card
+from cardwork.cards.cards import TWO_OF_DIAMONDS
+from cardwork.cards.orders import GERMAN_SUIT_SEQUENCE, RANK_SEQUENCE
+from cardwork.cards.points import REGULAR_POINTS, PointTable
+from cardwork.combinations.pattern import Pattern
+from cardwork.combinations.poker import (
+    FLUSH,
+    FULL_HOUSE,
+    HIGH_CARD,
+    PAIR,
+    QUADRUPLET_WITH_ONE,
+    STRAIGHT,
+    STRAIGHT_FLUSH,
+    TRIPLET,
+)
+from cardwork.combinations.policy import Duplicates, Evaluation
+from cardwork.combinations.ranking import Ranking
+from cardwork.decks.standard import ONE_DECK
+from cardwork.states.award import Award
+
+SEATS_LEAST: Final[int] = 2
+SEATS_MOST: Final[int] = 5
+TWO_DECKS: Final[int] = 2
+DECKS_ADMITTED: Final[tuple[int, ...]] = (ONE_DECK, TWO_DECKS)
+POINTS: Final[PointTable] = REGULAR_POINTS
+AWARD: Final[Award] = Award.LOWEST
+OPENING_CARD: Final[Card] = TWO_OF_DIAMONDS
+DECKS_SPOKEN: Final[str] = "one or two whole standard decks of suited cards"
+HAND_MOST: Final[int] = 26
+
+CLIMBING_PATTERNS: Final[tuple[Pattern, ...]] = (
+    HIGH_CARD,
+    PAIR,
+    TRIPLET,
+    STRAIGHT,
+    FLUSH,
+    FULL_HOUSE,
+    QUADRUPLET_WITH_ONE,
+    STRAIGHT_FLUSH,
+)
+
+CLIMBING_EVALUATION: Final[Evaluation] = Evaluation(
+    ranks=RANK_SEQUENCE,
+    suits=GERMAN_SUIT_SEQUENCE,
+    wheel=True,
+    wild_jokers=False,
+    duplicates=Duplicates.COLLAPSE,
+)
+
+CLIMBING_RANKING: Final[Ranking] = Ranking(
+    patterns=CLIMBING_PATTERNS,
+    evaluation=CLIMBING_EVALUATION,
+)

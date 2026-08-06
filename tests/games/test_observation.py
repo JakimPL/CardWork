@@ -8,6 +8,7 @@ from cardwork.moves.move import Move
 from .demo import HAND_SIZE, SEATS, DiscardGame, hand_of
 
 FIRST: Final[Move] = Move(player=0, action=Play(group="discard", indices=frozenset({0})))
+SECOND: Final[Move] = Move(player=1, action=Play(group="discard", indices=frozenset({0})))
 DEAL: Final[int] = 1
 
 
@@ -31,6 +32,24 @@ def test_view_narrows_a_spectator_to_the_public_table(game: DiscardGame) -> None
 
 def test_view_carries_the_cursor(game: DiscardGame) -> None:
     assert game.view(observer=0).state == game.state
+
+
+def test_view_offers_a_seat_one_move_for_every_card_it_holds(game: DiscardGame) -> None:
+    assert len(game.view(observer=0).legal) == HAND_SIZE
+
+
+def test_view_offers_a_seat_no_move_of_another_while_the_whole_table_owes_one(game: DiscardGame) -> None:
+    assert all(move.player == 1 for move in game.view(observer=1).legal)
+
+
+def test_view_offers_a_spectator_no_move(game: DiscardGame) -> None:
+    assert game.view(observer=None).legal == ()
+
+
+def test_view_offers_nothing_to_a_seat_that_has_acted(game: DiscardGame) -> None:
+    game.submit(FIRST, base_seq=game.head)
+
+    assert game.view(observer=0).legal == ()
 
 
 def test_events_report_every_commit_from_the_deal_onwards(game: DiscardGame) -> None:
@@ -76,6 +95,24 @@ def test_an_event_shows_the_actor_the_card_it_laid_down(game: DiscardGame) -> No
 
     change = next(change for change in game.events(observer=0, since=DEAL)[0].changes if change.zone == "discard")
     assert change.after == (laid.with_face(False),)
+
+
+def test_an_event_offers_the_moves_the_commit_it_reports_left_open(game: DiscardGame) -> None:
+    game.submit(FIRST, base_seq=game.head)
+
+    assert len(game.events(observer=1, since=DEAL)[0].legal) == HAND_SIZE
+
+
+def test_an_event_offers_the_moves_of_the_position_it_produced_rather_than_of_the_table_now(
+    game: DiscardGame,
+) -> None:
+    game.submit(FIRST, base_seq=game.head)
+    game.submit(SECOND, base_seq=game.head)
+
+    laid, followed = game.events(observer=1, since=DEAL)
+
+    assert len(laid.legal) == HAND_SIZE
+    assert followed.legal == ()
 
 
 def test_events_reject_a_sequence_below_the_start_of_the_record(game: DiscardGame) -> None:

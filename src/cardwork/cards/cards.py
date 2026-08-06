@@ -1,6 +1,6 @@
 from typing import Final
 
-from cardwork.cards.card import Card
+from cardwork.cards.card import Card, Cards
 from cardwork.cards.joker import Joker
 from cardwork.cards.rank import Rank
 from cardwork.cards.suit import Suit
@@ -60,6 +60,15 @@ JACK_OF_DIAMONDS: Final[Card] = Card(rank=Rank.JACK, suit=Suit.DIAMOND)
 QUEEN_OF_DIAMONDS: Final[Card] = Card(rank=Rank.QUEEN, suit=Suit.DIAMOND)
 KING_OF_DIAMONDS: Final[Card] = Card(rank=Rank.KING, suit=Suit.DIAMOND)
 ACE_OF_DIAMONDS: Final[Card] = Card(rank=Rank.ACE, suit=Suit.DIAMOND)
+
+STANDARD_CARDS: Final[Cards] = tuple(
+    Card(
+        rank=rank,
+        suit=suit,
+    )
+    for rank in Rank
+    for suit in Suit
+)
 
 BLACK_JOKER: Final[Joker] = Joker(red=False)
 RED_JOKER: Final[Joker] = Joker(red=True)

@@ -2,7 +2,7 @@ from typing import Annotated, Generic, Literal
 
 from pydantic import Field
 
-from cardwork.decks.deck import GameCards, NonEmptyIndices
+from cardwork.decks.deck import GameCards, NonEmptyIndices, Order
 from cardwork.effects.effect import Effect
 from cardwork.moves.transfer import pop_cards, validate_indices
 from cardwork.positions.position import Position
@@ -92,7 +92,7 @@ class Reorder(Effect[StateT], Generic[StateT]):
 
     kind: Literal["reorder"] = "reorder"
     zone: ZoneId
-    order: tuple[int, ...]
+    order: Order
 
     def apply(self, position: Position[StateT]) -> Position[StateT]:
         zone = position.board.zone(self.zone)

@@ -1,0 +1,44 @@
+{
+  "name": "cardwork-interface",
+  "version": "0.0.1",
+  "description": "The player interface a CardWork table is played through",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "format": "prettier --write . && eslint --fix . && stylelint --fix \"src/**/*.css\"",
+    "lint": "prettier --check . && eslint . && stylelint \"src/**/*.css\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "types": "openapi-typescript openapi.json --output src/api/schema.ts",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@microsoft/fetch-event-source": "2.0.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@types/node": "26.1.2",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@vitejs/plugin-react": "6.0.5",
+    "eslint": "9.39.5",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-simple-import-sort": "14.0.0",
+    "globals": "17.9.0",
+    "openapi-typescript": "7.13.0",
+    "prettier": "3.9.6",
+    "stylelint": "17.14.1",
+    "stylelint-config-standard": "40.0.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.66.0",
+    "vite": "8.2.0",
+    "vitest": "4.1.10",
+    "yaml": "2.9.0"
+  }
+}

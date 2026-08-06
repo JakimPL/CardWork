@@ -11,3 +11,6 @@ class Joker(BaseFrozen):
 
     def __repr__(self) -> str:
         return str(self)
+
+
+type Jokers = tuple[Joker, ...]

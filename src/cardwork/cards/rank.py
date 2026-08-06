@@ -15,3 +15,11 @@ class Rank(StrEnum):
     QUEEN = "Q"
     KING = "K"
     ACE = "A"
+
+    @property
+    def pip(self) -> bool:
+        """Whether the rank carries a numeric face, which is what a game counting pips reads."""
+        return self.value.isdigit()
+
+
+type Ranks = tuple[Rank, ...]

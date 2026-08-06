@@ -1,5 +1,5 @@
 from random import Random
-from typing import Final
+from typing import ClassVar, Final
 
 from cardwork.cards.card import Card
 from cardwork.cards.rank import Rank
@@ -8,39 +8,34 @@ from cardwork.decks.deck import Deck
 from cardwork.decks.decks import does_contain_jokers, to_game_cards
 from cardwork.decks.draw import permutation
 from cardwork.effects.effects import Effects, MoveCards, Reorder, SetState
-from cardwork.exceptions import IllegalMove
+from cardwork.exceptions import GameValidationError, IllegalMove
+from cardwork.games.capacity import Capacity
 from cardwork.games.game import Game
+from cardwork.games.intents import Intents
 from cardwork.moves.actions import Play, Take
 from cardwork.moves.move import Move, Moves
 from cardwork.positions.position import Position
-from cardwork.states.state import GameState
+from cardwork.states.state import GameState, Points
+from cardwork.zones.family import Family
 from cardwork.zones.presets import HAND, PILE
 from cardwork.zones.zone import Zone, ZoneId, Zones
+from cardwork.zones.zones import discard, hand_of, hands
 
 SEATS: Final[int] = 3
 HAND_SIZE: Final[int] = 3
 RANKS: Final[tuple[Rank, ...]] = (Rank.ACE, Rank.KING, Rank.QUEEN)
 DECK: Final[Deck] = tuple(Card(rank=rank, suit=suit) for suit in Suit for rank in RANKS)
+SEATS_LEAST: Final[int] = 2
+SEATS_MOST: Final[int] = 5
+LAYING: Final[Intents[Play]] = Intents(Play)
+LAYING_OR_RETRACTING: Final[Intents[Play | Take]] = Intents(Play, Take)
 
 
-def hand_of(seat: int) -> ZoneId:
-    return f"hand:{seat}"
+TRAYS: Final[Family] = Family(name="sealed", ordered=True, visibility=HAND)
 
 
 def tray_of(seat: int) -> ZoneId:
-    return f"sealed:{seat}"
-
-
-def played(move: Move) -> Play:
-    """The play behind a move, which is the intent these games are built around.
-
-    Raises:
-        IllegalMove: when the move carries some other intent.
-    """
-    if isinstance(move.action, Play):
-        return move.action
-
-    raise IllegalMove(f"Seat {move.player} lays a card down, and offered {move.action.kind}")
+    return TRAYS.of(seat)
 
 
 class DiscardGame(Game[GameState]):
@@ -49,23 +44,24 @@ class DiscardGame(Game[GameState]):
     This is the engine's exercise rather than a game worth playing: it opens a simultaneous phase,
     closes it a seat at a time, and scores once the last one has acted, which walks `submit`, `advance`
     and `settle` through the branches a real game takes.
+
+    This game is played with a play, and `SealedRoundGame` with a take besides, so the declared type names
+    both intents the two of them reach and each states the vocabulary it is played with.
     """
 
-    def zones(self, players: int, deck: Deck) -> Zones:
-        hands = {hand_of(seat): Zone(id=hand_of(seat), owner=seat, visibility=HAND) for seat in range(players)}
-        return {
-            **hands,
-            "draw": Zone(id="draw", visibility=PILE, cards=to_game_cards(deck, face_down=True)),
-            "discard": Zone(id="discard", visibility=PILE),
-        }
+    capacity: ClassVar[Capacity] = Capacity(least=SEATS_LEAST, most=SEATS_MOST)
+    intents: ClassVar[Intents[Play | Take]] = LAYING
 
-    def _validate_players(self, players: int) -> None:
-        if not 2 <= players <= 5:
-            raise ValueError(f"This game seats 2 to 5 players, and {players} were asked for")
+    def zones(self, players: int, deck: Deck) -> Zones:
+        return {
+            **hands(players),
+            "draw": Zone(id="draw", visibility=PILE, ordered=True, cards=to_game_cards(deck, face_down=True)),
+            **discard(),
+        }
 
     def _validate_initial_deck(self, deck: Deck) -> None:
         if does_contain_jokers(deck):
-            raise ValueError("This game is played with suited cards alone")
+            raise GameValidationError("This game is played with suited cards alone")
 
     def _deal_cards(self, position: Position[GameState], rng: Random) -> Effects[GameState]:
         pile = position.board.zone("draw").cards
@@ -84,10 +80,10 @@ class DiscardGame(Game[GameState]):
             seat for seat in range(position.players) if len(position.board.zone(hand_of(seat)).cards) != HAND_SIZE
         )
         if short:
-            raise ValueError(f"Seats {short} hold a hand of some size other than {HAND_SIZE}")
+            raise GameValidationError(f"Seats {short} hold a hand of some size other than {HAND_SIZE}")
 
     def validate(self, position: Position[GameState], move: Move) -> None:
-        indices = played(move).indices
+        indices = LAYING.read(move).indices
         held = len(position.board.zone(hand_of(move.player)).cards)
         if len(indices) != 1:
             raise IllegalMove(f"Seat {move.player} lays one card at a time, and named {len(indices)}")
@@ -99,33 +95,32 @@ class DiscardGame(Game[GameState]):
         return (
             MoveCards(
                 source=hand_of(move.player),
-                indices=played(move).indices,
+                indices=LAYING.read(move).indices,
                 target="discard",
                 face_down=False,
             ),
         )
 
-    def advance(self, position: Position[GameState], move: Move | None) -> Effects[GameState]:
+    def advance(self, position: Position[GameState], move: Move | None, rng: Random) -> Effects[GameState]:
         state = position.state
         if move is not None:
             return (SetState(state=state.with_changes(to_act=state.to_act - {move.player})),)
 
         if state.phase == "deal":
-            return (SetState(state=state.with_changes(phase="play", to_act=frozenset(range(position.players)))),)
+            return (SetState(state=state.with_changes(phase="play", to_act=range(position.players))),)
 
         if state.phase == "play" and not state.to_act:
             return (SetState(state=state.with_changes(phase="score", points=self._points(position))),)
 
         return ()
 
-    def legal_moves(self, position: Position[GameState]) -> Moves:
+    def moves_of(self, position: Position[GameState], seat: int) -> Moves:
         return tuple(
             Move(player=seat, action=Play(group="discard", indices=frozenset({index})))
-            for seat in sorted(position.state.to_act)
             for index in range(len(position.board.zone(hand_of(seat)).cards))
         )
 
-    def _points(self, position: Position[GameState]) -> tuple[int, ...]:
+    def _points(self, position: Position[GameState]) -> Points:
         """A point for every card a seat still holds once the round has closed."""
         return tuple(len(position.board.zone(hand_of(seat)).cards) for seat in range(position.players))
 
@@ -143,9 +138,10 @@ class SealedRoundGame(DiscardGame):
     which is the split letting an adapter answer one refusal with 403 and the other with 422.
     """
 
+    intents = LAYING_OR_RETRACTING
+
     def zones(self, players: int, deck: Deck) -> Zones:
-        trays = {tray_of(seat): Zone(id=tray_of(seat), owner=seat, visibility=HAND) for seat in range(players)}
-        return {**super().zones(players, deck), **trays}
+        return {**super().zones(players, deck), **TRAYS.zones(players)}
 
     def authorize(self, position: Position[GameState], move: Move) -> None:
         if isinstance(move.action, Take):
@@ -174,20 +170,20 @@ class SealedRoundGame(DiscardGame):
         return (
             MoveCards(
                 source=hand_of(move.player),
-                indices=played(move).indices,
+                indices=LAYING.read(move).indices,
                 target=tray_of(move.player),
                 face_down=True,
             ),
         )
 
-    def advance(self, position: Position[GameState], move: Move | None) -> Effects[GameState]:
+    def advance(self, position: Position[GameState], move: Move | None, rng: Random) -> Effects[GameState]:
         if move is not None and isinstance(move.action, Take):
             return (SetState(state=position.state.with_changes(to_act=position.state.to_act | {move.player})),)
 
         if move is None and position.state.phase == "play" and not position.state.to_act:
             return self._reveal(position)
 
-        return super().advance(position, move)
+        return super().advance(position, move, rng)
 
     def _reveal(self, position: Position[GameState]) -> Effects[GameState]:
         """Lay every sealed card face up on the discard and score what the seats held back."""
@@ -220,7 +216,7 @@ class SealedRoundGame(DiscardGame):
 class EndlessGame(DiscardGame):
     """A game whose rules carry the table in a circle, which is what `settle`'s cap answers."""
 
-    def advance(self, position: Position[GameState], move: Move | None) -> Effects[GameState]:
+    def advance(self, position: Position[GameState], move: Move | None, rng: Random) -> Effects[GameState]:
         opposite = "deal" if position.state.phase == "play" else "play"
         return (SetState(state=position.state.with_changes(phase=opposite)),)
 
@@ -238,11 +234,10 @@ class ShortDealGame(DiscardGame):
 class BareGame(Game[GameState]):
     """The least a game may declare: the hooks the engine requires, leaving the optional ones as they come."""
 
-    def zones(self, players: int, deck: Deck) -> Zones:
-        return {"draw": Zone(id="draw", visibility=PILE, cards=to_game_cards(deck, face_down=True))}
+    capacity: ClassVar[Capacity] = Capacity(least=1, most=SEATS_MOST)
 
-    def _validate_players(self, players: int) -> None:
-        """Any seating this engine accepts suits this game."""
+    def zones(self, players: int, deck: Deck) -> Zones:
+        return {"draw": Zone(id="draw", visibility=PILE, ordered=True, cards=to_game_cards(deck, face_down=True))}
 
     def _validate_initial_deck(self, deck: Deck) -> None:
         """Any deck this engine accepts suits this game."""
@@ -262,5 +257,5 @@ class BareGame(Game[GameState]):
     def expand(self, position: Position[GameState], move: Move, rng: Random) -> Effects[GameState]:
         return ()
 
-    def advance(self, position: Position[GameState], move: Move | None) -> Effects[GameState]:
+    def advance(self, position: Position[GameState], move: Move | None, rng: Random) -> Effects[GameState]:
         return ()

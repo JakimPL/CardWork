@@ -9,7 +9,13 @@ from starlette.responses import Response
 
 from cardserver.protocol import TableId
 from cardserver.schemas import ErrorBody
-from cardwork.exceptions import IllegalMove, NotYourTurn, StalePosition
+from cardwork.exceptions import (
+    ArrangementRefused,
+    GameValidationError,
+    IllegalMove,
+    NotYourTurn,
+    StalePosition,
+)
 
 
 class CardserverError(Exception):
@@ -48,6 +54,82 @@ class JournalSealed(CardserverError):
         self.table = table
 
 
+class Unadmitted(CardserverError):
+    """Raised when what someone offered at a gathering admits them to it nowhere."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+class NameTaken(CardserverError):
+    """Raised when a guest arrives under a name the company already reads."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(f"The name {name!r} is already read at this table")
+        self.name = name
+
+
+class SeatTaken(CardserverError):
+    """Raised when a seat is claimed while another guest of the company holds it."""
+
+    def __init__(self, seat: int, held_by: str) -> None:
+        super().__init__(f"Seat {seat} is held by {held_by!r}")
+        self.seat = seat
+        self.held_by = held_by
+
+
+class TintTaken(CardserverError):
+    """Raised when a tint is taken while another guest of the company holds it."""
+
+    def __init__(self, tint: str, held_by: str) -> None:
+        super().__init__(f"The {tint} tint is held by {held_by!r}")
+        self.tint = tint
+        self.held_by = held_by
+
+
+class NoSuchSeat(CardserverError):
+    """Raised when a seat is claimed that the table the gathering settled on holds nowhere."""
+
+    def __init__(self, seat: int, players: int) -> None:
+        super().__init__(f"Seat {seat} stands outside the {players} seats this table was settled on")
+        self.seat = seat
+        self.players = players
+
+
+class NoSay(CardserverError):
+    """Raised when a guest settles what a table plays, or calls for its deal, holding a say over neither."""
+
+    def __init__(self, guest: str) -> None:
+        super().__init__(f"{guest!r} holds no say over what this table plays")
+        self.guest = guest
+
+
+class GatheringOver(CardserverError):
+    """Raised when a gathering is asked to change after the table it settled has been dealt."""
+
+    def __init__(self, table: TableId) -> None:
+        super().__init__(f"Table {table!r} is dealt and its gathering is over")
+        self.table = table
+
+
+class SeatsEmpty(CardserverError):
+    """Raised when the deal is called for while a seat of the table stands empty."""
+
+    def __init__(self, empty: tuple[int, ...]) -> None:
+        super().__init__(f"A table is dealt once every seat is taken, and these stand empty: {sorted(empty)}")
+        self.empty = empty
+
+
+class StaleGathering(CardserverError):
+    """Raised when a command is built on a revision the gathering has moved past since."""
+
+    def __init__(self, base_revision: int, revision: int) -> None:
+        super().__init__(f"The command was built on revision {base_revision} while the gathering stands at {revision}")
+        self.base_revision = base_revision
+        self.revision = revision
+
+
 REFUSALS: Final[tuple[tuple[type[Exception], HTTPStatus], ...]] = (
     (Unauthenticated, HTTPStatus.UNAUTHORIZED),
     (UnknownTable, HTTPStatus.NOT_FOUND),
@@ -56,6 +138,17 @@ REFUSALS: Final[tuple[tuple[type[Exception], HTTPStatus], ...]] = (
     (NotYourTurn, HTTPStatus.FORBIDDEN),
     (StalePosition, HTTPStatus.CONFLICT),
     (IllegalMove, HTTPStatus.UNPROCESSABLE_ENTITY),
+    (ArrangementRefused, HTTPStatus.UNPROCESSABLE_ENTITY),
+    (Unadmitted, HTTPStatus.FORBIDDEN),
+    (NoSay, HTTPStatus.FORBIDDEN),
+    (NameTaken, HTTPStatus.CONFLICT),
+    (SeatTaken, HTTPStatus.CONFLICT),
+    (TintTaken, HTTPStatus.CONFLICT),
+    (GatheringOver, HTTPStatus.CONFLICT),
+    (SeatsEmpty, HTTPStatus.CONFLICT),
+    (StaleGathering, HTTPStatus.CONFLICT),
+    (NoSuchSeat, HTTPStatus.UNPROCESSABLE_ENTITY),
+    (GameValidationError, HTTPStatus.UNPROCESSABLE_ENTITY),
 )
 
 

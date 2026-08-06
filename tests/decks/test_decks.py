@@ -1,6 +1,63 @@
-from cardwork.cards.cards import ACE_OF_SPADES, BLACK_JOKER, KING_OF_HEARTS, RED_JOKER
-from cardwork.cards.game import GameCard
-from cardwork.decks.decks import compare_decks, count_cards, does_contain_jokers, jokers, normalize_deck, to_game_cards
+from dataclasses import dataclass
+from typing import Final
+
+import pytest
+
+from cardwork.cards.cards import ACE_OF_SPADES, BLACK_JOKER, KING_OF_HEARTS, QUEEN_OF_CLUBS, RED_JOKER
+from cardwork.cards.game import CardsOrJokers, GameCard
+from cardwork.decks.deck import Indices
+from cardwork.decks.decks import (
+    compare_decks,
+    count_cards,
+    does_contain_jokers,
+    jokers,
+    named,
+    normalize_deck,
+    to_game_cards,
+)
+from tests.cases import Case, descriptions
+
+RUN: Final[CardsOrJokers] = (ACE_OF_SPADES, KING_OF_HEARTS, QUEEN_OF_CLUBS)
+PAST_THE_RUN: Final[int] = len(RUN)
+
+
+@dataclass(frozen=True)
+class NamingCase(Case):
+    """One run of places and the cards of a three-card run they name."""
+
+    indices: Indices
+    read: CardsOrJokers
+
+
+NAMINGS: Final[tuple[NamingCase, ...]] = (
+    NamingCase(description="no place at all", indices=frozenset(), read=()),
+    NamingCase(description="one place of the run", indices=frozenset({1}), read=(KING_OF_HEARTS,)),
+    NamingCase(
+        description="places named in the run's own order",
+        indices=frozenset({0, 1}),
+        read=(ACE_OF_SPADES, KING_OF_HEARTS),
+    ),
+    NamingCase(
+        description="places named the other way round",
+        indices=frozenset({2, 0}),
+        read=(ACE_OF_SPADES, QUEEN_OF_CLUBS),
+    ),
+    NamingCase(description="every place of the run", indices=frozenset({0, 1, 2}), read=RUN),
+)
+
+
+@pytest.mark.parametrize("case", NAMINGS, ids=descriptions(NAMINGS))
+def test_named_reads_the_cards_standing_at_the_places_given(case: NamingCase) -> None:
+    assert named(RUN, case.indices) == case.read
+
+
+def test_named_refuses_a_place_lying_past_the_end_of_the_run() -> None:
+    with pytest.raises(KeyError, match=f"Place {PAST_THE_RUN} lies past the {len(RUN)} cards"):
+        named(RUN, frozenset({PAST_THE_RUN}))
+
+
+def test_named_reads_no_place_of_a_run_holding_no_cards() -> None:
+    assert named((), frozenset()) == ()
 
 
 def test_normalize_deck_unwraps_game_cards() -> None:

@@ -3,8 +3,7 @@ from http import HTTPStatus
 from httpx import AsyncClient
 
 from cardserver.identity import SEAT_HEADER
-from cardserver.sessions import TableSession
-from cardwork.states.state import GameState
+from cardserver.sessions import InService
 
 from ..games.demo import HAND_SIZE, SEATS, hand_of
 from .conftest import DEAL, MOVES, UNSERVED, VIEW, credentials, sealing
@@ -43,9 +42,7 @@ async def test_a_spectator_is_named_as_one(client: AsyncClient) -> None:
     assert response.json()["observer"] is None
 
 
-async def test_a_view_is_stamped_with_the_sequence_it_stands_at(
-    client: AsyncClient, session: TableSession[GameState]
-) -> None:
+async def test_a_view_is_stamped_with_the_sequence_it_stands_at(client: AsyncClient, session: InService) -> None:
     response = await client.get(VIEW, headers=credentials(0))
 
     assert response.json()["seq"] == session.head

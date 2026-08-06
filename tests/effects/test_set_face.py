@@ -3,9 +3,10 @@ import pytest
 from cardwork.effects.effects import SetFace
 from cardwork.positions.position import Position
 from cardwork.states.state import GameState
+from cardwork.zones.zone import ZoneId
 
 
-def faces(position: Position[GameState], zone_id: str) -> tuple[bool, ...]:
+def faces(position: Position[GameState], zone_id: ZoneId) -> tuple[bool, ...]:
     return tuple(game_card.face_down for game_card in position.board.zone(zone_id).cards)
 
 

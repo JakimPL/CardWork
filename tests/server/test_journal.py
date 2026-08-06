@@ -2,8 +2,7 @@ from http import HTTPStatus
 
 from httpx import AsyncClient
 
-from cardserver.sessions import TableSession
-from cardwork.states.state import GameState
+from cardserver.sessions import InService
 
 from ..games.demo import DECK, hand_of
 from .conftest import DEAL, JOURNAL, MOVES, UNSERVED, credentials, sealing
@@ -22,9 +21,7 @@ async def test_a_seat_reads_no_more_of_the_record_than_a_spectator(client: Async
     assert response.status_code == HTTPStatus.FORBIDDEN
 
 
-async def test_the_record_opens_once_the_host_calls_the_game_over(
-    client: AsyncClient, session: TableSession[GameState]
-) -> None:
+async def test_the_record_opens_once_the_host_calls_the_game_over(client: AsyncClient, session: InService) -> None:
     session.reveal()
 
     response = await client.get(JOURNAL)
@@ -33,9 +30,7 @@ async def test_the_record_opens_once_the_host_calls_the_game_over(
     assert len(response.json()["transactions"]) == session.head
 
 
-async def test_the_open_record_holds_the_deck_the_table_started_from(
-    client: AsyncClient, session: TableSession[GameState]
-) -> None:
+async def test_the_open_record_holds_the_deck_the_table_started_from(client: AsyncClient, session: InService) -> None:
     session.reveal()
 
     response = await client.get(JOURNAL)
@@ -45,9 +40,7 @@ async def test_the_open_record_holds_the_deck_the_table_started_from(
     assert origin[hand_of(0)]["cards"] == []
 
 
-async def test_the_open_record_carries_every_move_that_was_made(
-    client: AsyncClient, session: TableSession[GameState]
-) -> None:
+async def test_the_open_record_carries_every_move_that_was_made(client: AsyncClient, session: InService) -> None:
     await client.post(MOVES, json=sealing(0, DEAL, "first"), headers=credentials(0))
     session.reveal()
 

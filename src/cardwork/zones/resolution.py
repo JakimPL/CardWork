@@ -49,3 +49,18 @@ def visible_to(
         return rule_for(zone, card) is Audience.ALL
 
     return observer in audience(zone, card, players)
+
+
+def arrangeable_by(zone: Zone, observer: int | None) -> bool:
+    """Whether one observer may lay a zone out in an order of its own choosing.
+
+    A seat arranges the zones it holds whose run no rule reads, which is the pair of facts a zone states:
+    the arrangement is the seat's own to choose, and the seat is the one whose cards these are. A zone the
+    seats share belongs to the table, and a spectator holds no zone at all, so both leave the arrangement
+    where it lies.
+
+    Args:
+        zone: the zone in question, whose owner and arrangement decide it.
+        observer: the seat asking, or None for a spectator.
+    """
+    return not zone.ordered and observer is not None and zone.owner == observer

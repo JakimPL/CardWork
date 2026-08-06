@@ -37,12 +37,14 @@ ALSO_UNDRAWN: Final[GameCard] = GameCard(card=SIX_OF_SPADES, face_down=True)
 VAULTED: Final[GameCard] = GameCard(card=SEVEN_OF_SPADES, face_down=False)
 
 LAYOUT: Final[Zones] = {
-    "hand:0": Zone(id="hand:0", owner=0, visibility=HAND, cards=(HELD_BY_ZERO, ALSO_HELD_BY_ZERO, EXPOSED_BY_ZERO)),
-    "hand:1": Zone(id="hand:1", owner=1, visibility=HAND, cards=(HELD_BY_ONE, ALSO_HELD_BY_ONE)),
-    "blind:0": Zone(id="blind:0", owner=0, visibility=PILE, cards=(BLIND_OF_ZERO,)),
-    "discard": Zone(id="discard", visibility=PILE, cards=(DISCARDED,)),
-    "draw": Zone(id="draw", visibility=PILE, cards=(UNDRAWN, ALSO_UNDRAWN)),
-    "vault": Zone(id="vault", visibility=HIDDEN, cards=(VAULTED,)),
+    "hand:0": Zone(
+        id="hand:0", owner=0, visibility=HAND, ordered=False, cards=(HELD_BY_ZERO, ALSO_HELD_BY_ZERO, EXPOSED_BY_ZERO)
+    ),
+    "hand:1": Zone(id="hand:1", owner=1, visibility=HAND, ordered=False, cards=(HELD_BY_ONE, ALSO_HELD_BY_ONE)),
+    "blind:0": Zone(id="blind:0", owner=0, visibility=PILE, ordered=True, cards=(BLIND_OF_ZERO,)),
+    "discard": Zone(id="discard", visibility=PILE, ordered=True, cards=(DISCARDED,)),
+    "draw": Zone(id="draw", visibility=PILE, ordered=True, cards=(UNDRAWN, ALSO_UNDRAWN)),
+    "vault": Zone(id="vault", visibility=HIDDEN, ordered=True, cards=(VAULTED,)),
 }
 
 DECK: Final[Deck] = tuple(game_card.card for zone in LAYOUT.values() for game_card in zone.cards)

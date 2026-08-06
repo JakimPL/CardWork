@@ -15,4 +15,4 @@ class Move(BaseFrozen):
     action: AnyAction
 
 
-Moves = tuple[Move, ...]
+type Moves = tuple[Move, ...]

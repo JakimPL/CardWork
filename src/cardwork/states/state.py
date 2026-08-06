@@ -1,6 +1,11 @@
-from typing import Self, TypeVar
+from typing import Final, Self, TypeVar
 
 from cardwork.models.base import BaseFrozen
+from cardwork.states.seats import Seats
+
+type Points = tuple[int, ...]
+
+NOTHING: Final[int] = 0
 
 
 class GameState(BaseFrozen):
@@ -9,11 +14,14 @@ class GameState(BaseFrozen):
     A game declares its own subclass with typed fields for anything else it tracks — a bid, the trump
     suit, the seat that led the trick — and parameterises the engine with that subclass, so those
     fields keep full type checking and exact serialization.
+
+    `to_act` holds the seats that owe an action, and takes the turn as a game states it: a single seat, or
+    any run of seats, reaches the field as the set of seats it names.
     """
 
     phase: str
-    to_act: frozenset[int] = frozenset()
-    points: tuple[int, ...] | None = None
+    to_act: Seats = frozenset()
+    points: Points | None = None
 
     @property
     def current(self) -> int | None:
@@ -32,6 +40,18 @@ class GameState(BaseFrozen):
                 state does not declare.
         """
         return type(self).model_validate({**dict(self), **changes})
+
+    def at_rest(self, phase: str, **changes: object) -> Self:
+        """A state of this same type standing in that phase with no seat owing an action.
+
+        A phase that closes something leaves nobody to act — a round decided, a match over, a hand played
+        out — so this states the two together and carries whatever else that close writes.
+
+        Raises:
+            ValidationError: when a change leaves the state outside the types the game declared, or names a
+                field the state does not declare.
+        """
+        return self.with_changes(phase=phase, to_act=frozenset(), **changes)
 
     def project(self, observer: int | None) -> Self:  # pylint: disable=unused-argument
         """The cursor as one observer is entitled to read it, which is the whole of it here.

@@ -8,7 +8,7 @@ from cardwork.cards.game import GameCard
 from cardwork.positions.position import Position
 from cardwork.states.state import GameState
 from cardwork.views.position import PositionView
-from cardwork.views.project import project_position
+from cardwork.views.projection import project_position
 from cardwork.zones.zone import ZoneId
 
 from .conftest import (
@@ -92,13 +92,13 @@ OBSERVER_CASES: Final[tuple[ObserverCase, ...]] = (
 def test_project_position_narrows_each_zone_to_the_observer_s_entitlement(
     case: ObserverCase, position: Position[GameState]
 ) -> None:
-    view = project_position(position, SEQ, case.observer)
+    view = project_position(position, SEQ, case.observer, legal=())
 
     assert {zone_id: zone.cards for zone_id, zone in view.zones.items()} == case.expected
 
 
 def test_project_position_keeps_every_zone_at_its_true_length(position: Position[GameState]) -> None:
-    view = project_position(position, SEQ, 2)
+    view = project_position(position, SEQ, 2, legal=())
 
     assert {zone_id: len(zone.cards) for zone_id, zone in view.zones.items()} == {
         zone_id: len(zone.cards) for zone_id, zone in position.board.zones.items()
@@ -106,29 +106,69 @@ def test_project_position_keeps_every_zone_at_its_true_length(position: Position
 
 
 def test_project_position_leaves_a_concealed_card_at_the_index_it_occupies(position: Position[GameState]) -> None:
-    view = project_position(position, SEQ, 1)
+    view = project_position(position, SEQ, 1, legal=())
 
     assert view.zones["hand:0"].cards[2] == EXPOSED_BY_ZERO
 
 
 def test_project_position_carries_the_id_and_owner_of_each_zone(position: Position[GameState]) -> None:
-    view = project_position(position, SEQ, 0)
+    view = project_position(position, SEQ, 0, legal=())
 
     assert view.zones["hand:1"].id == "hand:1"
     assert view.zones["hand:1"].owner == 1
     assert view.zones["discard"].owner is None
 
 
+@dataclass(frozen=True)
+class StandingCase:
+    name: str
+    observer: int | None
+    expected: dict[ZoneId, bool]
+
+
+STANDING_CASES: Final[tuple[StandingCase, ...]] = (
+    StandingCase(
+        name="a seat lays out its own hand and reads every other zone as it lies",
+        observer=0,
+        expected={"hand:0": True, "hand:1": False, "blind:0": False, "discard": False, "draw": False, "vault": False},
+    ),
+    StandingCase(
+        name="the seat holding the other hand lays out that one instead",
+        observer=1,
+        expected={"hand:0": False, "hand:1": True, "blind:0": False, "discard": False, "draw": False, "vault": False},
+    ),
+    StandingCase(
+        name="a seat holding no cards lays out nothing on the table",
+        observer=2,
+        expected={"hand:0": False, "hand:1": False, "blind:0": False, "discard": False, "draw": False, "vault": False},
+    ),
+    StandingCase(
+        name="a spectator lays out nothing either",
+        observer=None,
+        expected={"hand:0": False, "hand:1": False, "blind:0": False, "discard": False, "draw": False, "vault": False},
+    ),
+)
+
+
+@pytest.mark.parametrize("case", STANDING_CASES, ids=lambda case: case.name)
+def test_project_position_carries_each_observer_s_standing_to_arrange_a_zone(
+    case: StandingCase, position: Position[GameState]
+) -> None:
+    view = project_position(position, SEQ, case.observer, legal=())
+
+    assert {zone_id: zone.arrangeable for zone_id, zone in view.zones.items()} == case.expected
+
+
 def test_project_position_stamps_the_sequence_it_was_given(position: Position[GameState]) -> None:
-    assert project_position(position, SEQ, 0).seq == SEQ
+    assert project_position(position, SEQ, 0, legal=()).seq == SEQ
 
 
 def test_project_position_names_the_observer_it_was_built_for(position: Position[GameState]) -> None:
-    assert project_position(position, SEQ, None).observer is None
+    assert project_position(position, SEQ, None, legal=()).observer is None
 
 
 def test_project_position_carries_the_rules_cursor(position: Position[GameState]) -> None:
-    assert project_position(position, SEQ, 0).state == GameState(phase="play", to_act=frozenset({1}))
+    assert project_position(position, SEQ, 0, legal=()).state == GameState(phase="play", to_act=frozenset({1}))
 
 
 def test_project_position_projects_an_empty_board_to_an_empty_view() -> None:
@@ -136,11 +176,11 @@ def test_project_position_projects_an_empty_board_to_an_empty_view() -> None:
         board=Board(starting_deck=(), zones={}), state=GameState(phase="setup"), players=1
     )
 
-    assert project_position(bare, 0, 0).zones == {}
+    assert project_position(bare, 0, 0, legal=()).zones == {}
 
 
 def test_project_position_round_trips_through_json(position: Position[GameState]) -> None:
-    view = project_position(position, SEQ, 0)
+    view = project_position(position, SEQ, 0, legal=())
 
     restored = PositionView[GameState].model_validate_json(view.model_dump_json())
 

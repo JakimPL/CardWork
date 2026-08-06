@@ -18,13 +18,14 @@ def hand_fixture() -> Zone:
         id="hand:0",
         owner=0,
         visibility=HAND,
+        ordered=False,
         cards=to_game_cards((ACE_OF_SPADES, KING_OF_HEARTS), face_down=True),
     )
 
 
 @pytest.fixture(name="draw")
 def draw_fixture() -> Zone:
-    return Zone(id="draw", visibility=PILE, cards=to_game_cards((QUEEN_OF_CLUBS,), face_down=True))
+    return Zone(id="draw", visibility=PILE, ordered=True, cards=to_game_cards((QUEEN_OF_CLUBS,), face_down=True))
 
 
 @pytest.fixture(name="board")

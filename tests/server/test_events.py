@@ -6,9 +6,8 @@ import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from cardserver.sessions import TableSession
+from cardserver.sessions import InService
 from cardserver.streams import frame, resume_point
-from cardwork.states.state import GameState
 
 from ..games.demo import tray_of
 from .conftest import DEAL, EVENTS, MOVES, credentials, sealing
@@ -112,7 +111,7 @@ def test_a_stream_picks_up_where_a_client_left_off(last_event_id: int | None, si
 
 
 async def test_a_frame_carries_the_sequence_as_the_id_a_client_hands_back(
-    session: TableSession[GameState],
+    session: InService,
 ) -> None:
     written = frame(session.events(0, 0)[0])
 

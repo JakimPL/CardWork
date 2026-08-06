@@ -1,8 +1,26 @@
+from dataclasses import dataclass
 from typing import Final
 
-from cardwork.decks.standard import is_standard_deck, standard_deck
+import pytest
+
+from cardwork.cards.cards import TWO_OF_SPADES
+from cardwork.decks.deck import Deck
+from cardwork.decks.decks import compare_decks, jokers
+from cardwork.decks.standard import (
+    NO_WHOLE_DECKS,
+    ONE_DECK,
+    confirm_standard_deck,
+    is_standard_deck,
+    standard_deck,
+    standard_decks,
+    standard_multiplicity,
+)
+from cardwork.exceptions import GameValidationError
+from tests.cases import Case, descriptions
 
 FULL_DECK_SIZE: Final[int] = 52
+TWO_DECKS: Final[int] = 2
+NO_DECKS: Final[int] = 0
 
 
 def test_standard_deck_holds_every_rank_and_suit_once() -> None:
@@ -23,3 +41,96 @@ def test_is_standard_deck_requires_a_matching_joker_count() -> None:
 
     assert is_standard_deck(deck, red_jokers=1)
     assert not is_standard_deck(deck)
+
+
+def test_several_standard_decks_hold_every_card_that_many_times() -> None:
+    deck = standard_decks(TWO_DECKS, black_jokers=1, red_jokers=1)
+
+    assert len(deck) == TWO_DECKS * FULL_DECK_SIZE + TWO_DECKS
+    assert deck.count(TWO_OF_SPADES) == TWO_DECKS
+    assert compare_decks(deck, standard_deck() + standard_deck() + jokers(black=1, red=1))
+
+
+def test_one_standard_deck_is_the_deck_a_single_count_asks_for() -> None:
+    assert compare_decks(
+        standard_decks(ONE_DECK, black_jokers=1, red_jokers=0),
+        standard_deck(black_jokers=1),
+    )
+
+
+def test_a_deck_is_made_of_at_least_one_standard_deck() -> None:
+    with pytest.raises(ValueError, match="at least 1 standard deck"):
+        standard_decks(NO_DECKS, black_jokers=0, red_jokers=0)
+
+
+@dataclass(frozen=True)
+class MultiplicityCase(Case):
+    deck: Deck
+    decks: int
+
+
+MULTIPLICITIES: Final[tuple[MultiplicityCase, ...]] = (
+    MultiplicityCase(
+        description="one standard deck makes one",
+        deck=standard_deck(),
+        decks=ONE_DECK,
+    ),
+    MultiplicityCase(
+        description="jokers stand outside the count",
+        deck=standard_deck(black_jokers=1, red_jokers=2),
+        decks=ONE_DECK,
+    ),
+    MultiplicityCase(
+        description="two standard decks make two",
+        deck=standard_decks(TWO_DECKS, black_jokers=0, red_jokers=0),
+        decks=TWO_DECKS,
+    ),
+    MultiplicityCase(
+        description="two standard decks make two beside their jokers",
+        deck=standard_decks(TWO_DECKS, black_jokers=2, red_jokers=2),
+        decks=TWO_DECKS,
+    ),
+    MultiplicityCase(
+        description="a deck one card short makes none",
+        deck=standard_deck()[:-1],
+        decks=NO_WHOLE_DECKS,
+    ),
+    MultiplicityCase(
+        description="a deck holding one card twice makes none",
+        deck=standard_deck() + (TWO_OF_SPADES,),
+        decks=NO_WHOLE_DECKS,
+    ),
+    MultiplicityCase(
+        description="jokers alone make none",
+        deck=jokers(black=1, red=1),
+        decks=NO_WHOLE_DECKS,
+    ),
+    MultiplicityCase(
+        description="no cards make none",
+        deck=(),
+        decks=NO_WHOLE_DECKS,
+    ),
+)
+
+
+@pytest.mark.parametrize("case", MULTIPLICITIES, ids=descriptions(MULTIPLICITIES))
+def test_the_multiplicity_counts_the_whole_standard_decks_the_suited_cards_make(case: MultiplicityCase) -> None:
+    assert standard_multiplicity(case.deck) == case.decks
+
+
+def test_a_standard_deck_stands_where_a_game_is_played_with_one() -> None:
+    confirm_standard_deck(standard_deck())
+
+
+def test_a_deck_of_another_run_of_cards_is_refused_naming_the_deck_the_game_asks_for() -> None:
+    with pytest.raises(GameValidationError, match="one standard deck of suited cards"):
+        confirm_standard_deck(standard_decks(TWO_DECKS))
+
+
+def test_the_jokers_a_game_is_played_with_stand_beside_its_standard_deck() -> None:
+    confirm_standard_deck(standard_deck(black_jokers=1, red_jokers=1), black_jokers=1, red_jokers=1)
+
+
+def test_a_refusal_states_the_jokers_the_game_is_played_with() -> None:
+    with pytest.raises(GameValidationError, match="beside 1 black and 1 red jokers"):
+        confirm_standard_deck(standard_deck(), black_jokers=1, red_jokers=1)

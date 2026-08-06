@@ -10,7 +10,10 @@ keywords = ["cards", "deck"]
 dependencies = ["pydantic>=2.9,<3"]
 
 [project.optional-dependencies]
-server = ["fastapi>=0.115,<1", "uvicorn>=0.34,<1"]
+server = ["fastapi>=0.115,<1", "pyyaml>=6,<7", "uvicorn>=0.34,<1"]
+
+[project.scripts]
+cardtable = "cardtable.cli:main"
 
 [dependency-groups]
 dev = [
@@ -21,6 +24,7 @@ dev = [
     "import-linter==2.13",
     "isort==8.0.1",
     "mypy==2.1.0",
+    "pillow==12.3.0",
     "pre-commit==4.6.0",
     "pylint==4.0.6",
     "pylint-pydantic==0.4.1",
@@ -28,6 +32,7 @@ dev = [
     "pytest-asyncio==1.4.0",
     "pytest-cov==7.1.0",
     "pytest-xdist==3.8.0",
+    "types-pyyaml==6.0.12.20260724",
 ]
 
 [build-system]
@@ -35,7 +40,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/cardwork", "src/cardserver"]
+packages = ["src/cardwork", "src/cardserver", "src/cardgames", "src/cardtable"]
 
 [tool.black]
 line-length = 120
@@ -44,11 +49,14 @@ target-version = ["py312"]
 [tool.isort]
 profile = "black"
 line_length = 120
-known_first_party = ["cardwork", "cardserver"]
+known_first_party = ["cardwork", "cardserver", "cardgames", "cardtable"]
 
 [tool.pylint.main]
 extension-pkg-allow-list = ["pydantic"]
 load-plugins = ["pylint_pydantic"]
+
+[tool.pylint.similarities]
+min-similarity-lines = 10
 
 [tool.pylint."messages control"]
 disable = [
@@ -58,17 +66,20 @@ disable = [
     "too-few-public-methods",
     "too-many-instance-attributes",
     "too-many-function-args",
+    "too-many-public-methods",
     "line-too-long",
 ]
 
 [tool.importlinter]
-root_packages = ["cardwork", "cardserver"]
+root_packages = ["cardwork", "cardserver", "cardgames", "cardtable"]
 include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "Layered architecture"
 type = "layers"
 layers = [
+    "cardwork.presentation",
+    "cardwork.rounds",
     "cardwork.games",
     "cardwork.views",
     "cardwork.transactions",
@@ -79,8 +90,22 @@ layers = [
     "cardwork.moves",
     "cardwork.zones",
     "cardwork.decks",
+    "cardwork.combinations",
     "cardwork.cards",
+    "cardwork.ordering",
     "cardwork.models",
+]
+
+[[tool.importlinter.contracts]]
+name = "Host layers"
+type = "layers"
+layers = [
+    "cardtable.cli",
+    "cardtable.catalogue",
+    "cardtable.hosting",
+    "cardtable.config : cardtable.reaching",
+    "cardtable.settings : cardtable.service : cardtable.interface : cardtable.artwork",
+    "cardtable.games : cardtable.paths",
 ]
 
 [[tool.importlinter.contracts]]
@@ -88,20 +113,89 @@ name = "Adapter layers"
 type = "layers"
 layers = [
     "cardserver.app",
+    "cardserver.lobby",
     "cardserver.streams",
     "cardserver.registry",
+    "cardserver.gathering",
     "cardserver.sessions",
     "cardserver.identity",
     "cardserver.errors",
     "cardserver.schemas",
-    "cardserver.protocol",
+    "cardserver.naming",
+    "cardserver.protocol : cardserver.codes",
 ]
 
 [[tool.importlinter.contracts]]
-name = "Core is transport-free"
+name = "Rules are transport-free"
 type = "forbidden"
-source_modules = ["cardwork"]
-forbidden_modules = ["cardserver", "fastapi", "starlette", "httpx", "asyncio", "requests"]
+source_modules = ["cardwork", "cardgames"]
+forbidden_modules = [
+    "cardserver",
+    "fastapi",
+    "starlette",
+    "httpx",
+    "asyncio",
+    "requests",
+]
+
+[[tool.importlinter.contracts]]
+name = "The framework knows no game"
+type = "forbidden"
+source_modules = ["cardwork", "cardserver"]
+forbidden_modules = ["cardgames"]
+
+[[tool.importlinter.contracts]]
+name = "Nothing names the host"
+type = "forbidden"
+source_modules = ["cardwork", "cardserver", "cardgames"]
+forbidden_modules = ["cardtable"]
+
+[[tool.importlinter.contracts]]
+name = "Rules know no presentation"
+type = "layers"
+containers = ["cardgames"]
+layers = ["frontend", "backend"]
+
+[[tool.importlinter.contracts]]
+name = "Rules read cards rather than tables"
+type = "forbidden"
+source_modules = ["cardgames.backend.*.rules"]
+forbidden_modules = [
+    "cardwork.presentation",
+    "cardwork.rounds",
+    "cardwork.games",
+    "cardwork.views",
+    "cardwork.transactions",
+    "cardwork.effects",
+    "cardwork.positions",
+    "cardwork.boards",
+    "cardwork.moves",
+    "cardwork.zones",
+]
+
+[[tool.importlinter.contracts]]
+name = "Passing stands apart"
+type = "forbidden"
+source_modules = ["cardgames.*.passing"]
+forbidden_modules = ["cardgames.*.showdown", "cardgames.*.shedding", "cardgames.*.climbing"]
+
+[[tool.importlinter.contracts]]
+name = "Showdown stands apart"
+type = "forbidden"
+source_modules = ["cardgames.*.showdown"]
+forbidden_modules = ["cardgames.*.passing", "cardgames.*.shedding", "cardgames.*.climbing"]
+
+[[tool.importlinter.contracts]]
+name = "Shedding stands apart"
+type = "forbidden"
+source_modules = ["cardgames.*.shedding"]
+forbidden_modules = ["cardgames.*.passing", "cardgames.*.showdown", "cardgames.*.climbing"]
+
+[[tool.importlinter.contracts]]
+name = "Climbing stands apart"
+type = "forbidden"
+source_modules = ["cardgames.*.climbing"]
+forbidden_modules = ["cardgames.*.passing", "cardgames.*.showdown", "cardgames.*.shedding"]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib --strict-markers"
@@ -109,7 +203,7 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 
 [tool.coverage.run]
-source = ["cardwork", "cardserver"]
+source = ["cardwork", "cardserver", "cardgames", "cardtable"]
 
 [tool.coverage.report]
 show_missing = true
@@ -117,8 +211,14 @@ fail_under = 80
 
 [tool.mypy]
 python_version = "3.12"
-files = ["src/cardwork", "src/cardserver"]
-exclude = ["tests"]
+files = [
+    "src/cardwork",
+    "src/cardserver",
+    "src/cardgames",
+    "src/cardtable",
+    "scripts",
+    "tests",
+]
 disallow_subclassing_any = true
 ignore_missing_imports = true
 strict = true

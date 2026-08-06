@@ -13,6 +13,22 @@ class IllegalMove(CardworkError):
         self.reason = reason
 
 
+class LogicError(CardworkError):
+    """Raised when a move is built on a position that the rules reject."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+class GameValidationError(CardworkError):
+    """Raised when a game is constructed with parameters the rules reject."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
 class NotYourTurn(CardworkError):
     """Raised when a player submits a move while the turn belongs to other seats."""
 
@@ -20,6 +36,14 @@ class NotYourTurn(CardworkError):
         super().__init__(f"Player {player} submitted while the turn belongs to {sorted(to_act)}")
         self.player = player
         self.to_act = to_act
+
+
+class ArrangementRefused(CardworkError):
+    """Raised when a seat asks to lay out a zone the table arranges, or asks for an order it holds no cards for."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
 
 
 class StalePosition(CardworkError):

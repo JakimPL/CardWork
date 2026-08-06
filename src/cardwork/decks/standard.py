@@ -1,19 +1,39 @@
 from typing import Final
 
-from cardwork.cards.card import Card
-from cardwork.cards.rank import Rank
-from cardwork.cards.suit import Suit
+from cardwork.cards.cards import STANDARD_CARDS
+from cardwork.cards.game import is_joker
 from cardwork.decks.deck import Deck, GameDeck
-from cardwork.decks.decks import compare_decks, jokers
+from cardwork.decks.decks import compare_decks, count_cards, jokers
+from cardwork.exceptions import GameValidationError
 
-STANDARD_DECK: Final[Deck] = tuple(
-    Card(
-        rank=rank,
-        suit=suit,
+ONE_DECK: Final[int] = 1
+NO_WHOLE_DECKS: Final[int] = 0
+
+
+def standard_decks(
+    count: int,
+    *,
+    black_jokers: int = 0,
+    red_jokers: int = 0,
+) -> Deck:
+    """`count` whole standard decks laid together, and the jokers a host asks for besides.
+
+    Several decks in play let a card be held twice, which a game reads through the duplicates policy of its
+    own evaluation.
+
+    Raises:
+        ValueError: when fewer than one deck is asked for.
+    """
+    if count < ONE_DECK:
+        raise ValueError(f"A deck is made of at least {ONE_DECK} standard deck, and {count} were asked for")
+
+    return (
+        *(card for _ in range(count) for card in STANDARD_CARDS),
+        *jokers(
+            black=black_jokers,
+            red=red_jokers,
+        ),
     )
-    for rank in Rank
-    for suit in Suit
-)
 
 
 def standard_deck(
@@ -21,13 +41,25 @@ def standard_deck(
     black_jokers: int = 0,
     red_jokers: int = 0,
 ) -> Deck:
-    return (
-        *STANDARD_DECK,
-        *jokers(
-            black=black_jokers,
-            red=red_jokers,
-        ),
+    return standard_decks(
+        ONE_DECK,
+        black_jokers=black_jokers,
+        red_jokers=red_jokers,
     )
+
+
+def standard_multiplicity(deck: GameDeck) -> int:
+    """How many whole standard decks the suited cards of a deck make, and `NO_WHOLE_DECKS` where they make none.
+
+    Jokers stand outside the count, so two standard decks beside three jokers make two. A game played with
+    whole decks reads this to accept the deck it was handed.
+    """
+    suited = {card: held for card, held in count_cards(deck).items() if not is_joker(card)}
+    if set(suited) != set(STANDARD_CARDS):
+        return NO_WHOLE_DECKS
+
+    fewest, most = min(suited.values()), max(suited.values())
+    return fewest if fewest == most else NO_WHOLE_DECKS
 
 
 def is_standard_deck(
@@ -43,3 +75,31 @@ def is_standard_deck(
             red_jokers=red_jokers,
         ),
     )
+
+
+def confirm_standard_deck(
+    deck: GameDeck,
+    *,
+    black_jokers: int = 0,
+    red_jokers: int = 0,
+) -> None:
+    """Confirm the deck is one whole standard deck, beside the jokers a game is played with.
+
+    Raises:
+        GameValidationError: when the deck holds another run of cards.
+    """
+    if not is_standard_deck(
+        deck,
+        black_jokers=black_jokers,
+        red_jokers=red_jokers,
+    ):
+        raise GameValidationError(f"This game is played with {_deck_spoken(black_jokers, red_jokers)}")
+
+
+def _deck_spoken(black_jokers: int, red_jokers: int) -> str:
+    """The deck a game is played with as a phrase, which is how a refusal states what it asks for."""
+    standard = "one standard deck of suited cards"
+    if not black_jokers and not red_jokers:
+        return standard
+
+    return f"{standard} beside {black_jokers} black and {red_jokers} red jokers"

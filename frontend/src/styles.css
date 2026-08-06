@@ -1,0 +1,1236 @@
+/*
+ * The look of a table, which is this interface's own affair: a layout states where a zone goes and how its
+ * cards lie against each other, and everything below decides what that comes to in pixels.
+ *
+ * The page is one screen high and never scrolls: the standing and the controls take the height they need and
+ * the table takes the rest, while every card is measured from one height that follows the window.
+ *
+ * `--card-height` is the one figure the cards are drawn from, and everything a card is measured by is derived
+ * from it on the slot rather than at the root, so a group of zones the page draws smaller states that height
+ * once and the cards inside it follow.
+ *
+ * A group states its own height as the lesser of what it is drawn upright at and what its room allows: the
+ * script hands over how many cards wide the group lies, and the height follows from the proportions of a card.
+ * So a hand of three is drawn as large as the window has height for, and a holding beside a row of five as large
+ * as the width leaves them both.
+ *
+ * Every card is drawn at the one height `--dealt`, the cards in hand and the cards on the table alike, and the
+ * seats standing one above another at a side of the table are what it gives way to, so a table of many seats
+ * draws all of its cards smaller together.
+ */
+
+:root {
+  --felt: #1c4532;
+  --felt-dark: #143526;
+  --edge: #0d2119;
+  --ink: #10201a;
+  --paper: #f4f1e8;
+  --paper-edge: #cfc9b8;
+  --chalk: #e7efe9;
+  --chalk-dim: #9fb3a7;
+  --chalk-lit: #fff;
+  --red: #b3243b;
+  --black: #1a1a1a;
+  --acting: #f0c040;
+  --tint: 240 192 64;
+  --live: #6fcf97;
+  --hint: #8fd0ff;
+  --drained: 0.3;
+  --quieted: 0.6;
+  --waiting: 0.78;
+  --gap: clamp(4px, 0.8vh, 12px);
+  --least: 48px;
+  --dealt: clamp(var(--least), 22vh, 200px);
+  --card-height: var(--dealt);
+  --card-aspect-width: 71;
+  --card-aspect-height: 96;
+  --radius: calc(var(--dealt) * 0.07);
+  --overlap: 0.42;
+  --widths: 1;
+  --lines: 1;
+  --caption: clamp(10px, 1.5vh, 14px);
+  --lettering: calc(var(--caption) * 2);
+  --edging: calc(var(--gap) * 8);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background: var(--felt);
+  color: var(--chalk);
+  font-family: ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: var(--caption);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Where the keyboard stands, which every control on the page draws the same way. */
+
+:focus-visible {
+  outline: 2px solid var(--hint);
+  outline-offset: 2px;
+}
+
+#table {
+  height: 100dvh;
+}
+
+/*
+ * The eight colours a company is told apart by, which is the one place a tint becomes a colour.
+ *
+ * A tint reaches the page as a name the room handed out — `cardwork.presentation.tint.Tint` — and what any of
+ * them looks like is settled here and nowhere else: every rule below reads the one triplet `--tint`, which the
+ * element carrying the tint sets and everything inside it inherits.
+ *
+ * Hue says who and strength says whose turn. A seat at rest carries its colour on its edge with a wash of it
+ * behind, and the seat to act stands in the same colour at full strength with the ring around it, so a glance
+ * finds both the player and the turn. Seven hues round the wheel and no green, since the felt is green and a
+ * drop target is mint.
+ *
+ * The gold stands at the root as the reading for a table served with no gathering behind it, where no seat
+ * carries a tint at all and the turn is the one thing there is to mark.
+ */
+
+[data-tint="rose"] {
+  --tint: 239 111 142;
+}
+
+[data-tint="coral"] {
+  --tint: 240 133 100;
+}
+
+[data-tint="amber"] {
+  --tint: 240 170 72;
+}
+
+[data-tint="lemon"] {
+  --tint: 232 214 96;
+}
+
+[data-tint="teal"] {
+  --tint: 96 214 200;
+}
+
+[data-tint="azure"] {
+  --tint: 104 176 240;
+}
+
+[data-tint="indigo"] {
+  --tint: 140 140 240;
+}
+
+[data-tint="violet"] {
+  --tint: 198 128 232;
+}
+
+/*
+ * The three bands of the page, each as wide as the window and no wider: the standing, the table, and the panel a
+ * player plays from. A band whose own reading runs longer than that — a table of many seats, each named and
+ * counted — keeps its place and reads as far as the window carries it.
+ */
+
+.page {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  height: 100%;
+}
+
+/* The standing: the game, and every seat playing it. */
+
+.standing {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--gap) * 2);
+  padding: var(--gap) calc(var(--gap) * 2);
+  background: var(--felt-dark);
+  border-bottom: 1px solid var(--edge);
+}
+
+.title {
+  margin: 0;
+  font-size: calc(var(--caption) * 1.4);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.plaques {
+  display: flex;
+  flex: 1;
+  gap: var(--gap);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.plaque {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap) / 2);
+  padding: calc(var(--gap) / 2) var(--gap);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: rgb(0 0 0 / 18%);
+  min-width: 0;
+}
+
+.plaque[data-tint] {
+  border-color: rgb(var(--tint) / 45%);
+  background: rgb(var(--tint) / 8%);
+}
+
+.plaque.own {
+  background: rgb(var(--tint) / 20%);
+}
+
+.plaque.acting {
+  border-color: rgb(var(--tint));
+  box-shadow: 0 0 0 2px rgb(var(--tint) / 35%);
+}
+
+.who {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.figures {
+  display: flex;
+  gap: var(--gap);
+  margin: 0;
+  color: var(--chalk-dim);
+}
+
+.figure {
+  display: flex;
+  gap: calc(var(--gap) / 2);
+  white-space: nowrap;
+}
+
+.figure dt {
+  font-weight: 400;
+}
+
+.figure dd {
+  margin: 0;
+  color: var(--chalk);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The table: the zones every seat shares at the centre of it, and the other players sitting round three sides.
+ *
+ * Each side is a run of its own and the middle a column between them, so the room a seat takes is room its
+ * neighbours give way by rather than room they are drawn over. A table of any size lies inside the felt, and
+ * every name on it stays legible.
+ *
+ * The felt divides the height it was given between the zones at the middle and the seats round the edge: the
+ * middle takes up to half of it and the seats take the rest, which is what keeps a table of any size inside the
+ * felt and every part of it clear of the panel below. The seats divide their share again by however many of them
+ * stand one above another at a side and by how many lines each of them stands in.
+ *
+ * It divides its width the same way: a quarter of it to each side that holds seats, and what is left down the
+ * middle to the seats facing the near edge and the cards they share.
+ *
+ * The shares are stated on what lies inside the felt rather than on the felt itself, since a container states its
+ * size to what it holds. The card on the pile is the largest card the table draws, so what a player reads of
+ * another seat is a card of that size or of the size that seat's own share leaves it.
+ */
+
+.felt {
+  container-type: size;
+  display: grid;
+  grid-template:
+    "left across right" auto
+    "left middle right" minmax(0, 1fr)
+    / auto minmax(0, 1fr) auto;
+  place-items: center;
+  gap: var(--gap);
+  min-height: 0;
+  padding: var(--gap);
+}
+
+.felt > * {
+  --on-the-table: max(var(--least), min(var(--dealt), 50cqh));
+  --round-the-table: calc(100cqh - var(--on-the-table));
+  --down-the-middle: calc(100cqw - var(--flanked) * 50cqw);
+}
+
+.sitting {
+  display: flex;
+  gap: var(--gap);
+  justify-content: center;
+}
+
+.sitting.left {
+  grid-area: left;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+}
+
+.sitting.across {
+  grid-area: across;
+  align-items: flex-end;
+}
+
+.sitting.right {
+  grid-area: right;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap) / 2);
+  padding: var(--gap) calc(var(--gap) * 2) calc(var(--gap) / 2);
+  background: var(--felt-dark);
+  border-top: 1px solid var(--edge);
+}
+
+/*
+ * One group of zones, drawn at the height its own room affords: the height it stands upright at, or the height
+ * the cards it lies as many wide as have width for, whichever is the lesser of the two.
+ *
+ * A group lies in lines, which is the one line the page has width for and the two a seat across the table stands
+ * its cards in. Every line is drawn to the widest of them and the height of the group is shared out among them,
+ * one line of lettering to a line of cards and one over the group for the name of the seat.
+ *
+ * A seat round the table draws at the height of a card on the table or at the height its own share leaves it,
+ * whichever is the lesser, so what a player reads of another seat is a card the size of the card on the pile.
+ */
+
+.zones {
+  --card-height: min(
+    var(--upright),
+    calc(var(--room) / var(--widths) * var(--card-aspect-height) / var(--card-aspect-width))
+  );
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap);
+}
+
+.line {
+  display: flex;
+  align-items: flex-end;
+  gap: calc(var(--gap) * 2);
+}
+
+/*
+ * The panel a player plays from, which says whose turn it is where the player is already looking.
+ *
+ * A turn arriving marks the panel as it marks a plaque and a seat round the table, so the outline round a player's
+ * own cards is the same yellow read at the same moment. It lies close round the cards it holds, since the mark is
+ * about the hand rather than about the width of the page. A panel with no move in it stands its cards quiet
+ * instead, which is written among the cards themselves further down.
+ *
+ * The panel keeps the room its outline takes out of the width its cards are drawn to, as the seats round the table
+ * keep theirs, so a hand of any size lies inside the page.
+ */
+
+.zones.own {
+  --upright: var(--dealt);
+  --room: calc(100vw - var(--gap) * 14 - 2px);
+
+  align-self: flex-start;
+  align-items: flex-start;
+  padding: calc(var(--gap) / 2) var(--gap);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+}
+
+.zones.own.acting {
+  border-color: rgb(var(--tint));
+  background: rgb(var(--tint) / 12%);
+}
+
+.zones.shared {
+  --upright: calc(var(--on-the-table) - var(--lettering));
+  --room: calc(var(--down-the-middle) - var(--edging));
+
+  grid-area: middle;
+}
+
+/*
+ * A seat up a side of the table has a quarter of its width, and the seats facing the near edge share what is left
+ * down the middle. Each of them keeps the edging of its own box out of the width its cards are drawn to, so the
+ * shares add to the width of the felt and the seats of a table of any size stand clear of each other and clear of
+ * the cards they share.
+ */
+
+.zones.theirs {
+  --upright: max(
+    var(--least),
+    min(
+      calc(var(--on-the-table) - var(--lettering)),
+      calc((var(--round-the-table) / var(--stacked) - var(--lettering)) / var(--lines) - var(--lettering))
+    )
+  );
+  --room: calc(25cqw - var(--edging));
+}
+
+.sitting.across .zones.theirs {
+  --room: calc(var(--down-the-middle) / var(--abreast) - var(--edging));
+}
+
+.zones.theirs .line {
+  gap: var(--gap);
+}
+
+/*
+ * One other player, whose name stands over the cards the table reads of them.
+ *
+ * The seats up one side of the table share the height it has for them, so a table of many seats draws the cards
+ * of each at the size that stands all of them clear of each other, which is the size the whole table is drawn at.
+ *
+ * The box a seat is drawn in and the group of zones inside it carry names of their own — `station` and `theirs` —
+ * so a rule written for the box reaches the box, and the group inside it lies in the lines it states for itself.
+ */
+
+.station {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--gap) / 2);
+  padding: calc(var(--gap) / 2) var(--gap);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+}
+
+.station[data-tint] {
+  border-color: rgb(var(--tint) / 45%);
+  background: rgb(var(--tint) / 6%);
+}
+
+.station.acting {
+  border-color: rgb(var(--tint));
+  background: rgb(var(--tint) / 12%);
+}
+
+.station.live {
+  border-color: var(--live);
+  box-shadow: 0 0 0 2px rgb(111 207 151 / 45%);
+}
+
+/*
+ * One zone where the layout puts it, and the place beside a hand where a turn is said in words.
+ *
+ * A zone is a drawing rather than a passage of text: a pointer travelling across it carries cards, and the reading
+ * a browser makes of a drag over words has nothing to add to that. So the section is taken out of the browser's own
+ * selection whole, name and count and cards alike, since those lie in one range and a carry begins wherever the hand
+ * came down. What a player is left holding after one is cards. The line saying where play stands and the reports
+ * that stop the table stay text, since those are the words a reader may want to take away.
+ */
+
+.slot {
+  --card-width: calc(var(--card-height) * var(--card-aspect-width) / var(--card-aspect-height));
+  --raised: calc(var(--card-height) * -0.06);
+  --radius: calc(var(--card-height) * 0.07);
+  --depth: calc(var(--card-height) * 0.03);
+  --face: clamp(14px, calc(var(--card-height) * 0.4), 128px);
+  --index: clamp(9px, calc(var(--card-height) * 0.17), 54px);
+
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap) / 2);
+  user-select: none;
+}
+
+.slot-label {
+  display: flex;
+  gap: calc(var(--gap) / 2);
+  align-items: baseline;
+  color: var(--chalk-dim);
+  white-space: nowrap;
+}
+
+.count {
+  padding: 0 calc(var(--gap) / 2);
+  border-radius: 999px;
+  background: rgb(0 0 0 / 30%);
+  color: var(--chalk);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The presses that put a hand in order, which stand at the far end of the name of the zone they order.
+ *
+ * The order of a hand is the player's own, so what sets it stands with the hand rather than among the furniture of
+ * the page: two words in chalk at the end of the line the zone is named on, each lettered with the end it is about
+ * to read the order from. They are drawn small and quiet and brighten under the hand, since a hand is played by
+ * pressing the cards of it and put in order between times.
+ */
+
+.sorting {
+  display: flex;
+  gap: calc(var(--gap) / 2);
+  margin-left: auto;
+}
+
+.sort {
+  display: inline-flex;
+  gap: 0.2em;
+  align-items: baseline;
+  padding: 0 calc(var(--gap) / 2);
+  border: 1px solid rgb(159 179 167 / 35%);
+  border-radius: 999px;
+  background: none;
+  color: var(--chalk-dim);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.sort:hover {
+  border-color: var(--chalk-dim);
+  color: var(--chalk);
+}
+
+.cards {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+}
+
+/* What lies under the card a heap is read by, which is the depth of the heap itself. */
+
+.cards.deep::before {
+  position: absolute;
+  z-index: 0;
+  width: var(--card-width);
+  height: var(--card-height);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius);
+  background: var(--paper);
+  content: "";
+  inset: auto auto 0 0;
+  pointer-events: none;
+  transform: translate(var(--depth), var(--depth));
+}
+
+.slot.row .cards {
+  gap: calc(var(--gap) / 2);
+}
+
+.slot.stack .cards,
+.slot.slot .cards {
+  gap: calc(var(--gap) / 2);
+  min-width: var(--card-width);
+}
+
+/* A card, which is the one drawing every zone is made of. */
+
+.card {
+  position: relative;
+  width: var(--card-width);
+  height: var(--card-height);
+  border-radius: var(--radius);
+  transition: transform 120ms ease;
+}
+
+.card.face {
+  border: 1px solid var(--paper-edge);
+  background: var(--paper);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.index {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: var(--index);
+  inset: calc(var(--card-height) * 0.05) auto auto calc(var(--card-height) * 0.03);
+  letter-spacing: -0.04em;
+}
+
+.index .suit {
+  font-size: calc(var(--index) * 0.85);
+}
+
+.pip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--face);
+  inset: 0;
+}
+
+.card.red {
+  color: var(--red);
+}
+
+.card.black {
+  color: var(--black);
+}
+
+.card.concealed {
+  outline: 1px dashed var(--chalk-dim);
+  outline-offset: -4px;
+}
+
+.card.back {
+  border: 1px solid var(--edge);
+  background-color: #2f5d8a;
+  background-image:
+    repeating-linear-gradient(45deg, rgb(255 255 255 / 22%) 0 2px, transparent 2px 5px),
+    repeating-linear-gradient(-45deg, rgb(0 0 0 / 22%) 0 2px, transparent 2px 5px);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+}
+
+.card.empty {
+  border: 1px dashed rgb(255 255 255 / 25%);
+  background: rgb(0 0 0 / 12%);
+}
+
+/*
+ * A card the pack in service draws, which is the picture standing where the page's own marks stand.
+ *
+ * The artwork is the whole of the card: it carries the edge and the corners it was drawn with, so the paper the
+ * sheet paints for a card it draws itself gives way to the picture. What is drawn over a card either way — the
+ * outline round a card in hand, the dashes marking one lying face down, the fading of a card a press stops at —
+ * stands as it stands, since those belong to the reading of a table rather than to the face of a card.
+ *
+ * A pack of the old pixel artwork is drawn square, one pixel to a block of them, which is how those cards were
+ * drawn to be read. A pack carrying its own corners is drawn to the edge of the place it lies in.
+ *
+ * The card is what a hand takes hold of and the picture travels with it, so a drag begun on the picture is a drag
+ * on the card under it and the run it came out of is what the hand is laying out.
+ */
+
+.card.drawn {
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.card.drawn .art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  -webkit-user-drag: none;
+}
+
+.card.pixelated .art {
+  image-rendering: pixelated;
+}
+
+.card.cornered {
+  border-radius: 0;
+}
+
+/* Picking cards up, and the places they can be sent from there. */
+
+button.card {
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.landing {
+  position: absolute;
+  z-index: 1;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  cursor: pointer;
+  inset: calc(var(--gap) / -2);
+}
+
+/*
+ * The place under a hand carrying cards, which is the one about to take them.
+ *
+ * Every place the cards in hand may go to is already ringed, so the one the hand has reached says so more brightly
+ * and takes a wash of the same colour: a player carrying cards across the table reads where they are about to land
+ * before they let go of them.
+ */
+
+.landing.aimed {
+  background: rgb(111 207 151 / 18%);
+  box-shadow: 0 0 0 3px var(--live);
+}
+
+.page.sending .landing,
+.page.sending button.card {
+  cursor: progress;
+}
+
+/*
+ * A card a press stops at, which goes quiet rather than marking itself.
+ *
+ * Nothing on the table is ever lit for being playable, since a card marked out reads as a card already chosen.
+ * What a player reads instead is the cards that have gone quiet: at rest the ones no move names, and once cards
+ * are in hand the ones no move holding those could name beside them.
+ *
+ * A quiet card is drained of its colour and its light, and stays as solid as any other. A card is paper, so a
+ * card lying over another covers it: the cards of a fan read as a fan whichever of them have gone quiet.
+ */
+
+.card.dimmed {
+  filter: saturate(var(--drained)) brightness(var(--quieted));
+}
+
+/*
+ * Every card of a panel the table is asking nothing of, which is a turn standing elsewhere read among a player's
+ * own cards.
+ *
+ * A hand waiting on another seat is lowered as a whole and keeps its colour, so what it reads as is a turn that is
+ * somebody else's — where a card lowered among its neighbours reads as one this turn has no use for. So a player
+ * glancing down at their cards is told which of the two they are looking at.
+ */
+
+.zones.own.idle .card {
+  filter: brightness(var(--waiting));
+}
+
+.card.selected {
+  box-shadow:
+    0 0 0 2px var(--chalk),
+    0 6px 10px rgb(0 0 0 / 45%);
+  transform: translateY(calc(var(--card-height) * -0.12));
+}
+
+/*
+ * A card a hand may take hold of, and the same card while a hand is carrying it.
+ *
+ * A run a player plays out of or sets the order of says so by the grip it offers, which is the one mark such a
+ * card carries: the cards read as cards, and taking hold of one is a thing the pointer discovers where it lies. A
+ * card being carried answers the hand alone, so a finger travelling across the page carries that card.
+ *
+ * The card in hand travels with the pointer holding it and lies over what it is carried across, raised off the
+ * table by the shadow it casts, and it goes where the pointer goes rather than easing after it. Carried through
+ * the run it came out of, the cards it passed over close up behind it and open ahead of it in their own time,
+ * which reads as the run making room — so what the player sees is the card in their hand and the order it is
+ * about to lie in.
+ *
+ * A card let go under the hand that laid it stands at the height a card under the hand stands at, and arrives
+ * there in one step: the hand is still on it, so it is still a card in hand and reads as one until the hand
+ * comes off it. A card the hand came off, or let go over the card beside it, lies as the run draws it.
+ */
+
+.card.carryable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.card.carried {
+  z-index: 2;
+  cursor: grabbing;
+  box-shadow: 0 12px 22px rgb(0 0 0 / 50%);
+  transition: none;
+}
+
+.card.laid {
+  transform: translateY(var(--raised));
+  transition: none;
+}
+
+/*
+ * A card coming to rest where it was played, which it reaches from the holding it was played out of.
+ *
+ * It travels rather than fading in, so a card landing among others covers what it lands over the whole way.
+ */
+
+.card.arriving {
+  animation: landing 200ms ease-out;
+}
+
+@keyframes landing {
+  from {
+    transform: translateY(calc(var(--card-height) * 0.5)) scale(0.94);
+  }
+
+  to {
+    transform: none;
+  }
+}
+
+/*
+ * How far a fan overlaps itself, which the script works out from the number of cards in it: a handful lies open
+ * enough to read every face, and a holding of a dozen and more closes up to the room its zone has.
+ */
+
+.slot.fan .card + .card {
+  margin-left: calc(var(--card-width) * var(--overlap) * -1);
+}
+
+.slot.fan button.card:hover {
+  transform: translateY(var(--raised));
+}
+
+/* A reader who asks for stillness gets the same table, arrived at in one step. */
+
+@media (prefers-reduced-motion: reduce) {
+  .cards .card,
+  .word {
+    transition: none;
+    animation: none;
+  }
+}
+
+.slot.live .cards::after {
+  position: absolute;
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 2px var(--live);
+  content: "";
+  inset: calc(var(--gap) / -2);
+  pointer-events: none;
+}
+
+.plaque.live {
+  border-color: var(--live);
+}
+
+/*
+ * The place beside a hand where a turn is said rather than played, drawn at the size of a card.
+ *
+ * A move that names no card is made nowhere among them, so what a player presses for one stands at the end of the
+ * panel as a place of its own: card-shaped, lettered in chalk, and labelled as the zones beside it are. It lies
+ * where the cards lie and takes the room of one, which leaves a move made instead of playing a card reading as
+ * somewhere on the table rather than as furniture along the edge of it.
+ *
+ * A place the cards in hand stand against goes quiet where it stands, so a hand picked up over one keeps its size
+ * and its place, and the words a turn could have been given up in stay legible while it is played out instead.
+ */
+
+.words {
+  display: flex;
+  align-items: flex-end;
+  gap: calc(var(--gap) / 2);
+}
+
+.word {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--gap) / 3);
+  width: var(--card-width);
+  height: var(--card-height);
+  padding: calc(var(--gap) / 2);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius);
+  background: var(--chalk);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+  color: var(--ink);
+  font: inherit;
+  font-size: calc(var(--caption) * 1.15);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  overflow: hidden;
+  text-align: center;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    transform 120ms ease;
+}
+
+.word .stroke {
+  font-size: calc(var(--caption) * 0.85);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  opacity: 0.72;
+}
+
+.word:hover {
+  background: var(--chalk-lit);
+  transform: translateY(calc(var(--card-height) * -0.06));
+}
+
+.word:disabled {
+  border-color: rgb(159 179 167 / 35%);
+  background: none;
+  box-shadow: none;
+  color: var(--chalk-dim);
+  opacity: var(--quieted);
+  cursor: default;
+  transform: none;
+}
+
+.page.sending .word {
+  cursor: progress;
+}
+
+.guidance {
+  margin: 0;
+  color: var(--hint);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Where play stands, in one line under the cards. */
+
+.status {
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--gap) * 1.5);
+  color: var(--chalk-dim);
+  border-top: 1px solid var(--edge);
+  padding-top: calc(var(--gap) / 2);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.phase {
+  color: var(--chalk);
+  font-weight: 600;
+}
+
+.reading {
+  display: flex;
+  gap: calc(var(--gap) / 2);
+}
+
+.reading .value {
+  color: var(--chalk);
+  font-variant-numeric: tabular-nums;
+}
+
+.connection {
+  margin-left: auto;
+}
+
+.connection.following {
+  color: var(--live);
+}
+
+.connection.resuming {
+  color: var(--acting);
+}
+
+.connection.refused {
+  color: var(--red);
+}
+
+/*
+ * The report a boundary is read at, held over the table until the player says they have read it.
+ *
+ * It lies over the whole page, so the cards underneath stay in view and out of reach: what closed the round is
+ * still lying where it closed it, and the panel names what that came to. The panel sits above the middle of the
+ * page rather than at the centre of it, which leaves the player's own cards showing beneath.
+ */
+
+.curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgb(0 0 0 / 55%);
+}
+
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  align-items: center;
+  max-width: min(90vw, 40rem);
+  max-height: 80vh;
+  padding: calc(var(--gap) * 3);
+  border: 1px solid var(--edge);
+  border-radius: calc(var(--radius) * 2);
+  background: var(--felt-dark);
+  box-shadow: 0 calc(var(--gap) * 2) calc(var(--gap) * 4) rgb(0 0 0 / 45%);
+  overflow-y: auto;
+  text-align: center;
+}
+
+.outcome {
+  margin: 0;
+  font-size: calc(var(--caption) * 1.8);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.winner {
+  margin: 0;
+  color: var(--acting);
+  font-size: calc(var(--caption) * 1.3);
+  font-weight: 600;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap) / 2);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result {
+  display: flex;
+  gap: var(--gap);
+  justify-content: space-between;
+  align-items: baseline;
+  padding: calc(var(--gap) / 2) var(--gap);
+  border-radius: var(--radius);
+  background: rgb(255 255 255 / 6%);
+}
+
+.result[data-tint] {
+  border-left: calc(var(--gap) / 2) solid rgb(var(--tint));
+}
+
+.figures.table {
+  justify-content: center;
+  flex-wrap: wrap;
+  font-size: var(--caption);
+}
+
+.onward {
+  padding: calc(var(--gap) / 2) calc(var(--gap) * 3);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--chalk);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* The page before a table is in hand: taking a seat, joining one, or being turned away from one. */
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  align-items: flex-start;
+  max-width: 34rem;
+  margin: 12vh auto;
+  padding: calc(var(--gap) * 3);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--felt-dark);
+  font-size: calc(var(--caption) * 1.1);
+}
+
+.notice p {
+  margin: 0;
+}
+
+.notice label {
+  display: flex;
+  gap: var(--gap);
+  align-items: center;
+  width: 100%;
+  color: var(--chalk-dim);
+}
+
+.notice input,
+.notice select {
+  flex: 1;
+  padding: calc(var(--gap) / 2) var(--gap);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--chalk);
+  font: inherit;
+}
+
+.notice button {
+  padding: calc(var(--gap) / 2) calc(var(--gap) * 2);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--chalk);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notice button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.notice a {
+  color: var(--chalk);
+}
+
+.trouble {
+  color: var(--acting);
+}
+
+/* The room a table gathers in: the company round it, what it plays, and the press that deals it. */
+
+.gathering {
+  gap: calc(var(--gap) * 1.5);
+  width: 100%;
+}
+
+.gathering .gathered,
+.gathering .code {
+  align-self: stretch;
+}
+
+.gathering .code {
+  color: var(--chalk-dim);
+  letter-spacing: 0.08em;
+}
+
+.company {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  width: 100%;
+}
+
+.places {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap) / 2);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.place {
+  display: flex;
+  gap: var(--gap);
+  align-items: center;
+  padding: calc(var(--gap) / 2) var(--gap);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--felt);
+}
+
+.place[data-tint] {
+  border-color: rgb(var(--tint) / 45%);
+}
+
+.place.own {
+  border-color: rgb(var(--tint));
+}
+
+.place .seat {
+  min-width: 5rem;
+  color: var(--chalk-dim);
+}
+
+.place .guest {
+  flex: 1;
+  color: var(--chalk);
+}
+
+.place.empty .guest {
+  color: var(--chalk-dim);
+  font-style: italic;
+}
+
+.place .guest.away {
+  opacity: var(--quieted);
+}
+
+.place .guest.present::before {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  margin-right: 0.5em;
+  border-radius: 50%;
+  background: var(--live);
+  content: "";
+}
+
+.watching {
+  color: var(--chalk-dim);
+}
+
+/* The colours the company is told apart by, each of them a guest's own to take while the room stands. */
+
+.tints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--gap) / 2);
+  align-items: center;
+  width: 100%;
+}
+
+.tints .colour {
+  min-width: 5rem;
+  color: var(--chalk-dim);
+}
+
+.tints .swatch {
+  width: calc(var(--caption) * 1.6);
+  height: calc(var(--caption) * 1.6);
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 50%;
+  background: rgb(var(--tint));
+  cursor: pointer;
+}
+
+.tints .swatch.own {
+  border-color: var(--chalk-lit);
+  box-shadow: 0 0 0 2px rgb(var(--tint) / 45%);
+}
+
+.settling {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  align-items: center;
+  width: 100%;
+}
+
+.settling label {
+  width: auto;
+}
+
+.settling select {
+  padding: calc(var(--gap) / 2) var(--gap);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--chalk);
+  font: inherit;
+}
+
+.settling select:disabled {
+  opacity: 0.45;
+}
+
+.settling .ending,
+.settling .told {
+  flex-basis: 100%;
+  color: var(--chalk-dim);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  align-items: center;
+  width: 100%;
+}
+
+.notice .reading {
+  color: var(--chalk-dim);
+  letter-spacing: 0.08em;
+}

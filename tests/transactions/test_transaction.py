@@ -3,9 +3,12 @@ from dataclasses import dataclass
 import pytest
 from pydantic import ValidationError
 
+from cardwork.combinations.poker import FLUSH, PAIR
+from cardwork.combinations.policy import REGULAR_EVALUATION
+from cardwork.combinations.ranking import Ranking
 from cardwork.effects.effect import Effect
 from cardwork.effects.effects import MoveCards, Reorder, SetFace, SetState
-from cardwork.moves.actions import Play
+from cardwork.moves.actions import Declare, Play
 from cardwork.moves.move import Move
 from cardwork.states.state import GameState
 from cardwork.transactions.transaction import Transaction
@@ -14,6 +17,12 @@ from cardwork.transactions.transaction import Transaction
 class BiddingState(GameState):
     trump: str
     highest_bid: int | None = None
+
+
+class ContractState(GameState):
+    """A cursor carrying the combinations the table settled on, which is what a bid contract comes to."""
+
+    recognised: Ranking
 
 
 @dataclass(frozen=True)
@@ -56,6 +65,21 @@ def test_a_transaction_round_trips_the_move_that_prompted_it() -> None:
     assert isinstance(restored.move.action, Play)
 
 
+def test_a_transaction_round_trips_the_claim_a_seat_declared() -> None:
+    transaction = Transaction[GameState](
+        seq=3,
+        move=Move(player=2, action=Declare(claim="three of a suit", indices=frozenset({0, 1, 3}))),
+        effects=(SetState(state=GameState(phase="won", to_act=frozenset())),),
+    )
+
+    restored = Transaction[GameState].model_validate_json(transaction.model_dump_json())
+
+    assert restored == transaction
+    assert restored.move is not None
+    assert isinstance(restored.move.action, Declare)
+    assert restored.move.action.claim == "three of a suit"
+
+
 def test_a_transaction_round_trips_a_game_s_own_state() -> None:
     transaction = Transaction[BiddingState](
         seq=1,
@@ -70,6 +94,23 @@ def test_a_transaction_round_trips_a_game_s_own_state() -> None:
     assert restored == transaction
     assert isinstance(restored_effect, SetState)
     assert restored_effect.state.highest_bid == 5
+
+
+def test_a_transaction_round_trips_the_rules_a_table_settled_on() -> None:
+    contract = ContractState(phase="play", recognised=Ranking(patterns=(PAIR, FLUSH), evaluation=REGULAR_EVALUATION))
+    transaction = Transaction[ContractState](
+        seq=2,
+        move=None,
+        effects=(SetState[ContractState](state=contract),),
+    )
+
+    restored = Transaction[ContractState].model_validate_json(transaction.model_dump_json())
+
+    restored_effect = restored.effects[0]
+
+    assert restored == transaction
+    assert isinstance(restored_effect, SetState)
+    assert restored_effect.state.recognised.patterns == (PAIR, FLUSH)
 
 
 def test_a_transaction_rejects_an_effect_of_an_unrecorded_kind() -> None:
