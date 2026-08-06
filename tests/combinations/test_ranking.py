@@ -14,12 +14,16 @@ from cardwork.cards.cards import (
     FIVE_OF_HEARTS,
     FIVE_OF_SPADES,
     FOUR_OF_CLUBS,
+    FOUR_OF_SPADES,
+    JACK_OF_HEARTS,
     JACK_OF_SPADES,
     KING_OF_CLUBS,
     KING_OF_DIAMONDS,
     KING_OF_HEARTS,
     KING_OF_SPADES,
     NINE_OF_SPADES,
+    QUEEN_OF_DIAMONDS,
+    QUEEN_OF_HEARTS,
     QUEEN_OF_SPADES,
     SEVEN_OF_DIAMONDS,
     SEVEN_OF_HEARTS,
@@ -42,6 +46,12 @@ from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.patterns.same_rank import SameRank
 from cardwork.combinations.patterns.same_suit import SameSuit
 from cardwork.combinations.poker import (
+    APART_FULL_HOUSE,
+    APART_PAIR,
+    APART_POKER,
+    APART_POKER_ORDER,
+    APART_QUADRUPLET,
+    APART_TWO_PAIR,
     FLUSH,
     FULL_HOUSE,
     HIGH_CARD,
@@ -122,6 +132,41 @@ FOUR_KINGS_ALONE: Final[tuple[CardOrJoker, ...]] = (
     KING_OF_HEARTS,
     KING_OF_CLUBS,
     KING_OF_DIAMONDS,
+)
+KING_HELD_TWICE: Final[tuple[CardOrJoker, ...]] = (KING_OF_SPADES, KING_OF_SPADES)
+TRIPLET_LEANING: Final[tuple[CardOrJoker, ...]] = (KING_OF_SPADES, KING_OF_SPADES, KING_OF_HEARTS)
+TWO_PAIR_OF_TWO_SUITS: Final[tuple[CardOrJoker, ...]] = (
+    KING_OF_SPADES,
+    KING_OF_HEARTS,
+    QUEEN_OF_SPADES,
+    QUEEN_OF_HEARTS,
+)
+TWO_PAIR_LEANING: Final[tuple[CardOrJoker, ...]] = (
+    KING_OF_SPADES,
+    KING_OF_SPADES,
+    QUEEN_OF_SPADES,
+    QUEEN_OF_HEARTS,
+)
+FULL_HOUSE_LEANING: Final[tuple[CardOrJoker, ...]] = (
+    KING_OF_SPADES,
+    KING_OF_SPADES,
+    KING_OF_HEARTS,
+    QUEEN_OF_SPADES,
+    QUEEN_OF_HEARTS,
+)
+FLUSH_LEANING: Final[tuple[CardOrJoker, ...]] = (
+    TWO_OF_SPADES,
+    TWO_OF_SPADES,
+    THREE_OF_SPADES,
+    FOUR_OF_SPADES,
+    FIVE_OF_SPADES,
+)
+QUEENS_OVER_JACKS: Final[tuple[CardOrJoker, ...]] = (
+    QUEEN_OF_SPADES,
+    QUEEN_OF_HEARTS,
+    QUEEN_OF_DIAMONDS,
+    JACK_OF_SPADES,
+    JACK_OF_HEARTS,
 )
 
 
@@ -560,3 +605,148 @@ def test_every_selection_a_ranking_offers_reads_as_a_combination_of_it() -> None
 
     assert offered
     assert all(POKER.exactly(tuple(hand[place] for place in selection)) is not None for selection in offered)
+
+
+@dataclass(frozen=True)
+class ApartCase(Case):
+    """One hand beside the combination each ranking reads it as, the rules of poker with and without spreads.
+
+    `plain` is what the hand comes to where every copy of a card answers for itself, and `apart` is what it comes
+    to where the places of a rule each hold a suit or a rank of their own. A row where the two differ is a row a
+    second deck made possible, and `reading` is what the apart ranking reads the hand as.
+    """
+
+    cards: tuple[CardOrJoker, ...]
+    plain: Pattern
+    apart: Pattern
+    reading: tuple[Card, ...]
+
+
+APART: Final[tuple[ApartCase, ...]] = (
+    ApartCase(
+        description="five spades in a row are a straight flush under either ranking",
+        cards=ROYAL_FLUSH,
+        plain=STRAIGHT_FLUSH,
+        apart=STRAIGHT_FLUSH,
+        reading=(TEN_OF_SPADES, JACK_OF_SPADES, QUEEN_OF_SPADES, KING_OF_SPADES, ACE_OF_SPADES),
+    ),
+    ApartCase(
+        description="four suits of a rank are a quadruplet under either",
+        cards=FOUR_KINGS_ALONE,
+        plain=QUADRUPLET,
+        apart=APART_QUADRUPLET,
+        reading=(KING_OF_SPADES, KING_OF_HEARTS, KING_OF_DIAMONDS, KING_OF_CLUBS),
+    ),
+    ApartCase(
+        description="three suits over two are a full house under either",
+        cards=KINGS_OVER_FIVES,
+        plain=FULL_HOUSE,
+        apart=APART_FULL_HOUSE,
+        reading=(KING_OF_SPADES, KING_OF_HEARTS, KING_OF_CLUBS, FIVE_OF_SPADES, FIVE_OF_HEARTS),
+    ),
+    ApartCase(
+        description="two pairs of two suits each are two pair under either",
+        cards=TWO_PAIR_OF_TWO_SUITS,
+        plain=TWO_PAIR,
+        apart=APART_TWO_PAIR,
+        reading=(KING_OF_SPADES, KING_OF_HEARTS, QUEEN_OF_SPADES, QUEEN_OF_HEARTS),
+    ),
+    ApartCase(
+        description="a triplet leaning on a card held twice is the pair its two suits reach",
+        cards=TRIPLET_LEANING,
+        plain=TRIPLET,
+        apart=APART_PAIR,
+        reading=(KING_OF_SPADES, KING_OF_HEARTS),
+    ),
+    ApartCase(
+        description="one card held twice is a pair, and read apart the one card it shows",
+        cards=KING_HELD_TWICE,
+        plain=PAIR,
+        apart=HIGH_CARD,
+        reading=(KING_OF_SPADES,),
+    ),
+    ApartCase(
+        description="two pair leaning on a card held twice are the one pair holding two suits",
+        cards=TWO_PAIR_LEANING,
+        plain=TWO_PAIR,
+        apart=APART_PAIR,
+        reading=(QUEEN_OF_SPADES, QUEEN_OF_HEARTS),
+    ),
+    ApartCase(
+        description="a full house leaning on a card held twice comes to two pair read apart",
+        cards=FULL_HOUSE_LEANING,
+        plain=FULL_HOUSE,
+        apart=APART_TWO_PAIR,
+        reading=(KING_OF_SPADES, KING_OF_HEARTS, QUEEN_OF_SPADES, QUEEN_OF_HEARTS),
+    ),
+    ApartCase(
+        description="a flush leaning on a card held twice comes to the high card of the suit",
+        cards=FLUSH_LEANING,
+        plain=FLUSH,
+        apart=HIGH_CARD,
+        reading=(FIVE_OF_SPADES,),
+    ),
+)
+
+
+@pytest.mark.parametrize("case", APART, ids=descriptions(APART))
+def test_a_ranking_of_rules_read_apart_reads_a_hand_by_the_facings_it_holds(case: ApartCase) -> None:
+    plain = POKER.strongest(case.cards)
+    apart = APART_POKER.strongest(case.cards)
+
+    assert plain is not None
+    assert apart is not None
+    assert plain.pattern == case.plain
+    assert apart.pattern == case.apart
+    assert apart.reading == case.reading
+
+
+def test_a_ranking_of_rules_read_apart_orders_a_hand_by_the_combination_its_facings_reach() -> None:
+    """The facings a hand holds are what it answers with, and the order follows the combination that makes.
+
+    Both hands are a full house where every copy of a card answers for itself, and the kings take the contest by
+    the rank of their triplet. Where the places of a triplet each hold a suit of their own, the kings come to two
+    pair and the queens take it, which is the whole of what a game states by ranking the rules read apart.
+    """
+    plain_kings = POKER.strongest(FULL_HOUSE_LEANING)
+    plain_queens = POKER.strongest(QUEENS_OVER_JACKS)
+    apart_kings = APART_POKER.strongest(FULL_HOUSE_LEANING)
+    apart_queens = APART_POKER.strongest(QUEENS_OVER_JACKS)
+
+    assert plain_kings is not None
+    assert plain_queens is not None
+    assert apart_kings is not None
+    assert apart_queens is not None
+    assert POKER_ORDER.compare(plain_kings, plain_queens) == 1
+    assert APART_POKER_ORDER.compare(apart_kings, apart_queens) == -1
+
+
+def test_a_hand_leaning_on_a_card_held_twice_answers_a_ranking_read_apart_at_a_shorter_count() -> None:
+    """A rule read apart turns the second copy away, so the hand answers with the count its facings reach.
+
+    These five cards are a full house where every copy answers for itself, and the contest they stand in is one
+    of five cards. Where a triplet asks three suits of one rank they are two pair, so they answer at four cards
+    and are a combination of five in no way at all.
+    """
+    plain = POKER.strongest(FULL_HOUSE_LEANING)
+    apart = APART_POKER.strongest(FULL_HOUSE_LEANING)
+
+    assert plain is not None
+    assert apart is not None
+    assert plain.pattern.size == POKER_HAND
+    assert apart.pattern.size == TWO_PAIR_CARDS
+    assert APART_POKER.exactly(FULL_HOUSE_LEANING) is None
+
+
+def test_a_ranking_of_rules_read_apart_reads_one_deck_as_the_rules_themselves_do() -> None:
+    """Over a deck holding every card once, every card faces apart from every other, so the ceilings coincide.
+
+    A spread turns a card away where another card of the same facing stands at a place of it already, which one
+    deck offers nowhere. So the best of every count is the same combination read by the rule holding it apart.
+    """
+    plain = POKER.ceilings(STANDARD_CARDS)
+    apart = APART_POKER.ceilings(STANDARD_CARDS)
+
+    assert APART_POKER.sizes() == POKER.sizes()
+    assert tuple(apart) == tuple(plain)
+    assert all(apart[size].reading == plain[size].reading for size in plain)

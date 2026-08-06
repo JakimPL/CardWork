@@ -41,7 +41,14 @@ from cardwork.combinations.patterns.same_rank import SameRank
 from cardwork.combinations.patterns.same_suit import SameSuit
 from cardwork.combinations.patterns.together import Together
 from cardwork.combinations.poker import (
+    APART_FLUSH,
+    APART_FULL_HOUSE,
+    APART_PAIR,
+    APART_QUADRUPLET,
+    APART_TRIPLET,
+    APART_TWO_PAIR,
     FLUSH,
+    FULL_HOUSE,
     PAIR,
     QUADRUPLET,
     STRAIGHT,
@@ -80,21 +87,14 @@ THREE_OF_A_SUIT: Final[Pattern] = SameSuit(places=3)
 TWO_LOOSE: Final[Pattern] = AnyCards(places=2)
 THREE_LOOSE: Final[Pattern] = AnyCards(places=3)
 PAIR_WITH_A_KICKER: Final[Pattern] = Beside(parts=(PAIR, AnyCards(places=1)))
-FULL_HOUSE: Final[Pattern] = Beside(parts=(TRIPLET, PAIR))
 SUITED_PAIR: Final[Pattern] = Together(parts=(PAIR, SameSuit(places=2)))
 
-APART_PAIR: Final[Pattern] = Apart.of_suit(PAIR)
-APART_PAIR_BY_CARD: Final[Pattern] = Apart.of_card(PAIR)
-APART_TRIPLET: Final[Pattern] = Apart.of_suit(TRIPLET)
-APART_QUADRUPLET: Final[Pattern] = Apart.of_suit(QUADRUPLET)
+PAIR_APART_BY_CARD: Final[Pattern] = Apart.of_card(PAIR)
 APART_FIVE_OF_A_RANK: Final[Pattern] = Apart.of_suit(FIVE_OF_A_RANK)
 APART_THREE_OF_A_SUIT: Final[Pattern] = Apart.of_rank(THREE_OF_A_SUIT)
-APART_FLUSH: Final[Pattern] = Apart.of_rank(FLUSH)
 APART_TWO_LOOSE: Final[Pattern] = Apart.of_card(TWO_LOOSE)
 APART_THREE_LOOSE: Final[Pattern] = Apart.of_card(THREE_LOOSE)
-APART_TWO_PAIR: Final[Pattern] = Apart.of_card(TWO_PAIR)
-TWO_APART_PAIRS: Final[Pattern] = Beside(parts=(APART_PAIR, APART_PAIR))
-APART_FULL_HOUSE: Final[Pattern] = Beside(parts=(APART_TRIPLET, APART_PAIR))
+TWO_PAIR_APART_BY_CARD: Final[Pattern] = Apart.of_card(TWO_PAIR)
 APART_PAIR_WITH_A_KICKER: Final[Pattern] = Beside(parts=(APART_PAIR, AnyCards(places=1)))
 APART_SUITED_PAIR: Final[Pattern] = Apart.of_card(SUITED_PAIR)
 APART_STRAIGHT: Final[Pattern] = Apart.of_card(STRAIGHT)
@@ -144,7 +144,7 @@ HOLDINGS: Final[tuple[HoldingCase, ...]] = (
     HoldingCase(
         description="a pair of two suits reads apart by card as well",
         cards=(KING_OF_SPADES, KING_OF_HEARTS),
-        apart=APART_PAIR_BY_CARD,
+        apart=PAIR_APART_BY_CARD,
         plain=PAIR,
         held_apart=True,
         held_plain=True,
@@ -152,7 +152,7 @@ HOLDINGS: Final[tuple[HoldingCase, ...]] = (
     HoldingCase(
         description="one card held twice reads apart by card no more than by suit",
         cards=(KING_OF_SPADES, KING_OF_SPADES),
-        apart=APART_PAIR_BY_CARD,
+        apart=PAIR_APART_BY_CARD,
         plain=PAIR,
         held_apart=False,
         held_plain=True,
@@ -264,7 +264,7 @@ HOLDINGS: Final[tuple[HoldingCase, ...]] = (
     HoldingCase(
         description="two pair of one suit hold apart by card, since two ranks hold them apart",
         cards=(KING_OF_SPADES, KING_OF_HEARTS, QUEEN_OF_SPADES, QUEEN_OF_HEARTS),
-        apart=APART_TWO_PAIR,
+        apart=TWO_PAIR_APART_BY_CARD,
         plain=TWO_PAIR,
         held_apart=True,
         held_plain=True,
@@ -272,7 +272,7 @@ HOLDINGS: Final[tuple[HoldingCase, ...]] = (
     HoldingCase(
         description="two cards each held twice are two pair and no two pair apart by card",
         cards=(KING_OF_SPADES, KING_OF_SPADES, QUEEN_OF_SPADES, QUEEN_OF_SPADES),
-        apart=APART_TWO_PAIR,
+        apart=TWO_PAIR_APART_BY_CARD,
         plain=TWO_PAIR,
         held_apart=False,
         held_plain=True,
@@ -280,7 +280,7 @@ HOLDINGS: Final[tuple[HoldingCase, ...]] = (
     HoldingCase(
         description="two pairs of two suits each hold two pairs read apart",
         cards=(KING_OF_SPADES, KING_OF_HEARTS, QUEEN_OF_SPADES, QUEEN_OF_HEARTS),
-        apart=TWO_APART_PAIRS,
+        apart=APART_TWO_PAIR,
         plain=TWO_PAIR,
         held_apart=True,
         held_plain=True,
@@ -288,7 +288,7 @@ HOLDINGS: Final[tuple[HoldingCase, ...]] = (
     HoldingCase(
         description="a pair leaning on a card held twice leaves two pairs read apart short",
         cards=(KING_OF_SPADES, KING_OF_SPADES, QUEEN_OF_SPADES, QUEEN_OF_HEARTS),
-        apart=TWO_APART_PAIRS,
+        apart=APART_TWO_PAIR,
         plain=TWO_PAIR,
         held_apart=False,
         held_plain=True,
@@ -296,7 +296,7 @@ HOLDINGS: Final[tuple[HoldingCase, ...]] = (
     HoldingCase(
         description="one suit across both pairs holds them apart, each pair holding its own two",
         cards=(KING_OF_SPADES, KING_OF_HEARTS, QUEEN_OF_SPADES, QUEEN_OF_DIAMONDS),
-        apart=TWO_APART_PAIRS,
+        apart=APART_TWO_PAIR,
         plain=TWO_PAIR,
         held_apart=True,
         held_plain=True,
@@ -433,7 +433,7 @@ READINGS: Final[tuple[ReadingCase, ...]] = (
     ReadingCase(
         description="a joker fills the pair the second copy of a card cannot",
         cards=(QUEEN_OF_SPADES, QUEEN_OF_HEARTS, KING_OF_SPADES, KING_OF_SPADES, RED_JOKER),
-        pattern=TWO_APART_PAIRS,
+        pattern=APART_TWO_PAIR,
         held=(KING_OF_SPADES, RED_JOKER, QUEEN_OF_SPADES, QUEEN_OF_HEARTS),
         reading=(KING_OF_SPADES, KING_OF_HEARTS, QUEEN_OF_SPADES, QUEEN_OF_HEARTS),
     ),
@@ -529,7 +529,7 @@ SELECTIONS: Final[tuple[SelectionCase, ...]] = (
     SelectionCase(
         description="two pairs read apart offer the copy that faces apart within its own pair",
         cards=(KING_OF_SPADES, KING_OF_SPADES, KING_OF_HEARTS, QUEEN_OF_SPADES, QUEEN_OF_HEARTS),
-        pattern=TWO_APART_PAIRS,
+        pattern=APART_TWO_PAIR,
         offered=((0, 2, 3, 4), (1, 2, 3, 4)),
     ),
     SelectionCase(
@@ -559,13 +559,13 @@ SELECTIONS: Final[tuple[SelectionCase, ...]] = (
     SelectionCase(
         description="two pair apart by card turn away the pair holding one card twice",
         cards=(KING_OF_SPADES, KING_OF_HEARTS, QUEEN_OF_SPADES, QUEEN_OF_SPADES),
-        pattern=APART_TWO_PAIR,
+        pattern=TWO_PAIR_APART_BY_CARD,
         offered=(),
     ),
     SelectionCase(
         description="one pair repeating a card leaves two pairs read apart nothing to offer",
         cards=(KING_OF_SPADES, KING_OF_SPADES, QUEEN_OF_SPADES, QUEEN_OF_HEARTS),
-        pattern=TWO_APART_PAIRS,
+        pattern=APART_TWO_PAIR,
         offered=(),
     ),
 )
@@ -646,7 +646,7 @@ RULES: Final[tuple[RuleCase, ...]] = (
     ),
     RuleCase(
         description="a pair apart by card is two cards of one rank, neither of them the other",
-        pattern=APART_PAIR_BY_CARD,
+        pattern=PAIR_APART_BY_CARD,
         places=2,
         holds=lambda reading: _one_rank(reading) and _alike_apart(reading, lambda card: card),
     ),
@@ -676,13 +676,13 @@ RULES: Final[tuple[RuleCase, ...]] = (
     ),
     RuleCase(
         description="two pair apart by card are two pairs of two ranks, no card of them twice",
-        pattern=APART_TWO_PAIR,
+        pattern=TWO_PAIR_APART_BY_CARD,
         places=4,
         holds=lambda reading: _two_pairs_apart(reading) and _alike_apart(reading, lambda card: card),
     ),
     RuleCase(
         description="two pairs read apart are a pair of two suits beside another of two suits",
-        pattern=TWO_APART_PAIRS,
+        pattern=APART_TWO_PAIR,
         places=4,
         holds=_two_pairs_apart,
     ),

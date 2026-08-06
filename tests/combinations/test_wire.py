@@ -27,6 +27,9 @@ from cardwork.combinations.patterns.same_rank import SameRank
 from cardwork.combinations.patterns.simple import Simple
 from cardwork.combinations.patterns.together import Together
 from cardwork.combinations.poker import (
+    APART_PAIR,
+    APART_POKER,
+    APART_TWO_PAIR,
     FULL_HOUSE,
     HIGH_CARD,
     PAIR,
@@ -51,8 +54,6 @@ SPADES: Final[CardsOrJokers] = (KING_OF_SPADES, QUEEN_OF_SPADES, TEN_OF_SPADES)
 SPADES_AND_A_HEART: Final[CardsOrJokers] = (*SPADES, TWO_OF_HEARTS)
 THREE_SPADES: Final[Pattern] = OneSuit(suit=Suit.SPADE, places=SUITED_PLACES)
 AUTHORED_INSIDE_A_BUILT_IN: Final[Pattern] = Beside(parts=(THREE_SPADES, PAIR))
-APART_PAIR: Final[Pattern] = Apart.of_suit(PAIR)
-TWO_APART_PAIRS: Final[Pattern] = Beside(parts=(APART_PAIR, APART_PAIR))
 CONTRACT: Final[Ranking] = Ranking(
     patterns=(HIGH_CARD, PAIR, THREE_SPADES, AUTHORED_INSIDE_A_BUILT_IN),
     evaluation=REGULAR_EVALUATION,
@@ -99,7 +100,7 @@ ROUND_TRIPS: Final[tuple[RoundTripCase, ...]] = (
     RoundTripCase(description="parts standing beside each other", pattern=TWO_PAIR, reads_as=Beside),
     RoundTripCase(description="parts read together", pattern=STRAIGHT_FLUSH, reads_as=Together),
     RoundTripCase(description="a rule read apart", pattern=APART_PAIR, reads_as=Apart),
-    RoundTripCase(description="rules read apart standing beside each other", pattern=TWO_APART_PAIRS, reads_as=Beside),
+    RoundTripCase(description="rules read apart standing beside each other", pattern=APART_TWO_PAIR, reads_as=Beside),
     RoundTripCase(description="a game's own rule", pattern=THREE_SPADES, reads_as=OneSuit),
     RoundTripCase(
         description="a game's own rule inside a built-in one",
@@ -152,6 +153,13 @@ def test_the_ranking_this_package_states_reads_back_as_itself() -> None:
 
     assert restored == POKER
     assert restored.patterns[-1] == STRAIGHT_FLUSH
+
+
+def test_a_ranking_of_rules_read_apart_carries_the_facing_each_of_them_holds_apart() -> None:
+    restored = Ranking.model_validate_json(APART_POKER.model_dump_json())
+
+    assert restored == APART_POKER
+    assert restored.patterns[1] == APART_PAIR
 
 
 def test_a_pattern_states_the_word_it_travels_under_beside_its_own_fields() -> None:

@@ -74,7 +74,9 @@ travels and replays as the ranking it was.
 state, so `SameRank(places=1)` is refused at the boundary and a dump of a ranking carries its rules. `Demand`,
 `Shape`, `Tally` and `Filling` are frozen dataclasses: they are built by this package out of values already
 checked, they answer one question and are dropped, and a question about a full house builds nine hundred of
-them — which validation would double the cost of for nothing to check.
+them, which a model's validation would double the cost of. The one invariant a reading carries of its own — a
+place reading apart one way — `Shape.__post_init__` holds it to, at the cost of one pass over the spreads the
+reading states.
 
 ---
 
@@ -116,14 +118,55 @@ STRAIGHT_FLUSH = Together(parts=(STRAIGHT, FLUSH))
 A pattern says itself in words, so `str(FULL_HOUSE)` reads `3 of a rank beside 2 of a rank`. Several decks
 in play let a rule reach further, and `SameRank(places=5)` is five of a rank.
 
+### A rule whose places read apart
+
+Several decks also let one card answer two places asking alike, so `SameRank(places=2)` reads the king of
+spades held twice as a pair. Many games want the pair to hold two *suits*: same rank, cards of their own.
+`Apart` states the rule of another pattern with each of its places taking a facing of its own, and poker reads
+a second time:
+
+```python
+APART_PAIR = Apart.of_suit(PAIR)  # two of a rank, showing two suits
+APART_TRIPLET = Apart.of_suit(TRIPLET)
+APART_QUADRUPLET = Apart.of_suit(QUADRUPLET)
+APART_TWO_PAIR = Beside(parts=(APART_PAIR, APART_PAIR))
+APART_FULL_HOUSE = Beside(parts=(APART_TRIPLET, APART_PAIR))
+APART_FLUSH = Apart.of_rank(FLUSH)  # five of a suit, showing five ranks
+```
+
+The size, the strength and the readings are the part's own, so `str(APART_PAIR)` reads `2 of a rank apart by
+suit` and a pair of kings is placed by its rank as ever. `STRAIGHT` and `STRAIGHT_FLUSH` stand as they are,
+each of their places asking for a rank of its own already. `APART_POKER` and `APART_POKER_ORDER` are the ranking
+of these rules, beside `POKER`, which stays the single-deck canon — so a game states which of the two it is
+played by, and a hand whose triplet leans on a card held twice answers the apart ranking with the two pair its
+suits reach.
+
+**A facet is what a place holds of its own.** `Apart.of_card` holds each place to a card the other places of
+the rule left, `of_rank` to a rank of its own and `of_suit` to a suit of its own. Over one rank a card of one's
+own and a suit of one's own ask the same thing, and over one suit a card of one's own and a rank of one's own
+do. They part where a rule reaches over several ranks and several suits at once, which is what tells two pair
+holding four suits from two pair each of whose four cards is its own card.
+
+**A spread by rank or by suit reads over places asking alike.** Where the places ask alike, every card of one
+facing answers every one of them and the filling settles which card takes which place. So `Apart.of_suit(PAIR)`
+stands and `Apart.of_suit(TWO_PAIR)` is refused where it is written, two pair asking one rank of two places and
+another rank of the other two: the rule that holds four suits across both pairs is
+`Beside(parts=(APART_PAIR, APART_PAIR))`, each pair holding two of its own. Reading apart by card holds a place
+to a card of its own whatever that place asks for, so `Apart.of_card(TWO_PAIR)` stands as well, and it reads
+four cards each of them its own. A rule already holding places apart is refused a second spread over them,
+since a place reads apart one way.
+
 ### A rule read back by its word
 
-Six words are in play — `any_cards`, `beside`, `run`, `same_rank`, `same_suit`, `together` — one per
-concrete pattern above, and a game writing a seventh puts its own word in play by writing the class:
+Seven words are in play — `any_cards`, `apart`, `beside`, `run`, `same_rank`, `same_suit`, `together` — one per
+concrete pattern above, and a game writing an eighth puts its own word in play by writing the class:
 
 ```python
 FULL_HOUSE.model_dump()
 # {"kind": "beside", "parts": ({"kind": "same_rank", "places": 3}, {"kind": "same_rank", "places": 2})}
+
+APART_PAIR.model_dump_json()
+# {"kind": "apart", "part": {"kind": "same_rank", "places": 2}, "facet": "suit"}
 
 Ranking.model_validate_json(POKER.model_dump_json()) == POKER  # True
 ```
@@ -146,6 +189,15 @@ one place meet nowhere, which is how a run read together with a flush of another
 reading. `Shape.together` is that meeting place by place and `Shape.beside` is concatenation, which is the
 whole of what the two compound patterns do with the shapes of their parts.
 
+A `Spread` is the other thing a reading states: the places it holds apart, beside the `Facet` each of them
+takes of its own — the card, its rank or its suit. A demand asks a place for a card of the deck and a spread
+holds a place to what the other places of that spread left, so the two together are the whole of what a
+reading says, and `Apart` is the pattern that states one. A reading carries its spreads the way it carries its
+demands: `Shape.beside` shifts each part's spread onto the places that part takes in the run of them, and
+`Shape.together` carries them as they stand, every part reading the same places. Every place reads apart in
+one spread at the most, which a reading is held to where it is built, and `spreading()` reads that back the
+way the filling asks it — the spread standing at each place.
+
 ### Evaluation
 
 | field | what it states |
@@ -163,6 +215,11 @@ wild, and copies counted.
 three of diamonds are three diamonds. `Duplicates.COLLAPSE` reads a repeated card once, so the same three
 cards are two diamonds. A repeated rank lengthens no run either way, since a run asks each of its places
 for a rank of its own.
+
+Which of the two a game reads by is a statement about the whole deck, and a rule may hold its own places apart
+besides: a game where a pair shows two suits while a triplet still admits three copies of a card counts copies
+and states the pair as `Apart.of_suit(PAIR)`, which §2 is about. Where a reading collapses repeats, every card
+of a hand faces apart from every other and a rule read apart asks what the rule it reads asks.
 
 **The runs a reading admits.** `stretches(size)` lists every run of that many consecutive ranks, the
 highest-topped first, and the wheel stands among them where the reading turns — ten of them at five cards
@@ -210,6 +267,15 @@ natural kings holding their own pair.
 A joker reads as the strongest card its place admits and the reading has yet to name, so two kings and two
 jokers read `K♠ K♥ K♦ K♣` and three jokers read three aces.
 
+**Places that read apart take cards facing apart.** A place inside a spread is reached through the gate that
+spread keeps for the facing a card shows, and a gate carries one card at a time, so two copies of the king of
+spades reach one place of a pair read apart by suit between them and the filling settles which of them takes
+it. Gates are a second resource of the same matching, so the two statements above stand as they are: as many
+places are filled as any assignment could fill, and the strongest cards are the ones held. A joker at an open
+place of a spread reads as the strongest card its demand admits whose facing the spread leaves free, and the
+shape falls short where those facings run out — which is what four suits do to five of a rank read apart by
+suit, however many jokers stand behind it.
+
 ### What a question costs
 
 | pattern | shapes |
@@ -222,6 +288,10 @@ jokers read `K♠ K♥ K♦ K♣` and three jokers read three aces.
 | a run of *n* | 14 − *n*, and the wheel besides |
 | a suited run of *n* | four times that |
 | a pair beside loose places | 13 |
+| any of them read apart | the same count |
+
+A spread leaves that count as it stands: a pair holding two suits is the thirteen shapes a pair is, and reading
+places apart is a question the filling answers as it hands out the places.
 
 Filling one shape reads the cards once for each place and rearranges no further than the places reach, so a
 hand of seven cards and a hand of fifty-two cost the same question. No subset of a hand is ever enumerated,
@@ -249,7 +319,8 @@ Strength is the pattern's own statement, and it reads the ranks of an instance:
   it shows and a run of loose places by its cards in turn;
 - `Run` reads the card that tops it, and the wheel is topped by its five, so it stands below a six-high
   straight;
-- a pattern made of parts keys on its parts **in the order it names them**.
+- a pattern made of parts keys on its parts **in the order it names them**;
+- `Apart` reads as the rule it holds apart, so a pair of two suits is settled by its rank as any pair is.
 
 That last rule is why a full house of twos over aces stands below one of threes over kings: `FULL_HOUSE`
 names its triplet first. It is also why `Beside(parts=(PAIR, AnyCards(places=3)))` compares two hands by
@@ -276,6 +347,13 @@ POKER = Ranking(
     evaluation=REGULAR_EVALUATION,
 )
 ```
+
+`APART_POKER` names the same nine rules with each rule that asks alike of its places read apart (§2) — the pair,
+the triplet, the quadruplet and the flush — so two pair and the full house are built of those, and the high
+card, the straight and the straight flush stand as they are. It is the ranking a game of several decks holds up
+where a pair means two suits, and a hand answers whichever of the two it is held to. The count it answers at
+follows: five cards whose triplet leans on a card held twice are a full house under `POKER` and two pair under
+`APART_POKER`, so they stand in the contest of four cards there.
 
 **`strongest` takes cards and `order` takes combinations.** A hand is a run of cards, and `strongest`
 reads one and answers with the `Combination` it forms — the pattern it answers, the cards that make it, and
@@ -384,6 +462,10 @@ instance per reading is what a person wants to read; three pairs are three moves
 different king in hand and that is the whole of the decision. The strongest patterns lead, and each set of
 places comes out once however many patterns it answers.
 
+A rule read apart offers the places whose cards face apart, which is the same rule the filling reads by: a hand
+holding the king of spades twice beside the king of hearts offers a pair read apart by suit two ways, each copy
+of the spades standing beside the hearts.
+
 What a game gets by asking is that its move list and its rules are one statement: a pattern added to the
 ranking is offered from the next move onwards, with no enumerator of its own to keep in step.
 
@@ -419,7 +501,8 @@ matches(hand, SameRank(places=4), evaluation) or matches(
 ```
 
 Its evaluation counts copies, since several standard decks are in play and three spade cards are three of a
-suit even where two of them are the same spade.
+suit even where two of them are the same spade. A game wanting three ranks of the suit instead states that in
+the rule — `Apart.of_rank(THREE_OF_A_SUIT)` — and keeps the reading of the deck as it is.
 
 **A game of single cards** (`cardgames.backend.showdown`) compares one card against another and needs one winner
 every time, so it reads `REGULAR_ORDER` from `cardwork.cards.order` and asks this package nothing.

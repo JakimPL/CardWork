@@ -5,6 +5,7 @@ from cardwork.cards.rank import Ranks
 from cardwork.combinations.combination import Combination
 from cardwork.combinations.pattern import Pattern
 from cardwork.combinations.patterns.any_cards import AnyCards
+from cardwork.combinations.patterns.apart import Apart
 from cardwork.combinations.patterns.beside import Beside
 from cardwork.combinations.patterns.run import Run
 from cardwork.combinations.patterns.same_rank import SameRank
@@ -28,6 +29,13 @@ STRAIGHT: Final[Pattern] = Run(places=POKER_HAND)
 FLUSH: Final[Pattern] = SameSuit(places=POKER_HAND)
 STRAIGHT_FLUSH: Final[Pattern] = Together(parts=(STRAIGHT, FLUSH))
 
+APART_PAIR: Final[Pattern] = Apart.of_suit(PAIR)
+APART_TRIPLET: Final[Pattern] = Apart.of_suit(TRIPLET)
+APART_QUADRUPLET: Final[Pattern] = Apart.of_suit(QUADRUPLET)
+APART_TWO_PAIR: Final[Pattern] = Beside(parts=(APART_PAIR, APART_PAIR))
+APART_FULL_HOUSE: Final[Pattern] = Beside(parts=(APART_TRIPLET, APART_PAIR))
+APART_FLUSH: Final[Pattern] = Apart.of_rank(FLUSH)
+
 POKER: Final[Ranking] = Ranking(
     patterns=(
         HIGH_CARD,
@@ -44,3 +52,20 @@ POKER: Final[Ranking] = Ranking(
 )
 
 POKER_ORDER: Final[Preorder[Combination]] = POKER.total_order
+
+APART_POKER: Final[Ranking] = Ranking(
+    patterns=(
+        HIGH_CARD,
+        APART_PAIR,
+        APART_TWO_PAIR,
+        APART_TRIPLET,
+        STRAIGHT,
+        APART_FLUSH,
+        APART_FULL_HOUSE,
+        APART_QUADRUPLET,
+        STRAIGHT_FLUSH,
+    ),
+    evaluation=REGULAR_EVALUATION,
+)
+
+APART_POKER_ORDER: Final[Preorder[Combination]] = APART_POKER.total_order
