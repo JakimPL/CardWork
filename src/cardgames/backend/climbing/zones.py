@@ -12,11 +12,12 @@ def climbing_zones(players: int, deck: Deck) -> Zones:
     seat says which zone that word reaches. It lies face down, which its owner reads and the rest of the table
     reads the size of.
 
-    The stack is the one pile of this game, holding the cards a round has yet to deal and the combinations it has
-    put down: what a seat plays lands there face up, so the whole table reads the combination it stands on, and
-    the deal of the next round gathers everything back into it. An equal share of the deck goes to every seat and
-    what that leaves over lies face down on the discard, so a table of five dealt one standard deck sets two
-    cards aside that nobody holds and nobody reads.
+    The stack is the one pile of this game, holding the cards a round has yet to deal and the combination the
+    contest stands on: what a seat plays lands there face up for the whole table to read, and the deal of the
+    next round gathers everything back into it. An equal share of the deck goes to every seat and what that
+    leaves over lies face down on the discard, so a table of five dealt one standard deck sets two cards aside
+    that nobody holds and nobody reads. Every combination beaten joins them as the next one lands, which leaves
+    the discard holding everything out of play as a count of what the round has spent.
     """
     return {
         **HANDS.zones(players),

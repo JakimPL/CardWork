@@ -290,7 +290,7 @@ it is the same rule that arms every other move: the cards in hand are exactly th
 for this one is none of them. So a pass stands ready the moment a turn arrives and stands down as soon as a
 card is picked up, and the two states need no rule of their own. The caption of such a gesture is lettered on
 the place a player presses rather than read as a title over one, so a game states it in words that carry at the
-size of a card.
+size of a card — climbing letters its own with the word that game is played by, which is *Pass*.
 
 That is the whole of the contract. Which cards light up as a selection grows, when a heap collapses to its top
 card, how a highlight looks and how large a card is drawn: all of it is the interface's, and none of it is a
@@ -364,7 +364,8 @@ points at, and whose zone either one is was never part of what it states.
 The fourth is the first to state a gesture sent by its word: a seat gives its turn up over the combination
 standing on the table, and the caption is lettered on the place it presses (§5). It is also the game that
 spells a lay out where a builder would have read wrong — the stack it plays onto is fanned rather than heaped,
-since the combination a seat has to climb over is what a heap would put away (`docs/games/climbing.md` §5).
+since the combination a seat has to climb over is what a heap would put away, and uncounted, since the cards
+lying there are the count (`docs/games/climbing.md` §5).
 
 They are held to their own rules by test: every move a game's `legal_moves` offers a seat is matched against
 the layout that seat is served, and the gesture it resolves to has to pick in a zone the projection holds and

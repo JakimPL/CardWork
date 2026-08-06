@@ -438,10 +438,10 @@ A pattern built per question is what lets one line stand for a pair, a triplet a
 in it answers to no size at all. Its evaluation leaves jokers unwild, since the one standard deck it is played
 with holds none.
 
-**A game of climbing combinations** (`cardgames.backend.climbing`) recognises seven patterns across four
-counts — one card, a pair, a triplet, and five cards reading as a straight, a flush, a full house or a
-straight flush — and a seat answering the table is held to the count standing on it. Four of the questions
-above are the whole of its card rules:
+**A game of climbing combinations** (`cardgames.backend.climbing`) recognises eight patterns across four
+counts — one card, a pair, a triplet, and five cards reading as a straight, a flush, a full house, four of a
+rank beside any card, or a straight flush — and a seat answering the table is held to the count standing on it.
+Four of the questions above are the whole of its card rules:
 
 ```python
 CLIMBING_RANKING.selections(hand)  # every combination a seat on lead can put down

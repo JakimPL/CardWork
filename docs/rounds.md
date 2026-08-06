@@ -146,9 +146,9 @@ boundary sees it. Answer with an empty run once the round owes nothing: that is 
 `round_over`.
 
 **Three hooks arrive with an answer.** `next_leader` draws a seat at random before the first round and takes the
-seat after the leader thereafter, which is the rotation every game here wants. `score_round` awards the tally the
-round kept. `match_over` reads the conclusion off the cursor. A game that seats its rounds by the standing, or
-counts rounds won rather than points scored, overrides one of the three:
+seat after the leader thereafter, which is the rotation three of the games here want. `score_round` awards the
+tally the round kept. `match_over` reads the conclusion off the cursor. A game that seats its rounds by the
+standing, or counts rounds won rather than points scored, overrides one of the three:
 
 ```python
 def score_round(self, position: Position[MatchState]) -> Points:
@@ -221,7 +221,8 @@ position of every round.
 
 **A game that asks something of the round it opens on states it as a predicate, and the deal is drawn until the
 predicate holds.** `admitted(counts, rng, admits)` stands beside `effects` for that — a seat holding a hand
-still to be played for, a hand with a move to make in it:
+still to be played for, a hand with a move to make in it, a card the match opens from lying in somebody's hand
+rather than among the cards the shares left over:
 
 ```python
 return Redeal(position, pile=PILE, face_down=True).admitted(counts, rng, self._still_to_be_won(leader))
@@ -269,8 +270,17 @@ cards each seat is caught holding, and nothing at all for the seat that went out
 which is the point of keeping the direction on the state, since a game scoring what it is caught with counts
 into the same tuple as a game scoring what it wins. `docs/games/climbing.md` states the game whole.
 
-Between them they override none of `next_leader`, `score_round` and `match_over`: a seat drawn for the first
-round and the next seat after, with the round's tally added into the standing and the ending read off the
-clauses the table stated, is what all four of them wanted. The three clauses are one vocabulary, so any of
-these games runs to any of the three endings — a two-round `passing` match and a `shedding` match to fifty
-points are both a line of configuration, not a line of code.
+**It is also the one that answers `next_leader` for itself**, since a round of it is led by the seat that went
+out of the one before: the seat is a field of the cursor read back, and the draw the hook arrives with stands
+where no round has been played yet. Its first round is the round its own opening is read out of — the deal is
+drawn again until some seat holds the card the match opens from, and `opening_state` writes a phase with nobody
+to act, which `advance_round` answers by reading the hands and naming that seat. So the whole of its opening is
+one predicate on the deal, one hook overridden and one settlement transaction, all three of them stated above
+for whatever game wanted them.
+
+Between them they override one of `next_leader`, `score_round` and `match_over`, and the leader climbing seats
+its rounds by is it: the round's tally added into the standing and the ending read off the clauses the table
+stated are what all four of them wanted, and a seat drawn for the first round with the next seat after is what
+three of them wanted. The three clauses are one vocabulary, so any of these games runs to any of the three
+endings — a two-round `passing` match and a `shedding` match to fifty points are both a line of configuration,
+not a line of code.

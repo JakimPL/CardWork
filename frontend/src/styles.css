@@ -368,9 +368,10 @@ body {
  * One zone where the layout puts it, and the place beside a hand where a turn is said in words.
  *
  * A zone is a drawing rather than a passage of text: a pointer travelling across it carries cards, and the reading
- * a browser makes of a drag over words has nothing to add to that. So a run dragged across paints no selection of
- * its own, and what a player is left holding is the cards. The names on the table stay text and stay selectable,
- * since a name is something a reader may want to take away with them.
+ * a browser makes of a drag over words has nothing to add to that. So the section is taken out of the browser's own
+ * selection whole, name and count and cards alike, since those lie in one range and a carry begins wherever the hand
+ * came down. What a player is left holding after one is cards. The line saying where play stands and the reports
+ * that stop the table stay text, since those are the words a reader may want to take away.
  */
 
 .slot {

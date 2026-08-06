@@ -48,9 +48,9 @@ class ClimbingGame(RoundGame[ClimbingState]):
     """A match of rounds in which a combination is answered by a stronger one of as many cards.
 
     A round deals the deck out in equal shares. The seat on lead puts down any combination this game is played
-    by — one card, a pair, a triplet, or five cards reading as a straight, a flush, a full house or a
-    straight flush — and every other seat either climbs over it with a stronger combination of as many cards or
-    gives its turn up. `rules.CLIMBING_RANKING` holds that vocabulary whole, and `climbs` is the contest itself:
+    by — one card, a pair, a triplet, or five cards reading as a straight, a flush, a full house, four of a rank
+    beside any card, or a straight flush — and every other seat either climbs over it with a stronger combination
+    of as many cards or gives its turn up. `rules.CLIMBING_RANKING` holds that vocabulary whole, and `climbs` is the contest itself:
     as many cards, standing higher.
 
     The round closes on the first seat to play its last card, and every seat is caught with what its hand still

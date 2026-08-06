@@ -1192,16 +1192,23 @@ The origin is a table where the box has been opened and nothing else has happene
 decisions. Every decision — how the cards were shuffled, who got how many, who leads — is an effect.
 
 That line is what puts the opening state in `advance` rather than in the constructor. Take the rule *the
-player holding 2♦ leads*. `_initialize` runs before anything is dealt, so nobody holds 2♦ yet; and the
-deck it might be handed is still in its given order, because the shuffle is a `Reorder` produced inside
-`_deal_cards`. A leader computed there would be computed from an arrangement that never occurs.
+player holding 2♦ leads*, which is how a climbing match opens. `_initialize` runs before anything is dealt, so
+nobody holds 2♦ yet; and the deck it might be handed is still in its given order, because the shuffle is a
+`Reorder` produced inside `_deal_cards`. A leader computed there would be computed from an arrangement that
+never occurs.
 
 So `_initialize` states what is knowable before a card moves — a `"deal"` phase, an empty `to_act`, a
 zeroed score — and the rule goes where every other "whose turn is it" answer lives: `advance`, run on the
 dealt position, in the branch that reads `phase == "deal"`. The branch that runs after every later move
-answers the same question from the move it was given. In Big Two the leader is the 2♦ holder at the start
-and the next player clockwise afterwards; splitting the first answer into the dealer would put two answers
-to one question in two places, with nothing but chronology separating them.
+answers the same question from the move it was given. In climbing the leader is the 2♦ holder to open with
+and the seat that went out of the last round thereafter; splitting the first answer into the dealer would put
+two answers to one question in two places, with nothing but chronology separating them.
+
+`ClimbingGame` is that shape written out (`docs/games/climbing.md` §4). Its `opening_state` writes a `choosing`
+phase naming no seat, since the seat the match opens on stands in cards it is handed too early to read;
+`advance_round` answers that phase by reading the dealt hands and writing the turn, which is one settlement
+transaction and the second of the two a table stands up with. So the choice is journaled, replays without a
+generator, and is answerable after the fact from the transaction that made it.
 
 Three things follow that a constructor-computed leader would not give:
 
@@ -1243,7 +1250,7 @@ The games in `cardgames` are the worked examples, and between them they exercise
 | `cardgames.backend.passing` | a sequential turn: one exchange with the pile, then a pass round the table | an outcome a rules question over `combinations` decides, and a match ending on a lead rather than a count |
 | `cardgames.backend.showdown` | a simultaneous turn: every seat commits one sealed card, and they turn over together | `to_act` holding every seat, `HIDDEN` zones, and a turn settled behind no move at all |
 | `cardgames.backend.shedding` | a turn of two minds: shed a set of one rank, or draw a card and pass it on | a move naming several cards, a hand that grows, and a game that added no primitive below it |
-| `cardgames.backend.climbing` | a combination put down on lead, and the seats after it climbing over what stands there or passing | a `Ranking` asked for every move a hand can make, a `Combination` carried in the cursor, a turn given up by word, and a standing of penalties won at the low end |
+| `cardgames.backend.climbing` | a combination put down on lead, and the seats after it climbing over what stands there or passing | a `Ranking` asked for every move a hand can make, a `Combination` carried in the cursor, a turn given up by word, a leader read off the cards a deal handed out, and a standing of penalties won at the low end |
 
 **All four are played end to end over the endpoints in the suite** (§13), and each is opened by name through
 `cardtable` (§10, *The host*). Climbing is the one that reads the standing the other way about: a round closes
@@ -1602,6 +1609,20 @@ down, and clicking the page clears it. The renderer holds no
 count and no rank in any of it: multi-card selection is the general case and a one-card move is where it
 happens to stop.
 
+**Whether the table is asking anything of this seat is read where the player is already looking.** The moves a
+view serves are the whole of what a seat may do, so a seat served none is a seat with nothing to do: its own
+panel lowers every card it holds and keeps their colour, which reads as a turn standing somewhere else. A turn
+arriving marks that panel with the yellow a plaque and a station take at the same moment, so where the turn is
+says the same thing in the middle of the table and at the near edge of it. The two quiets a hand can read in are
+two statements rather than one twice over: a card drained of its colour is a card the moves in play name no use
+for, and a hand lowered whole is a hand nothing is being asked of. A spectator holds a panel of nobody's and
+reads the table as it stands.
+
+**A zone is a drawing rather than a passage of text.** A pointer travelling across one carries cards, so the
+sheet takes the browser's own selection off the zones and its drag off the artwork: a run dragged through paints
+no highlight the page did not draw, and what a player is left holding after a carry is cards. The line under the
+cards and the reports over them stay text, since those are the words a reader may want to take away.
+
 **A move landing on no place is said where its words are drawn.** A pass names no card and no destination (§9),
 and the arming rule reads it by itself: the cards in hand are exactly the cards it names, which is none of them,
 so it stands ready the moment a turn arrives and stands down the moment a card is picked up. What the panel
@@ -1639,6 +1660,21 @@ may be ordered, so a spread reading a zone by the card on top of it says its dep
 ordering to the zones a player sees whole. The table settles it like any other command: the cards lie as the table
 holds them until the commit carrying the new order arrives, which is also what tells every other seat nothing — a
 permuted run of placeholders reads the same as it read (§6).
+
+**A hand is put in order by asking for one as well.** Two presses stand at the end of the name of any zone this
+seat lays out that holds a card and another to stand beside it — one reading the run by rank, one by suit — and
+each lays the whole run down in the order it names. Which end the next press reads from is read off the run in
+front of the player rather than remembered: a press sorts from the low card up unless the run already reads that
+way, in which case it turns the run round, and each press letters the direction it is about to apply. So one
+press per ordering carries both readings of it, and a command the table refuses leaves no button lettered with a
+direction the cards deny. `play/ordering.ts` holds the order those readings are made against — the ranks as the
+deck spells them, the suits as `Suit` declares them, each figure breaking the other's ties, and a card the order
+can tell no way apart from its neighbour left lying where it lay. It is a display order the page owns rather
+than a ranking a game states,
+since sorting a hand is the player's convenience and two of these games rank no card at all; a game whose hand
+wanted its own reckoning would state it on the scene. What a press sends is a permutation of the zone's own
+positions, which is the command a carry through the run sends, so the optimistic order, the retry and the
+refusal are the ones already described.
 
 **A move is sent by carrying its cards onto the place it goes to, which is one gesture with the ordering of a
 run.** Where the cards are taken is what says which of the two a hand is doing, and the whole of it is seven rules:
