@@ -4,6 +4,28 @@
  */
 
 export interface paths {
+    "/offerings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Offerings
+         * @description Every game this host offers, and the tables and deck counts each of them is played with.
+         *
+         *     A page draws its whole choice from this, which is what leaves it holding the name of no game.
+         */
+        get: operations["read_offerings_offerings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tables/{table_id}/arrangements": {
         parameters: {
             query?: never;
@@ -27,6 +49,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tables/{table_id}/choice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Settle Choice
+         * @description Settle what the table plays, which every guest holding a say may do.
+         */
+        put: operations["settle_choice_tables__table_id__choice_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tables/{table_id}/deal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deal Table
+         * @description Deal the table the company settled on, which opens it and ends the gathering.
+         */
+        post: operations["deal_table_tables__table_id__deal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tables/{table_id}/events": {
         parameters: {
             query?: never;
@@ -41,6 +103,66 @@ export interface paths {
         get: operations["read_events_tables__table_id__events_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tables/{table_id}/gathering": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Gathering
+         * @description The gathering as this guest reads it: the company, what is settled, and where it stands.
+         */
+        get: operations["read_gathering_tables__table_id__gathering_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tables/{table_id}/gathering/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Attendance
+         * @description How the gathering stands, again at every revision it reaches, until the table is dealt.
+         */
+        get: operations["read_attendance_tables__table_id__gathering_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tables/{table_id}/guests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Arrive
+         * @description Admit one person on the code they offered, answering with the token they will speak through.
+         */
+        post: operations["arrive_tables__table_id__guests_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -112,6 +234,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tables/{table_id}/seat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Claim Seat
+         * @description Take a seat at the table, or stand up from the one held by naming none.
+         */
+        put: operations["claim_seat_tables__table_id__seat_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tables/{table_id}/view": {
         parameters: {
             query?: never;
@@ -147,6 +289,18 @@ export interface components {
          * @enum {string}
          */
         ActionKind: "pass" | "play" | "take" | "give" | "reject" | "discard" | "declare";
+        /**
+         * Admitted
+         * @description What a guest is answered on arrival: the token they speak through, and the gathering they have joined.
+         *
+         *     The token is the whole of what this server knows of them. It rides the fragment of an address, which a
+         *     browser sends to nobody, and reaches every endpoint in a header of its own.
+         */
+        Admitted: {
+            gathering: components["schemas"]["GatheringView"];
+            /** Token */
+            token: string;
+        };
         AnyAction: components["schemas"]["Pass"] | components["schemas"]["Play"] | components["schemas"]["Take"] | components["schemas"]["Give"] | components["schemas"]["Reject"] | components["schemas"]["Discard"] | components["schemas"]["Declare"];
         /**
          * ArrangementRequest
@@ -169,6 +323,16 @@ export interface components {
             zone: string;
         };
         /**
+         * Arriving
+         * @description One person arriving at a table: the code that admits them, and the name they will be read by.
+         */
+        Arriving: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+        };
+        /**
          * Award
          * @description Which end of a standing a match is won at.
          *
@@ -179,7 +343,62 @@ export interface components {
          * @enum {string}
          */
         Award: "highest" | "lowest";
+        /**
+         * Capacity
+         * @description The tables a game is played at: the fewest seats it needs and the most it holds.
+         *
+         *     A game states its seating as a declaration rather than a check, so the range a reader looks for stands
+         *     beside the vocabulary the game is played with, and the engine holds every table it opens to it:
+         *
+         *         capacity: ClassVar[Capacity] = Capacity(least=2, most=5)
+         *
+         *     A game played at one size states that size as both. A game bounded by the cards it deals states the
+         *     table its deck reaches, since a seating range is something a game has settled rather than discovered.
+         */
+        Capacity: {
+            /** Least */
+            least: number;
+            /** Most */
+            most: number;
+        };
         CardIndex: number;
+        /**
+         * Choice
+         * @description What a gathering has settled to play: the game, the table, the decks it is dealt from, and where it ends.
+         *
+         *     This is what a table is opened with once the deal is called for, and every field of it is something the
+         *     company settles rather than something the host fixes. The game is named as a plain word for the same reason
+         *     a phase is: the vocabulary belongs to whatever holds the rules, and the adapter reads a name it confirms
+         *     against what the host says it offers.
+         */
+        Choice: {
+            conclusion: components["schemas"]["Conclusion"];
+            /** Decks */
+            decks: number;
+            /** Game */
+            game: string;
+            /** Players */
+            players: number;
+        };
+        /**
+         * Choosing
+         * @description A guest settling what the table plays.
+         */
+        Choosing: {
+            /** Base Revision */
+            base_revision: number;
+            choice: components["schemas"]["Choice"];
+        };
+        /**
+         * Claiming
+         * @description A guest taking a seat, or standing up from the one they hold by naming none.
+         */
+        Claiming: {
+            /** Base Revision */
+            base_revision: number;
+            /** Seat */
+            seat: number | null;
+        };
         /**
          * CommandAccepted
          * @description The sequence a command was committed at, which the table stands one commit past.
@@ -211,6 +430,41 @@ export interface components {
          */
         Commit: "zone" | "seat" | "word";
         /**
+         * Conclusion
+         * @description How long a match runs: the clauses it ends on, of which a match states at least one.
+         *
+         *     A match ends on a count of rounds played, on a score some seat reaches, or on a lead one seat opens over the
+         *     next best, and a table states whichever of those the match it opens is played to. Several stated together end
+         *     it on the first of them the standing meets, which is how a match runs to five hundred points or ten rounds,
+         *     whichever arrives first.
+         *
+         *     | clause | ends the match once |
+         *     |---|---|
+         *     | `rounds` | that many rounds have been played |
+         *     | `target` | some seat holds that score, whether reaching it wins the match or loses it |
+         *     | `lead` | the seat at the winning end of the standing leads the next best by that margin |
+         *
+         *     This is what a table is opened with, and the clauses it states are stamped onto the cursor the table opens on,
+         *     so a replayed position describes the ending it was always running to. `RoundState` carries them there and
+         *     reads them as `concluded`.
+         */
+        Conclusion: {
+            /** Lead */
+            lead?: number | null;
+            /** Rounds */
+            rounds?: number | null;
+            /** Target */
+            target?: number | null;
+        };
+        /**
+         * Dealing
+         * @description A guest calling for the deal, which opens the table and ends the gathering.
+         */
+        Dealing: {
+            /** Base Revision */
+            base_revision: number;
+        };
+        /**
          * Declare
          * @description A claim a seat makes about cards it holds, for the rules to confirm or refuse.
          *
@@ -238,6 +492,29 @@ export interface components {
              * @enum {string}
              */
             kind: "discard";
+        };
+        /**
+         * GatheringView
+         * @description A gathering as one of its guests reads it: the company, what is settled, and where the gathering stands.
+         *
+         *     `revision` counts the changes the gathering has been through, and a command quotes the one it was built on
+         *     the way a move quotes a sequence, so two guests settling the choice at once leaves the second told rather
+         *     than overruled. `dealt` turns true once, which is what carries every page from the gathering to the table.
+         */
+        GatheringView: {
+            choice: components["schemas"]["Choice"];
+            /** Code */
+            code: string;
+            /** Company */
+            company: components["schemas"]["Guest"][];
+            /** Dealt */
+            dealt: boolean;
+            /** Mine */
+            mine: string;
+            /** Revision */
+            revision: number;
+            /** Table */
+            table: string;
         };
         /**
          * Gesture
@@ -278,6 +555,22 @@ export interface components {
             kind: "give";
             /** Target Player */
             target_player: number;
+        };
+        /**
+         * Guest
+         * @description One person at a gathering as the whole company reads them: the name, the seat, and whether they are here.
+         *
+         *     The name is what a guest arrived under and the whole of their identity at the table. The seat is the one
+         *     they have taken, and none while they are standing. Presence follows the stream a page holds open, so the
+         *     company reads as the room does.
+         */
+        Guest: {
+            /** Name */
+            name: string;
+            /** Present */
+            present: boolean;
+            /** Seat */
+            seat: number | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -365,6 +658,23 @@ export interface components {
             move: components["schemas"]["Move"];
         };
         NonEmptyIndices: components["schemas"]["CardIndex"][];
+        /**
+         * Offering
+         * @description One game a host offers, the tables it seats and the deck counts it is dealt from.
+         *
+         *     A client draws every control of a gathering from these, so a page settles a game while holding the name of
+         *     none: what may be chosen is what the host says it offers, and a choice is confirmed against the same answer
+         *     before a card is dealt.
+         */
+        Offering: {
+            /** Decks */
+            decks: number[];
+            /** Game */
+            game: string;
+            seats: components["schemas"]["Capacity"];
+            /** Title */
+            title: string;
+        };
         Order: components["schemas"]["CardIndex"][];
         /**
          * Pass
@@ -533,6 +843,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    read_offerings_offerings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Offering"][];
+                };
+            };
+        };
+    };
     arrange_zone_tables__table_id__arrangements_post: {
         parameters: {
             query?: never;
@@ -570,6 +900,80 @@ export interface operations {
             };
         };
     };
+    settle_choice_tables__table_id__choice_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Seat-Token"?: string | null;
+            };
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Choosing"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GatheringView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deal_table_tables__table_id__deal_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Seat-Token"?: string | null;
+            };
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Dealing"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GatheringView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_events_tables__table_id__events_get: {
         parameters: {
             query?: {
@@ -593,6 +997,110 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_gathering_tables__table_id__gathering_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Seat-Token"?: string | null;
+            };
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GatheringView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_attendance_tables__table_id__gathering_events_get: {
+        parameters: {
+            query?: {
+                since?: number;
+            };
+            header?: {
+                "Last-Event-ID"?: number | null;
+                "X-Seat-Token"?: string | null;
+            };
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    arrive_tables__table_id__guests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Arriving"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Admitted"];
                 };
             };
             /** @description Validation Error */
@@ -694,6 +1202,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommandAccepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    claim_seat_tables__table_id__seat_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Seat-Token"?: string | null;
+            };
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Claiming"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GatheringView"];
                 };
             };
             /** @description Validation Error */

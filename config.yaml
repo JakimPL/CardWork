@@ -1,11 +1,13 @@
-game: passing
-
 table:
   name: cardtable
+  grace_seconds: 2.0
+
+choice:
+  game: passing
   players: 3
+  decks: 1
   conclusion:
     lead: 2
-  grace_seconds: 2.0
 
 artwork:
   pack: kare
@@ -14,4 +16,5 @@ artwork:
 service:
   host: 127.0.0.1
   port: 8421
+  advertise: null
   log_level: info

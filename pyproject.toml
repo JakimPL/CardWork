@@ -103,8 +103,8 @@ layers = [
     "cardtable.cli",
     "cardtable.catalogue",
     "cardtable.hosting",
-    "cardtable.config",
-    "cardtable.settings : cardtable.service : cardtable.interface : cardtable.artwork : cardtable.seats",
+    "cardtable.config : cardtable.reaching",
+    "cardtable.settings : cardtable.service : cardtable.interface : cardtable.artwork",
     "cardtable.games : cardtable.paths",
 ]
 

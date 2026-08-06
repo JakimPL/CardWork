@@ -32,6 +32,16 @@ def spoken(ranks: Ranks) -> str:
     return APART.join(ranks)
 
 
+def read_out(offered: str) -> str:
+    """One code as it is read out, and as it stands where it reads as no hand of ranks.
+
+    This is the form a code is shown in wherever a person is meant to pass it on, since ranks apart from one
+    another are what one person says and another writes down.
+    """
+    ranks = ranks_in(offered)
+    return offered if ranks is None else spoken(ranks)
+
+
 def ranks_in(offered: str) -> Ranks | None:
     """The hand of ranks a code reads as, and None where what was offered reads as no hand at all.
 

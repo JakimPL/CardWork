@@ -2,27 +2,38 @@ from argparse import ArgumentParser
 from collections.abc import Mapping, Sequence
 from json import dumps
 from pathlib import Path
+from time import monotonic
 from typing import Final
 
 from cardserver.app import create_app
-from cardserver.identity import TokenSeats
+from cardserver.gathering import Gatherings, SeatedSay, Turnstile
 from cardserver.registry import TableRegistry
+from cardtable.catalogue import OFFERINGS, Deals
 from cardtable.paths import SPECIFICATION
 
 NO_GRACE: Final[float] = 0.0
+NO_SEED: Final[int] = 0
 INDENT: Final[int] = 2
 
 Document = Mapping[str, object]
 
 
 def document() -> Document:
-    """The OpenAPI document of the protocol a table answers, read off an application serving no table.
+    """The OpenAPI document of the protocol a table answers, read off an application gathering no table.
 
     A schema follows from the endpoints rather than from any position, so this builds the application with an
-    empty registry: what a client sends and what it is answered stands the same whichever game is in service.
+    empty registry and a lobby nobody has arrived at: what a client sends and what it is answered stands the
+    same whichever game is in service. The lobby is the host's own, since the endpoints a table is gathered at
+    answer only where one is held.
     """
     registry = TableRegistry(NO_GRACE)
-    return create_app(registry, TokenSeats({}), None).openapi()
+    gatherings = Gatherings(
+        Deals(registry, NO_SEED),
+        OFFERINGS,
+        SeatedSay(),
+        Turnstile.watching(monotonic),
+    )
+    return create_app(registry, gatherings, gatherings).openapi()
 
 
 def write(specification: Document, into: Path) -> int:

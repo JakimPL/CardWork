@@ -1,5 +1,5 @@
 from cardserver.app import create_app
-from cardserver.codes import CODE_LENGTH, a_drawn_code, ranks_in, spoken
+from cardserver.codes import CODE_LENGTH, a_drawn_code, ranks_in, read_out, spoken
 from cardserver.errors import (
     CardserverError,
     GatheringOver,
@@ -92,5 +92,6 @@ __all__ = [
     "a_drawn_code",
     "create_app",
     "ranks_in",
+    "read_out",
     "spoken",
 ]

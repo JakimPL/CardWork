@@ -12,7 +12,7 @@ from cardserver.protocol import TableId
 ROOT: Final[str] = "/"
 MOUNT: Final[str] = "interface"
 TABLE_FIELD: Final[str] = "table"
-TOKEN_FIELD: Final[str] = "token"
+CODE_FIELD: Final[str] = "code"
 
 KEEPING: Final[str] = "cache-control"
 HASHED: Final[str] = "assets/"
@@ -58,17 +58,17 @@ def serve_interface(app: FastAPI, built: Path) -> Path | None:
     return built
 
 
-def joining(address: str, table: TableId, token: str | None) -> str:
-    """The address one tab opens at to take a seat of a table, and to watch it where it holds no token.
+def joining(address: str, table: TableId, code: str) -> str:
+    """The address one tab opens at to arrive at a gathering, name itself and take a seat.
 
-    The table and the token stand in the fragment of the address, which a browser keeps to itself: the
-    interface reads both out of it as it loads and offers the token in a header from then on, so a token
-    stands in no address a server writes down. That leaves one line the whole of what a player is handed.
+    The table and the code stand in the fragment of the address, which a browser keeps to itself: the interface
+    reads both out of it as it loads and offers the code once, on arrival, so what admits a guest stands in no
+    address a server writes down. The token minted there takes the code's place in the fragment, which leaves
+    one line the whole of what a player is handed and a reload rejoining the seat it holds.
 
     Args:
         address: where the table answers, as a browser reaches it.
-        table: the name the table is in service under.
-        token: the token holding a seat there, and None for a tab watching the table.
+        table: the name the table gathers under.
+        code: the hand of ranks the gathering admits on.
     """
-    stated = {TABLE_FIELD: table} if token is None else {TABLE_FIELD: table, TOKEN_FIELD: token}
-    return f"{address}/#{urlencode(stated)}"
+    return f"{address}/#{urlencode({TABLE_FIELD: table, CODE_FIELD: code})}"

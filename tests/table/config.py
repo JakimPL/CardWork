@@ -3,6 +3,7 @@ from typing import Final
 
 from yaml import safe_dump
 
+from cardserver.schemas import Choice
 from cardtable.artwork import Artwork
 from cardtable.config import Configuration
 from cardtable.games import GameName
@@ -12,14 +13,20 @@ from cardwork.rounds.conclusion import Conclusion
 
 FILE: Final[str] = "config.yaml"
 BACK: Final[str] = "crosshatch"
+CODE: Final[str] = "K10AJ2"
 
 GLYPHS: Final[Artwork] = Artwork(pack=None, back=BACK)
 
 CONFIGURED: Final[Configuration] = Configuration(
-    game=GameName.PASSING,
-    table=Settings(name="baize", players=3, conclusion=Conclusion(rounds=2), seed=7, grace_seconds=0.5),
+    table=Settings(name="baize", code=CODE, seed=7, grace_seconds=0.5),
+    choice=Choice(
+        game=GameName.PASSING.value,
+        players=3,
+        decks=1,
+        conclusion=Conclusion(rounds=2),
+    ),
     artwork=GLYPHS,
-    service=Service(host="127.0.0.1", port=9000, log_level=LogLevel.WARNING),
+    service=Service(host="127.0.0.1", port=9000, advertise=None, log_level=LogLevel.WARNING),
 )
 
 

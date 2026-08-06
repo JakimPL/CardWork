@@ -49,13 +49,17 @@ types:
 
 TABLE_ARGUMENTS = \
 	$(if $(GAME),--game $(GAME)) \
+	$(if $(CODE),--code $(CODE)) \
 	$(if $(PLAYERS),--players $(PLAYERS)) \
+	$(if $(DECKS),--decks $(DECKS)) \
 	$(if $(ROUNDS),--rounds $(ROUNDS)) \
 	$(if $(SEED),--seed $(SEED)) \
 	$(if $(GRACE),--grace-seconds $(GRACE)) \
 	$(if $(PACK),--pack $(PACK)) \
 	$(if $(BACK),--back $(BACK)) \
-	$(if $(PORT),--port $(PORT))
+	$(if $(HOST),--host $(HOST)) \
+	$(if $(PORT),--port $(PORT)) \
+	$(if $(ADVERTISE),--advertise $(ADVERTISE))
 
 play: build
 	uv run cardtable $(TABLE_ARGUMENTS) $(ARGS)
