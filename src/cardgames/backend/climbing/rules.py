@@ -10,6 +10,7 @@ from cardwork.combinations.poker import (
     FULL_HOUSE,
     HIGH_CARD,
     PAIR,
+    QUADRUPLET_WITH_ONE,
     STRAIGHT,
     STRAIGHT_FLUSH,
     TRIPLET,
@@ -31,6 +32,7 @@ CLIMBING_PATTERNS: Final[tuple[Pattern, ...]] = (
     STRAIGHT,
     FLUSH,
     FULL_HOUSE,
+    QUADRUPLET_WITH_ONE,
     STRAIGHT_FLUSH,
 )
 

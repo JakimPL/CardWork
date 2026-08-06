@@ -403,6 +403,43 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * The presses that put a hand in order, which stand at the far end of the name of the zone they order.
+ *
+ * The order of a hand is the player's own, so what sets it stands with the hand rather than among the furniture of
+ * the page: two words in chalk at the end of the line the zone is named on, each lettered with the end it is about
+ * to read the order from. They are drawn small and quiet and brighten under the hand, since a hand is played by
+ * pressing the cards of it and put in order between times.
+ */
+
+.sorting {
+  display: flex;
+  gap: calc(var(--gap) / 2);
+  margin-left: auto;
+}
+
+.sort {
+  display: inline-flex;
+  gap: 0.2em;
+  align-items: baseline;
+  padding: 0 calc(var(--gap) / 2);
+  border: 1px solid rgb(159 179 167 / 35%);
+  border-radius: 999px;
+  background: none;
+  color: var(--chalk-dim);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.sort:hover {
+  border-color: var(--chalk-dim);
+  color: var(--chalk);
+}
+
 .cards {
   position: relative;
   display: flex;

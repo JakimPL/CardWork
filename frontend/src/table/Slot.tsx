@@ -15,9 +15,13 @@ import { carriedTo, grasped, heldAt, laidOut, placesOf, restingOn, sending, sent
 import { Landing } from "./Landing";
 import { released, useLandings } from "./landings";
 import { fanning } from "./sizing";
+import { Sorting } from "./Sorting";
 
 /** How many cards of a heap a card that lands on it comes to rest on, which is the one it covers. */
 const RESTING_ON = 1;
+
+/** The fewest cards a run a player is offered an order for holds, which is a card and another to stand it beside. */
+const ORDERABLE_FROM = 2;
 
 /** What a player presses to leave a run as the table holds it, wherever the cards in hand have been carried to. */
 const ABANDONING = "Escape";
@@ -56,6 +60,10 @@ interface SlotProps {
  * lays that order instead — the run closes up behind the cards and opens at the place they have come to cover, so
  * the order a player is choosing is the order in front of them, and letting go sends that reading from wherever on
  * the page they let it go. Letting go anywhere else puts the cards back down, as pressing escape does.
+ *
+ * The order of such a run is offered in words as well, at the name of the zone: one press for each way of reading a
+ * hand, laying the whole run down in the order it asks for. It reaches the table by the road a carry through the run
+ * takes, so a hand sorted stands on screen as a hand a player laid out themselves does.
  *
  * The run stays laid out as the player laid it until the table hands that order back, so cards let go lie where
  * they were put and the commit carrying the order home changes nothing on screen. A card let go under the hand
@@ -245,6 +253,14 @@ export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement
       <header className="slot-label">
         <span className="label">{slot.label}</span>
         {slot.counted && <span className="count">{cards.length}</span>}
+        {orderable && read.length >= ORDERABLE_FROM && (
+          <Sorting
+            run={read}
+            onSort={(laying) => {
+              playing.arrange(slot.zone, laying);
+            }}
+          />
+        )}
       </header>
       <div ref={run} className={classes("cards", cards.length > shown.length && "deep")} style={fanning(shown.length)}>
         {landing !== null && (

@@ -173,7 +173,7 @@ function drawn(view: PositionView, place: Placement): string {
 
 /** The cards of one drawing, in the order the page draws them, each read by the name it carries. */
 function named(drawing: string): string[] {
-  return [...drawing.matchAll(/aria-label="([^"]*)"/g)].map((mark) => mark[1] ?? "");
+  return [...drawing.matchAll(/class="card[^"]*" aria-label="([^"]*)"/g)].map((mark) => mark[1] ?? "");
 }
 
 /** How many cards of one drawing a player may take hold of. */
