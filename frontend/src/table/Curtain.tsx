@@ -71,7 +71,7 @@ export function Curtain({ layout, report, dismiss }: CurtainProps): ReactElement
         {report.interlude === MATCH && <p className="winner">{won(layout, report)}</p>}
         <ul className="results">
           {layout.plaques.map((plaque) => (
-            <li className="result" key={plaque.seat}>
+            <li className="result" key={plaque.seat} data-tint={plaque.tint}>
               <span className="who">{plaque.name}</span>
               <dl className="figures">
                 {seatReadouts(layout).map((readout) => (

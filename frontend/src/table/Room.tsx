@@ -18,7 +18,7 @@ interface RoomProps {
  * The seat a token holds is the seat it goes on to play, so nothing is asked again on the way over.
  */
 export function Room({ seat }: RoomProps): ReactElement {
-  const { gathering, offerings, connection, trouble, claim, settle, callTheDeal } = useGathering(seat);
+  const { gathering, offerings, connection, trouble, claim, tint, settle, callTheDeal } = useGathering(seat);
 
   if (gathering === null || offerings === null) {
     return <Waiting table={seat.table} connection={connection} trouble={trouble} />;
@@ -35,6 +35,7 @@ export function Room({ seat }: RoomProps): ReactElement {
       connection={connection}
       trouble={trouble}
       claim={claim}
+      tint={tint}
       settle={settle}
       callTheDeal={callTheDeal}
     />

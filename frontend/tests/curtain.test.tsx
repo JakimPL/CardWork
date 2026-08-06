@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { Layout, Readout } from "../src/api/layout";
 import type { Report } from "../src/play/interludes";
 import { Curtain } from "../src/table/Curtain";
-import { aLayout, atRest, BETWEEN_ROUNDS, MATCH_OVER, PLAQUES } from "./tables";
+import { aLayout, atRest, BETWEEN_ROUNDS, MATCH_OVER, PLAQUES, TINTED } from "./tables";
 
 const POINTS: Readout = { field: "points", label: "Points", scope: "seat" };
 const THIS_ROUND: Readout = { field: "round_points", label: "This round", scope: "seat" };
@@ -43,6 +43,18 @@ describe("a round read out as it closes", () => {
     expect(panel).toContain("This round");
     expect([...panel.matchAll(/<dd>8<\/dd>/g)]).toHaveLength(1);
     expect([...panel.matchAll(/<dd>1<\/dd>/g)]).toHaveLength(1);
+  });
+
+  it("reads each seat under the tint it played in, which is how the standing is read at a glance", () => {
+    const coloured = aLayout({ plaques: TINTED, readouts: [POINTS] });
+    const panel = drawn(CLOSED, coloured);
+
+    expect(panel).toContain('class="result" data-tint="rose"');
+    expect([...panel.matchAll(/class="result" data-tint/g)]).toHaveLength(TINTED.length);
+  });
+
+  it("reads them under none where no host held a colour for anybody", () => {
+    expect(drawn(CLOSED)).not.toContain("data-tint");
   });
 
   it("reads the figures the game keeps of the whole table beneath the seats", () => {

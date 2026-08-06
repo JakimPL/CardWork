@@ -35,7 +35,10 @@ export function Plaque({ plaque, layout, view, playing }: PlaqueProps): ReactEle
   const onto = useMemo<Target>(() => ({ commit: "seat", seat: plaque.seat }), [plaque.seat]);
   const landing = drawnAt(layout, plaque.seat) ? null : offerTo(playing.standing, onto);
   return (
-    <div className={classes("plaque", acting && "acting", seated && "own", landing !== null && "live")}>
+    <div
+      className={classes("plaque", acting && "acting", seated && "own", landing !== null && "live")}
+      data-tint={plaque.tint}
+    >
       {landing !== null && (
         <Landing onto={onto} caption={landing.caption} label={`${landing.caption}: ${plaque.name}`} playing={playing} />
       )}

@@ -1,12 +1,10 @@
 import type { Choice, Conclusion, GatheringView, Guest, Offering, Tint } from "../src/api/gathering";
+import { TINTS } from "../src/play/tints";
 
 /** The table these tests gather, and the guest whose page they are read as. */
 export const TABLE = "green-baize";
 export const CODE = "KQAJ72";
 export const MINE = "Ada";
-
-/** The tints in the order a company arriving is handed them, which mirrors `cardserver.gathering.TINTS`. */
-export const TINTS: Tint[] = ["rose", "coral", "amber", "lemon", "teal", "azure", "indigo", "violet"];
 
 /** The tint a guest holds where a test says nothing about it, which is the one the first arrival takes. */
 const FIRST_TINT: Tint = "rose";

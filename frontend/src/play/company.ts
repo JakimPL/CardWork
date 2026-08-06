@@ -1,4 +1,4 @@
-import type { GatheringView, Guest } from "../api/gathering";
+import type { GatheringView, Guest, Tint } from "../api/gathering";
 
 /** What the button calling for the deal reads once nothing stands in the way of it. */
 const DEAL = "Deal the cards";
@@ -34,6 +34,16 @@ export function mySeat(gathering: GatheringView): number | null {
 /** Whether this seat is the one the guest reading the page holds. */
 export function mine(gathering: GatheringView, seat: number): boolean {
   return mySeat(gathering) === seat;
+}
+
+/** The tint the guest reading the page plays under, and nothing where the company reads nobody by that name. */
+export function myTint(gathering: GatheringView): Tint | null {
+  return gathering.company.find((guest) => guest.name === gathering.mine)?.tint ?? null;
+}
+
+/** The guest holding one tint, and nothing where it stands free for whoever takes it. */
+export function tintHeldBy(gathering: GatheringView, tint: Tint): Guest | null {
+  return gathering.company.find((guest) => guest.tint === tint) ?? null;
 }
 
 /**

@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import type { Layout } from "../api/layout";
 import type { PositionView } from "../api/views";
 import type { Arrivals } from "../play/arrivals";
-import { nameOf } from "../play/seats";
+import { nameOf, tintOf } from "../play/seats";
 import type { Target } from "../play/selection";
 import { offerTo } from "../play/selection";
 import type { Playing } from "../play/usePlay";
@@ -40,7 +40,10 @@ export function Station({ station, layout, view, arrivals, playing }: StationPro
   const landing = offerTo(playing.standing, onto);
   const name = nameOf(layout, station.seat);
   return (
-    <div className={classes("station", acting && "acting", landing !== null && "live")}>
+    <div
+      className={classes("station", acting && "acting", landing !== null && "live")}
+      data-tint={tintOf(layout, station.seat)}
+    >
       {landing !== null && (
         <Landing onto={onto} caption={landing.caption} label={`${landing.caption}: ${name}`} playing={playing} />
       )}

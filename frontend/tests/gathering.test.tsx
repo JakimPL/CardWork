@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import type { Choice, GatheringView } from "../src/api/gathering";
+import type { Choice, GatheringView, Tint } from "../src/api/gathering";
+import { TINTS } from "../src/play/tints";
 import { Gathering } from "../src/table/Gathering";
 import { aChoice, aGathering, aGuest, aSeatedGathering, CODE, MINE, OFFERINGS, TABLE } from "./rooms";
 
@@ -22,6 +23,7 @@ function drawn(gathering: GatheringView): string {
       connection="following"
       trouble={null}
       claim={IDLE}
+      tint={IDLE}
       settle={IDLE}
       callTheDeal={IDLE}
     />,
@@ -80,6 +82,45 @@ describe("the room a table gathers in", () => {
 
   it("names nobody standing by at a gathering where every guest is sitting", () => {
     expect(drawn(aSeatedGathering(3))).not.toContain("Standing by");
+  });
+});
+
+/** The tints two guests of these tests play under, which are two the company holds apart. */
+const HERS: Tint = "teal";
+const HIS: Tint = "amber";
+
+describe("the colours the company is told apart by", () => {
+  it("reads each place under the tint the guest holding it plays in", () => {
+    const room = drawn(aGathering([aGuest("Grace", 1, true, HIS)]));
+
+    expect(room).toContain(`class="place taken" data-tint="${HIS}"`);
+    expect([...room.matchAll(/class="place empty"[^>]*data-tint/g)]).toHaveLength(0);
+  });
+
+  it("offers a swatch for every tint the room hands out", () => {
+    const room = drawn(aGathering([aGuest(MINE, null, true, HERS)]));
+
+    expect([...room.matchAll(/class="swatch/g)]).toHaveLength(TINTS.length);
+  });
+
+  it("marks the one the guest reading the room holds, which is the one they are drawn in", () => {
+    const room = drawn(aGathering([aGuest(MINE, null, true, HERS)]));
+
+    expect(room).toContain(`class="swatch own" data-tint="${HERS}" title="${HERS}, yours"`);
+  });
+
+  it("leaves a tint another guest holds to them, and says whose it is", () => {
+    const room = drawn(aGathering([aGuest(MINE, null, true, HERS), aGuest("Grace", 0, true, HIS)]));
+
+    expect(room).toContain(`data-tint="${HIS}" title="${HIS}, held by Grace"`);
+    expect([...room.matchAll(/class="swatch"[^>]*disabled=""/g)]).toHaveLength(1);
+  });
+
+  it("offers the tints nobody holds, since a guest takes one of those by pressing it", () => {
+    const room = drawn(aGathering([aGuest(MINE, null, true, HERS)]));
+
+    expect([...room.matchAll(/title="[a-z]+, free to take"/g)]).toHaveLength(TINTS.length - 1);
+    expect([...room.matchAll(/class="swatch"[^>]*disabled=""/g)]).toHaveLength(0);
   });
 });
 

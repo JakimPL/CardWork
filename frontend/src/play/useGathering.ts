@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { Choice, GatheringView, Offering } from "../api/gathering";
-import { claimSeat, deal, followGathering, readGathering, readOfferings, settleChoice } from "../api/lobby";
+import type { Choice, GatheringView, Offering, Tint } from "../api/gathering";
+import { chooseTint, claimSeat, deal, followGathering, readGathering, readOfferings, settleChoice } from "../api/lobby";
 import { reasonOf } from "../api/refusal";
 import type { Seat } from "../api/seat";
 import type { Connection } from "./connection";
@@ -17,6 +17,7 @@ export interface Gathered {
   connection: Connection;
   trouble: string | null;
   claim: (seat: number | null) => void;
+  tint: (chosen: Tint) => void;
   settle: (choice: Choice) => void;
   callTheDeal: () => void;
 }
@@ -63,6 +64,13 @@ export function useGathering(seat: Seat): Gathered {
   const claim = useCallback(
     (taken: number | null) => {
       commanded((revision) => claimSeat(seat, { seat: taken, base_revision: revision }));
+    },
+    [seat, commanded],
+  );
+
+  const tint = useCallback(
+    (chosen: Tint) => {
+      commanded((revision) => chooseTint(seat, { tint: chosen, base_revision: revision }));
     },
     [seat, commanded],
   );
@@ -130,5 +138,5 @@ export function useGathering(seat: Seat): Gathered {
     };
   }, [seat, hold]);
 
-  return { gathering, offerings, connection, trouble, claim, settle, callTheDeal };
+  return { gathering, offerings, connection, trouble, claim, tint, settle, callTheDeal };
 }

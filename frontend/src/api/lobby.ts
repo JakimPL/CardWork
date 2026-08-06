@@ -1,4 +1,4 @@
-import type { Admitted, Arriving, Choosing, Claiming, Dealing, GatheringView, Offering } from "./gathering";
+import type { Admitted, Arriving, Choosing, Claiming, Dealing, GatheringView, Offering, Tinting } from "./gathering";
 import { asking, SENDING, STATING, stating } from "./requests";
 import { credentials, type Seat } from "./seat";
 import { follow, type Streamed } from "./streaming";
@@ -9,6 +9,7 @@ const GUESTS = "guests";
 const GATHERING = "gathering";
 const GATHERING_EVENTS = "gathering/events";
 const SEAT = "seat";
+const TINT = "tint";
 const CHOICE = "choice";
 const DEAL = "deal";
 const SINCE = "since";
@@ -60,6 +61,11 @@ export function readGathering(seat: Seat): Promise<GatheringView> {
 /** Take a seat at the table, or stand up from the one held by naming none. */
 export function claimSeat(seat: Seat, claiming: Claiming): Promise<GatheringView> {
   return stating<GatheringView, Claiming>(gathered(seat.table, SEAT), STATING, credentials(seat), claiming);
+}
+
+/** Take one of the company's tints, which is a guest's own to choose whether they hold a seat or stand by. */
+export function chooseTint(seat: Seat, tinting: Tinting): Promise<GatheringView> {
+  return stating<GatheringView, Tinting>(gathered(seat.table, TINT), STATING, credentials(seat), tinting);
 }
 
 /** Settle what the table plays, which every guest holding a seat may do. */

@@ -3,6 +3,7 @@ import type { Move } from "../src/api/moves";
 import type { Cursor, EventView, PositionView, ProjectedCard, ZoneChange, ZoneId } from "../src/api/views";
 import type { Arrivals } from "../src/play/arrivals";
 import type { Prospect } from "../src/play/selection";
+import { TINTS } from "../src/play/tints";
 import type { Playing } from "../src/play/usePlay";
 
 /** The table these tests read, which is one hand, one heap, and a cursor holding a figure of its own. */
@@ -68,6 +69,9 @@ export const PLAQUES: Plaque[] = SEATS.map((seat) => ({
   tint: null,
   counts: [{ zone: handOf(seat), label: "Cards" }],
 }));
+
+/** The same plaques as a table dealt out of a gathering carries them, each seat under a tint of its own. */
+export const TINTED: Plaque[] = PLAQUES.map((plaque, seat) => ({ ...plaque, tint: TINTS[seat] ?? null }));
 
 export const SEATED: Cursor = {
   phase: "passing",

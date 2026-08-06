@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 
-import type { Choice, GatheringView, Offering } from "../api/gathering";
+import type { Choice, GatheringView, Offering, Tint } from "../api/gathering";
 import { readOut } from "../play/codes";
 import { dealReading, dealReady } from "../play/company";
 import type { Connection } from "../play/connection";
@@ -16,6 +16,7 @@ interface GatheringProps {
   connection: Connection;
   trouble: string | null;
   claim: (seat: number | null) => void;
+  tint: (chosen: Tint) => void;
   settle: (choice: Choice) => void;
   callTheDeal: () => void;
 }
@@ -36,6 +37,7 @@ export function Gathering({
   connection,
   trouble,
   claim,
+  tint,
   settle,
   callTheDeal,
 }: GatheringProps): ReactElement {
@@ -47,7 +49,7 @@ export function Gathering({
       <p className="code">
         Join code <strong>{readOut(gathering.code)}</strong>
       </p>
-      <Company gathering={gathering} claim={claim} />
+      <Company gathering={gathering} claim={claim} tint={tint} />
       <Settling gathering={gathering} offerings={offerings} settle={settle} />
       {trouble !== null && <p className="trouble">{trouble}</p>}
       <div className="choices">

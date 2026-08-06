@@ -32,6 +32,7 @@
   --red: #b3243b;
   --black: #1a1a1a;
   --acting: #f0c040;
+  --tint: 240 192 64;
   --live: #6fcf97;
   --hint: #8fd0ff;
   --drained: 0.3;
@@ -80,6 +81,54 @@ body {
 
 #table {
   height: 100dvh;
+}
+
+/*
+ * The eight colours a company is told apart by, which is the one place a tint becomes a colour.
+ *
+ * A tint reaches the page as a name the room handed out — `cardwork.presentation.tint.Tint` — and what any of
+ * them looks like is settled here and nowhere else: every rule below reads the one triplet `--tint`, which the
+ * element carrying the tint sets and everything inside it inherits.
+ *
+ * Hue says who and strength says whose turn. A seat at rest carries its colour on its edge with a wash of it
+ * behind, and the seat to act stands in the same colour at full strength with the ring around it, so a glance
+ * finds both the player and the turn. Seven hues round the wheel and no green, since the felt is green and a
+ * drop target is mint.
+ *
+ * The gold stands at the root as the reading for a table served with no gathering behind it, where no seat
+ * carries a tint at all and the turn is the one thing there is to mark.
+ */
+
+[data-tint="rose"] {
+  --tint: 239 111 142;
+}
+
+[data-tint="coral"] {
+  --tint: 240 133 100;
+}
+
+[data-tint="amber"] {
+  --tint: 240 170 72;
+}
+
+[data-tint="lemon"] {
+  --tint: 232 214 96;
+}
+
+[data-tint="teal"] {
+  --tint: 96 214 200;
+}
+
+[data-tint="azure"] {
+  --tint: 104 176 240;
+}
+
+[data-tint="indigo"] {
+  --tint: 140 140 240;
+}
+
+[data-tint="violet"] {
+  --tint: 198 128 232;
 }
 
 /*
@@ -134,13 +183,18 @@ body {
   min-width: 0;
 }
 
+.plaque[data-tint] {
+  border-color: rgb(var(--tint) / 45%);
+  background: rgb(var(--tint) / 8%);
+}
+
 .plaque.own {
-  background: rgb(255 255 255 / 8%);
+  background: rgb(var(--tint) / 20%);
 }
 
 .plaque.acting {
-  border-color: var(--acting);
-  box-shadow: 0 0 0 2px rgb(240 192 64 / 35%);
+  border-color: rgb(var(--tint));
+  box-shadow: 0 0 0 2px rgb(var(--tint) / 35%);
 }
 
 .who {
@@ -296,8 +350,8 @@ body {
 }
 
 .zones.own.acting {
-  border-color: var(--acting);
-  background: rgb(240 192 64 / 12%);
+  border-color: rgb(var(--tint));
+  background: rgb(var(--tint) / 12%);
 }
 
 .zones.shared {
@@ -354,9 +408,14 @@ body {
   border-radius: var(--radius);
 }
 
+.station[data-tint] {
+  border-color: rgb(var(--tint) / 45%);
+  background: rgb(var(--tint) / 6%);
+}
+
 .station.acting {
-  border-color: var(--acting);
-  background: rgb(240 192 64 / 12%);
+  border-color: rgb(var(--tint));
+  background: rgb(var(--tint) / 12%);
 }
 
 .station.live {
@@ -933,6 +992,10 @@ button.card {
   background: rgb(255 255 255 / 6%);
 }
 
+.result[data-tint] {
+  border-left: calc(var(--gap) / 2) solid rgb(var(--tint));
+}
+
 .figures.table {
   justify-content: center;
   flex-wrap: wrap;
@@ -1057,8 +1120,12 @@ button.card {
   background: var(--felt);
 }
 
+.place[data-tint] {
+  border-color: rgb(var(--tint) / 45%);
+}
+
 .place.own {
-  border-color: var(--acting);
+  border-color: rgb(var(--tint));
 }
 
 .place .seat {
@@ -1092,6 +1159,36 @@ button.card {
 
 .watching {
   color: var(--chalk-dim);
+}
+
+/* The colours the company is told apart by, each of them a guest's own to take while the room stands. */
+
+.tints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--gap) / 2);
+  align-items: center;
+  width: 100%;
+}
+
+.tints .colour {
+  min-width: 5rem;
+  color: var(--chalk-dim);
+}
+
+.tints .swatch {
+  width: calc(var(--caption) * 1.6);
+  height: calc(var(--caption) * 1.6);
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 50%;
+  background: rgb(var(--tint));
+  cursor: pointer;
+}
+
+.tints .swatch.own {
+  border-color: var(--chalk-lit);
+  box-shadow: 0 0 0 2px rgb(var(--tint) / 45%);
 }
 
 .settling {

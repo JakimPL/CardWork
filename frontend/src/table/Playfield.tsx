@@ -6,6 +6,7 @@ import type { PositionView } from "../api/views";
 import type { Arrivals } from "../play/arrivals";
 import type { Connection } from "../play/connection";
 import type { Report } from "../play/interludes";
+import { ownTint } from "../play/seats";
 import { saidAlone } from "../play/selection";
 import { useArtwork } from "../play/useArtwork";
 import { usePlay } from "../play/usePlay";
@@ -103,6 +104,7 @@ export function Playfield({
     <Reaching>
       <div
         className={classes("page", playing.sending && "sending")}
+        data-tint={ownTint(layout)}
         style={shaping(artwork)}
         onClick={clear}
         onContextMenu={answering(clear)}
