@@ -4,7 +4,11 @@ import { describe, expect, it } from "vitest";
 import type { Arrival } from "../src/play/arriving";
 import { arrivalIn } from "../src/play/arriving";
 import { Arriving } from "../src/table/Arriving";
+import { Founding } from "../src/table/Founding";
 import { CODE, TABLE } from "./rooms";
+
+/** A press that does nothing, since what these read is the drawing of a page rather than what follows one. */
+const IDLE = (): void => undefined;
 
 /** Another table gathering here, which is what makes the tables offered a choice rather than the one answer. */
 const ANOTHER = "back-room";
@@ -89,6 +93,31 @@ describe("the table a guest arriving from the bare address joins", () => {
 
   it("offers no way back, since a table named here is the way back", () => {
     expect(drawn(BARE)).not.toContain("Name another table");
+  });
+
+  it("offers the way to open a table of one's own, which a person handed no line takes", () => {
+    expect(drawn(BARE)).toContain("Open a new table");
+  });
+});
+
+describe("the page a person opens a table of their own from", () => {
+  it("offers no way to open a table where the address already names one to join", () => {
+    expect(drawn(ANNOUNCED)).not.toContain("Open a new table");
+  });
+
+  it("names the table and the founder and offers the game it starts on, and a way back to joining", () => {
+    const page = renderToStaticMarkup(<Founding back={IDLE} />);
+
+    expect(page).toContain("Open a table of your own");
+    expect(page).toContain('placeholder="green-baize"');
+    expect(page).toContain("Join a table instead");
+  });
+
+  it("holds the opening back until the games the host offers have been read", () => {
+    const page = renderToStaticMarkup(<Founding back={IDLE} />);
+
+    expect(page).toMatch(/Open the table<\/button>/);
+    expect(page).toMatch(/<button type="submit" disabled=""/);
   });
 });
 

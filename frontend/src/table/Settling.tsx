@@ -13,6 +13,9 @@ const ROUND_COUNTS = [...Array(ROUNDS_MOST).keys()].map((step) => step + 1);
 /** What a guest holding no seat is told, since the players of the game are the ones who settle it. */
 const TOLD = "Take a seat to settle what is played";
 
+/** How the table reads the move hints it lights the playable cards with, which the company turns on and off. */
+const CUES = "Light the cards a seat may play";
+
 /** How the host reads the say they are handing out or keeping, which is the whole of the governance toggle. */
 const GOVERNANCE = "Everyone at the table may change the settings";
 
@@ -31,8 +34,9 @@ interface SettlingProps {
  * that admits one count of decks offers no choice of them at all.
  *
  * Settling is for the guests holding seats, which the server answers for itself: a guest standing by reads the
- * choice and is told as much. How the table is governed stands here too, as the host's own to settle: the toggle
- * hands the say to the whole table or keeps it to the host, and it shows for the host alone.
+ * choice and is told as much. Whether the table lights the cards a seat may play settles here beside the game, as
+ * one of the settings the deal opens on. How the table is governed stands here too, as the host's own to settle:
+ * the toggle hands the say to the whole table or keeps it to the host, and it shows for the host alone.
  */
 export function Settling({ gathering, offerings, settle, govern }: SettlingProps): ReactElement {
   const { choice } = gathering;
@@ -112,6 +116,15 @@ export function Settling({ gathering, offerings, settle, govern }: SettlingProps
         </select>
       </label>
       <p className="ending">Runs to {endingRead(choice.conclusion)}</p>
+      <label className="cues">
+        <input
+          type="checkbox"
+          checked={choice.cues}
+          disabled={!saying}
+          onChange={(event) => settle({ ...choice, cues: event.target.checked })}
+        />
+        {CUES}
+      </label>
       {hosting && (
         <label className="governance">
           <input type="checkbox" checked={gathering.democratic} onChange={(event) => govern(event.target.checked)} />

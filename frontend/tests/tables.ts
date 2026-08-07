@@ -232,11 +232,12 @@ const IDLE = (): void => undefined;
 /** A seat that has laid no order of its own down, which is a page drawing every zone as the table holds it. */
 const LAID_NONE = (): number[] | null => null;
 
-/** The table as it is played, for a test reading what a prospect comes to. */
-export function aPlaying(standing: Prospect): Playing {
+/** The table as it is played, for a test reading what a prospect comes to, with the move hints lit unless one says otherwise. */
+export function aPlaying(standing: Prospect, cues = true): Playing {
   return {
     standing,
     hint: "",
+    cues,
     sending: false,
     pick: IDLE,
     commit: IDLE,

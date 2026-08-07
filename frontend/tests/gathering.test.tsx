@@ -167,6 +167,27 @@ describe("what the room offers to play", () => {
   });
 });
 
+describe("the move hints the table may put out", () => {
+  it("offers a seated guest the toggle, lit where the choice settled the hints on", () => {
+    const room = drawn(aGathering([aGuest(MINE, 0)], { choice: aChoice({ cues: true }) }));
+
+    expect(room).toContain("Light the cards a seat may play");
+    expect(room).toMatch(/class="cues"><input type="checkbox" checked=""/);
+  });
+
+  it("reads the toggle out unlit where the choice turned the hints off", () => {
+    const room = drawn(aGathering([aGuest(MINE, 0)], { choice: aChoice({ cues: false }) }));
+
+    expect(room).toMatch(/class="cues"><input type="checkbox"\/>/);
+  });
+
+  it("leaves the toggle to the guests holding a seat, so a guest standing by reads it fixed", () => {
+    const room = drawn(aGathering([aGuest(MINE, null)]));
+
+    expect(room).toMatch(/class="cues"><input type="checkbox"[^>]*disabled=""/);
+  });
+});
+
 describe("the one press the room carries a seated guest through", () => {
   it("asks a seated guest to commit, and says what the table still waits on", () => {
     const room = drawn(aGathering([aGuest(MINE, 0)]));

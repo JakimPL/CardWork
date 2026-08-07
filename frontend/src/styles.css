@@ -1323,7 +1323,8 @@ button.card {
   color: var(--chalk-dim);
 }
 
-.settling .governance {
+.settling .governance,
+.settling .cues {
   flex-basis: 100%;
   display: flex;
   flex-direction: row;
@@ -1333,7 +1334,8 @@ button.card {
   color: var(--chalk-dim);
 }
 
-.settling .governance input {
+.settling .governance input,
+.settling .cues input {
   width: auto;
 }
 
@@ -1363,4 +1365,78 @@ button.card {
 .notice .reading {
   color: var(--chalk-dim);
   letter-spacing: 0.08em;
+}
+
+.closed .reason {
+  color: var(--chalk-dim);
+}
+
+/* The overseer's panel: the lobby whole, the terms it is held under, and the levers over both. */
+
+.overseeing {
+  gap: calc(var(--gap) * 1.5);
+  width: 100%;
+  max-width: 44rem;
+}
+
+.overseeing .terms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  align-items: center;
+  width: 100%;
+}
+
+.overseeing .census {
+  flex-basis: 100%;
+  color: var(--chalk-dim);
+}
+
+.overseeing .tables {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap) / 2);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.table-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  align-items: center;
+  padding: calc(var(--gap) / 2) var(--gap);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: rgb(0 0 0 / 18%);
+}
+
+.table-card .name {
+  min-width: 8rem;
+  font-weight: 600;
+}
+
+.table-card .phase,
+.table-card .seats,
+.table-card .idle,
+.table-card .host {
+  color: var(--chalk-dim);
+}
+
+.overseeing .table-card button {
+  margin-left: auto;
+}
+
+.overseeing .opening {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  align-items: center;
+  width: 100%;
+}
+
+.overseeing .empty {
+  color: var(--chalk-dim);
 }

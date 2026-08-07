@@ -4,6 +4,7 @@ import { followCommits, readLayout, readView } from "../api/client";
 import type { Interludes, Layout } from "../api/layout";
 import { reasonOf } from "../api/refusal";
 import type { Seat } from "../api/seat";
+import type { Closed } from "../api/streaming";
 import type { EventView, PositionView } from "../api/views";
 import type { Arrivals } from "./arrivals";
 import { useArrivals } from "./arrivals";
@@ -25,6 +26,7 @@ export interface Watched {
   view: PositionView | null;
   connection: Connection;
   trouble: string | null;
+  closed: Closed | null;
   arrivals: Arrivals;
   report: Report | null;
   refresh: () => void;
@@ -60,6 +62,7 @@ export function useTable(seat: Seat): Watched {
   const [view, setView] = useState<PositionView | null>(null);
   const [connection, setConnection] = useState<Connection>("joining");
   const [trouble, setTrouble] = useState<string | null>(null);
+  const [closed, setClosed] = useState<Closed | null>(null);
   const [report, setReport] = useState<Report | null>(null);
   const { arrivals, landed } = useArrivals();
   const reached = useRef(UNREAD);
@@ -116,6 +119,7 @@ export function useTable(seat: Seat): Watched {
           reached.current = Math.max(reached.current, reachedBy(event));
           arrive(event);
         },
+        onClosed: setClosed,
         onDropped: (reason) => {
           setConnection("resuming");
           setTrouble(reason);
@@ -160,5 +164,5 @@ export function useTable(seat: Seat): Watched {
     };
   }, [seat, arrive, hold]);
 
-  return { layout, view, connection, trouble, arrivals, report, refresh, dismiss };
+  return { layout, view, connection, trouble, closed, arrivals, report, refresh, dismiss };
 }

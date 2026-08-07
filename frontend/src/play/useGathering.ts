@@ -14,6 +14,7 @@ import {
 } from "../api/lobby";
 import { reasonOf } from "../api/refusal";
 import type { Seat } from "../api/seat";
+import type { Closed } from "../api/streaming";
 import type { Connection } from "./connection";
 import { whileInView } from "./viewing";
 
@@ -26,6 +27,7 @@ export interface Gathered {
   offerings: Offering[] | null;
   connection: Connection;
   trouble: string | null;
+  closed: Closed | null;
   claim: (seat: number | null) => void;
   tint: (chosen: Tint) => void;
   settle: (choice: Choice) => void;
@@ -47,6 +49,9 @@ export interface Gathered {
  * Every command quotes the revision it was built on, so two guests settling the choice at once leaves the
  * second told rather than overruled, and the answer to a command is a reading of the room like any other.
  *
+ * A gathering broken up before it is dealt ends the stream on a closing frame, which `closed` holds along with
+ * the word the host or overseer left, so the page reads the room as gone rather than as a connection lost.
+ *
  * @param seat - the table gathered and the token it is attended as.
  */
 export function useGathering(seat: Seat): Gathered {
@@ -54,6 +59,7 @@ export function useGathering(seat: Seat): Gathered {
   const [offerings, setOfferings] = useState<Offering[] | null>(null);
   const [connection, setConnection] = useState<Connection>("joining");
   const [trouble, setTrouble] = useState<string | null>(null);
+  const [closed, setClosed] = useState<Closed | null>(null);
   const reached = useRef(UNREAD);
 
   const hold = useCallback((view: GatheringView) => {
@@ -123,6 +129,7 @@ export function useGathering(seat: Seat): Gathered {
           setTrouble(null);
         },
         onFrame: hold,
+        onClosed: setClosed,
         onDropped: (reason) => {
           setConnection("resuming");
           setTrouble(reason);
@@ -164,5 +171,5 @@ export function useGathering(seat: Seat): Gathered {
     };
   }, [seat, hold]);
 
-  return { gathering, offerings, connection, trouble, claim, tint, settle, ready, govern, callTheDeal };
+  return { gathering, offerings, connection, trouble, closed, claim, tint, settle, ready, govern, callTheDeal };
 }

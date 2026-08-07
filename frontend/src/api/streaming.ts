@@ -4,10 +4,19 @@ import { parsed } from "./parsing";
 import { reasonOf, refusalOf, Refused } from "./refusal";
 import type { Credentials } from "./requests";
 
+/** The name a stream's last frame arrives under, which carries why the table it followed was broken up. */
+const CLOSED_EVENT = "closed";
+
+/** What a closing frame carries: the word left for whoever was following, and nothing where none was left. */
+export interface Closed {
+  reason: string | null;
+}
+
 /** What a client following a stream is told as frames land and as the stream carrying them fares. */
 export interface Streamed<FrameT> {
   onOpen: () => void;
   onFrame: (frame: FrameT) => void;
+  onClosed: (closed: Closed) => void;
   onDropped: (reason: string) => void;
   onRefused: (reason: string) => void;
 }
@@ -25,10 +34,13 @@ export interface Streamed<FrameT> {
  * worth a connection just now is the caller's to weigh, which `play/viewing.ts` weighs by what the player is
  * looking at.
  *
+ * A stream ends of its own accord when the table it follows is broken up: a closing frame carries the word left
+ * for the company, `onClosed` reads it, and the following stops there rather than reaching for the frame after.
+ *
  * @param address - where the stream is read from, which carries the point it is picked up at.
  * @param event - the name the frames a client reads arrive under, the others being none of its business.
  * @param credentials - the credential the stream is followed as.
- * @param streamed - what to do as the stream opens, carries a frame, drops, or is refused outright.
+ * @param streamed - what to do as the stream opens, carries a frame, closes, drops, or is refused outright.
  */
 export function follow<FrameT>(
   address: string,
@@ -52,6 +64,9 @@ export function follow<FrameT>(
     onmessage(message): void {
       if (message.event === event) {
         streamed.onFrame(parsed<FrameT>(message.data));
+      } else if (message.event === CLOSED_EVENT) {
+        streamed.onClosed(parsed<Closed>(message.data));
+        stopped.abort();
       }
     },
     onerror(trouble: unknown): void {

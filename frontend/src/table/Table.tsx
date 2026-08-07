@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 
 import type { Seat } from "../api/seat";
 import { useTable } from "../play/useTable";
+import { Closed } from "./Closed";
 import { Playfield } from "./Playfield";
 import { Waiting } from "./Waiting";
 
@@ -16,7 +17,11 @@ interface TableProps {
  * arrive says where the joining has got to and offers the way to another seat.
  */
 export function Table({ seat }: TableProps): ReactElement {
-  const { layout, view, connection, trouble, arrivals, report, refresh, dismiss } = useTable(seat);
+  const { layout, view, connection, trouble, closed, arrivals, report, refresh, dismiss } = useTable(seat);
+
+  if (closed !== null) {
+    return <Closed table={seat.table} reason={closed.reason} />;
+  }
 
   if (layout === null || view === null) {
     return <Waiting table={seat.table} connection={connection} trouble={trouble} />;

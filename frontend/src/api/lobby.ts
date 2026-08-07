@@ -4,6 +4,7 @@ import type {
   Choosing,
   Claiming,
   Dealing,
+  Founding,
   GatheringView,
   Governing,
   Offering,
@@ -64,6 +65,18 @@ export function readTables(): Promise<string[]> {
  */
 export function arrive(table: string, arriving: Arriving): Promise<Admitted> {
   return stating<Admitted, Arriving>(gathered(table, GUESTS), SENDING, UNCREDENTIALED, arriving);
+}
+
+/**
+ * Gather a fresh table and take the host's seat at it, answering with the token to speak through from then on.
+ *
+ * Founding a table is arriving at it: the founder names the table and themselves at once, the code is drawn for
+ * them, and the token minted seats them as the host the way an arrival seats any guest.
+ *
+ * @throws Refused when a table already answers under the name, or when the lobby holds as many tables as it may.
+ */
+export function found(founding: Founding): Promise<Admitted> {
+  return stating<Admitted, Founding>(TABLES, SENDING, UNCREDENTIALED, founding);
 }
 
 /** The gathering as this guest reads it: the company, what is settled, and where it stands. */
