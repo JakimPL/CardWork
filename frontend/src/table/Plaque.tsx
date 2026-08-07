@@ -28,6 +28,10 @@ interface PlaqueProps {
  * A seat the cards in hand can be sent to lies under a place to send them, since a move naming a player is
  * committed by pointing at that player. Where the table draws that seat's own cards, the cards themselves are
  * what a player points at and the plaque leaves the move to them, which is the nearer thing to reach for.
+ *
+ * The counts a seat's zones come to are named apart from the figures a game keeps, since a plaque drawn narrow
+ * lets them go first: what they say is said again over the cards those zones hold, where the readouts beside them
+ * are said here alone.
  */
 export function Plaque({ plaque, layout, view, playing }: PlaqueProps): ReactElement {
   const acting = view.state.to_act.includes(plaque.seat);
@@ -51,7 +55,7 @@ export function Plaque({ plaque, layout, view, playing }: PlaqueProps): ReactEle
           </div>
         ))}
         {plaque.counts.map((tally) => (
-          <div className="figure" key={tally.zone}>
+          <div className="figure tally" key={tally.zone}>
             <dt>{tally.label}</dt>
             <dd>{view.zones[tally.zone]?.cards.length ?? 0}</dd>
           </div>

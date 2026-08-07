@@ -163,6 +163,20 @@ body {
   white-space: nowrap;
 }
 
+/*
+ * One seat's standing, which reads inside the box it is drawn in and nowhere else.
+ *
+ * The seats share the strip evenly between them, so a table of eight gives each of them an eighth of it and a
+ * plaque states its width from the room it was handed rather than from the length of what it holds. That is what
+ * leaves a name of any length and a game counting whatever it counts lying in one row across the top, and what
+ * lets a plaque read its own share to decide how much of a seat it has room to say.
+ *
+ * A share too narrow to carry the whole of a seat's reading gives way in the order the readings are wanted. The
+ * counts of a seat's zones go first, since those stand over the cards themselves round the table and beside the
+ * player's own; the figures a game scopes to a seat go after them. What a plaque keeps to the last is the name
+ * and the colour, which is who is there and whose turn it is.
+ */
+
 .plaques {
   display: flex;
   flex: 1;
@@ -172,8 +186,10 @@ body {
 }
 
 .plaque {
+  container: standing / inline-size;
   position: relative;
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
   gap: calc(var(--gap) / 2);
   padding: calc(var(--gap) / 2) var(--gap);
@@ -181,6 +197,7 @@ body {
   border-radius: var(--radius);
   background: rgb(0 0 0 / 18%);
   min-width: 0;
+  overflow: hidden;
 }
 
 .plaque[data-tint] {
@@ -207,12 +224,26 @@ body {
   gap: var(--gap);
   margin: 0;
   color: var(--chalk-dim);
+  overflow: hidden;
 }
 
 .figure {
   display: flex;
   gap: calc(var(--gap) / 2);
+  min-width: 0;
   white-space: nowrap;
+}
+
+@container standing (width < 23em) {
+  .figure.tally {
+    display: none;
+  }
+}
+
+@container standing (width < 11em) {
+  .figures {
+    display: none;
+  }
 }
 
 .figure dt {
@@ -243,18 +274,23 @@ body {
  * The shares are stated on what lies inside the felt rather than on the felt itself, since a container states its
  * size to what it holds. The card on the pile is the largest card the table draws, so what a player reads of
  * another seat is a card of that size or of the size that seat's own share leaves it.
+ *
+ * The seats round the edge give way to the middle where the two of them want the same height, and the felt keeps
+ * whatever it draws inside itself, so the table stays between the standing above it and the panel below however
+ * short the window it is drawn in.
  */
 
 .felt {
   container-type: size;
   display: grid;
   grid-template:
-    "left across right" auto
+    "left across right" minmax(0, auto)
     "left middle right" minmax(0, 1fr)
     / auto minmax(0, 1fr) auto;
   place-items: center;
   gap: var(--gap);
   min-height: 0;
+  overflow: hidden;
   padding: var(--gap);
 }
 
@@ -309,9 +345,9 @@ body {
  */
 
 .zones {
-  --card-height: min(
-    var(--upright),
-    calc(var(--room) / var(--widths) * var(--card-aspect-height) / var(--card-aspect-width))
+  --card-height: max(
+    0px,
+    min(var(--upright), calc(var(--room) / var(--widths) * var(--card-aspect-height) / var(--card-aspect-width)))
   );
 
   display: flex;
@@ -366,15 +402,16 @@ body {
  * down the middle. Each of them keeps the edging of its own box out of the width its cards are drawn to, so the
  * shares add to the width of the felt and the seats of a table of any size stand clear of each other and clear of
  * the cards they share.
+ *
+ * A seat is drawn at the height its share leaves it and at no other, so the seats round a short table give way
+ * together and the felt holds all of them. What a seat says from across the table is a figure beside the backs
+ * standing for its cards, and that figure reads at any size the table draws the backs at.
  */
 
 .zones.theirs {
-  --upright: max(
-    var(--least),
-    min(
-      calc(var(--on-the-table) - var(--lettering)),
-      calc((var(--round-the-table) / var(--stacked) - var(--lettering)) / var(--lines) - var(--lettering))
-    )
+  --upright: min(
+    calc(var(--on-the-table) - var(--lettering)),
+    calc((var(--round-the-table) / var(--stacked) - var(--lettering)) / var(--lines) - var(--lettering))
   );
   --room: calc(25cqw - var(--edging));
 }
