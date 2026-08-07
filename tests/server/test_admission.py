@@ -33,7 +33,7 @@ async def test_a_guest_arrives_standing_at_no_seat(visitor: AsyncClient) -> None
     admitted = (await arriving(visitor, NAMED)).json()
 
     assert admitted["gathering"]["company"] == [
-        {"name": NAMED, "tint": FIRST_TINT, "seat": None, "present": False},
+        {"name": NAMED, "tint": FIRST_TINT, "seat": None, "present": False, "ready": False, "host": False},
     ]
 
 

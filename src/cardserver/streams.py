@@ -1,13 +1,16 @@
 from collections.abc import AsyncIterator
+from json import dumps
 from typing import Final
 
-from cardserver.gathering import Gathering
-from cardserver.schemas import GatheringView
-from cardserver.sessions import Commit, InService
+from cardserver.gathering.gathering import Gathering
+from cardserver.schemas.gathering import GatheringView
+from cardserver.sessions.commit import Commit
+from cardserver.sessions.in_service import InService
 
 STREAM_START: Final[int] = 0
 COMMIT_EVENT: Final[str] = "commit"
 GATHERING_EVENT: Final[str] = "gathering"
+CLOSED_EVENT: Final[str] = "closed"
 EVENT_STREAM: Final[str] = "text/event-stream"
 STREAM_HEADERS: Final[dict[str, str]] = {
     "Cache-Control": "no-store",
@@ -43,11 +46,25 @@ def frame(
     return framed(event.seq, COMMIT_EVENT, event.model_dump_json())
 
 
+def dismissed(
+    session: InService,
+) -> str:
+    """The word a broken-up table leaves, which a stream carries last so a seat learns the game is over."""
+    return framed(session.head, CLOSED_EVENT, dumps({"reason": session.closing}))
+
+
 def standing(
     view: GatheringView,
 ) -> str:
     """How a gathering stands, keyed by the revision it had reached when it was read."""
     return framed(view.revision, GATHERING_EVENT, view.model_dump_json())
+
+
+def broken(
+    view: GatheringView,
+) -> str:
+    """The word a broken-up gathering leaves, which a stream carries last so a page learns the room is gone."""
+    return framed(view.revision, CLOSED_EVENT, dumps({"reason": view.reason}))
 
 
 async def commits(
@@ -68,6 +85,10 @@ async def commits(
             yield frame(event)
 
         cursor += len(events)
+        if session.closed:
+            yield dismissed(session)
+            return
+
         await session.watch(cursor)
 
 
@@ -83,13 +104,18 @@ async def attendance(
     makes the company a page draws the company watching it, and hanging up takes their name out of the room.
 
     The deal is the last thing a gathering has to say, so the frame carrying it closes the stream and every page
-    holding one is carried to the table by it.
+    holding one is carried to the table by it. Breaking the gathering up is the other last word: the stream
+    carries a frame of its own for it, so a page learns the room is gone rather than watching it fall silent.
     """
     gathering.attends(guest)
     try:
         cursor = since
         while True:
             view = await gathering.since(cursor, guest)
+            if view.closed:
+                yield broken(view)
+                return
+
             yield standing(view)
             if view.dealt:
                 return

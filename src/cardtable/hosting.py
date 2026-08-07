@@ -4,10 +4,10 @@ from pathlib import Path
 from fastapi import FastAPI
 
 from cardserver.app import create_app
-from cardserver.gathering import Gatherings
-from cardserver.protocol import TableId
+from cardserver.gathering.gatherings import Gatherings
+from cardserver.protocols.table import TableId
 from cardserver.registry import TableRegistry
-from cardserver.schemas import Choice
+from cardserver.schemas.choice import Choice
 from cardtable.artwork import Artwork, serve_artwork
 from cardtable.interface import serve_interface
 from cardtable.paths import ASSETS, INTERFACE

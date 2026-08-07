@@ -65,8 +65,10 @@ disable = [
     "missing-function-docstring",
     "too-few-public-methods",
     "too-many-instance-attributes",
+    "too-many-locals",
     "too-many-function-args",
     "too-many-public-methods",
+    "too-many-arguments",
     "line-too-long",
 ]
 
@@ -177,25 +179,41 @@ forbidden_modules = [
 name = "Passing stands apart"
 type = "forbidden"
 source_modules = ["cardgames.*.passing"]
-forbidden_modules = ["cardgames.*.showdown", "cardgames.*.shedding", "cardgames.*.climbing"]
+forbidden_modules = [
+    "cardgames.*.showdown",
+    "cardgames.*.shedding",
+    "cardgames.*.climbing",
+]
 
 [[tool.importlinter.contracts]]
 name = "Showdown stands apart"
 type = "forbidden"
 source_modules = ["cardgames.*.showdown"]
-forbidden_modules = ["cardgames.*.passing", "cardgames.*.shedding", "cardgames.*.climbing"]
+forbidden_modules = [
+    "cardgames.*.passing",
+    "cardgames.*.shedding",
+    "cardgames.*.climbing",
+]
 
 [[tool.importlinter.contracts]]
 name = "Shedding stands apart"
 type = "forbidden"
 source_modules = ["cardgames.*.shedding"]
-forbidden_modules = ["cardgames.*.passing", "cardgames.*.showdown", "cardgames.*.climbing"]
+forbidden_modules = [
+    "cardgames.*.passing",
+    "cardgames.*.showdown",
+    "cardgames.*.climbing",
+]
 
 [[tool.importlinter.contracts]]
 name = "Climbing stands apart"
 type = "forbidden"
 source_modules = ["cardgames.*.climbing"]
-forbidden_modules = ["cardgames.*.passing", "cardgames.*.showdown", "cardgames.*.shedding"]
+forbidden_modules = [
+    "cardgames.*.passing",
+    "cardgames.*.showdown",
+    "cardgames.*.shedding",
+]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib --strict-markers"

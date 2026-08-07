@@ -413,9 +413,18 @@ export interface components {
          *     company settles rather than something the host fixes. The game is named as a plain word for the same reason
          *     a phase is: the vocabulary belongs to whatever holds the rules, and the adapter reads a name it confirms
          *     against what the host says it offers.
+         *
+         *     `cues` is the one field the rules read nothing of: whether the table lights the cards a seat may play, which
+         *     a company settles like the rest and an advanced one turns off. It travels with the choice so a page settles
+         *     it beside the game and it reaches the table the deal opens, where the layout carries it to every seat.
          */
         Choice: {
             conclusion: components["schemas"]["Conclusion"];
+            /**
+             * Cues
+             * @default true
+             */
+            cues: boolean;
             /** Decks */
             decks: number;
             /** Game */
@@ -543,15 +552,23 @@ export interface components {
          *     `revision` counts the changes the gathering has been through, and a command quotes the one it was built on
          *     the way a move quotes a sequence, so two guests settling the choice at once leaves the second told rather
          *     than overruled. `dealt` turns true once, which is what carries every page from the gathering to the table.
+         *
+         *     `democratic` is how the table is governed: true where every seated guest settles what is played, and false
+         *     where the say is the host's alone. `closed` turns true when the gathering is broken up before it is dealt,
+         *     which ends it the way the deal does but carries the company nowhere.
          */
         GatheringView: {
             choice: components["schemas"]["Choice"];
+            /** Closed */
+            closed: boolean;
             /** Code */
             code: string;
             /** Company */
             company: components["schemas"]["Guest"][];
             /** Dealt */
             dealt: boolean;
+            /** Democratic */
+            democratic: boolean;
             /** Mine */
             mine: string;
             /** Revision */
@@ -607,12 +624,20 @@ export interface components {
          *     them apart from the rest of the company at a glance, and no two guests hold one. The seat is the one they
          *     have taken, and none while they are standing. Presence follows the stream a page holds open, so the company
          *     reads as the room does.
+         *
+         *     `ready` is whether the guest has committed to the settings as they stand, which only a seated guest may do
+         *     and any change to what is played or who plays it takes back. `host` marks the guest who gathered the table,
+         *     whose say governs it while it is settled host by host rather than company-wide.
          */
         Guest: {
+            /** Host */
+            host: boolean;
             /** Name */
             name: string;
             /** Present */
             present: boolean;
+            /** Ready */
+            ready: boolean;
             /** Seat */
             seat: number | null;
             tint: components["schemas"]["Tint"];
@@ -645,6 +670,10 @@ export interface components {
          *     interface resolves nothing: it draws the slots where they belong, matches the moves it is served to the
          *     gestures, reads the cursor through the readouts and captions the phase from `phases`. What is left over —
          *     the size of a card, the colour of a highlight, the moment a heap collapses — is the interface's own.
+         *
+         *     The line runs between which thing is meant and what it looks like: a plaque states which of eight tints a
+         *     player is told apart by, and what that tint draws as belongs to the interface, exactly as a spread states
+         *     how cards lie against each other and where they lie belongs to the page.
          *
          *     Every claim a layout makes about itself is checked as it is built, which leaves an interface free to trust
          *     it: one slot per zone, a slot belonging to a seat of the table or to the table itself, one slot per place

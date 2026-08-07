@@ -7,8 +7,8 @@ from fastapi.responses import JSONResponse
 from starlette.requests import Request
 from starlette.responses import Response
 
-from cardserver.protocol import TableId
-from cardserver.schemas import ErrorBody
+from cardserver.protocols.table import TableId
+from cardserver.schemas.error import ErrorBody
 from cardwork.exceptions import (
     ArrangementRefused,
     GameValidationError,
@@ -44,6 +44,17 @@ class WrongSeat(CardserverError):
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
+
+
+class Unauthorized(CardserverError):
+    """Raised when the overseeing routes are reached without the token this host was started under.
+
+    The token is handed to whoever runs the server and to nobody else, so a request offering none or another
+    is turned away before it is read for what it asks: overseeing is the one thing here no code admits anyone to.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("These routes answer only to the token this host prints as it starts")
 
 
 class JournalSealed(CardserverError):
@@ -130,8 +141,48 @@ class StaleGathering(CardserverError):
         self.revision = revision
 
 
+class NotReady(CardserverError):
+    """Raised when the deal is called for while a seated guest has yet to commit to the settings."""
+
+    def __init__(self, waiting: tuple[str, ...]) -> None:
+        super().__init__(f"A table is dealt once every seat has committed, and these have not: {sorted(waiting)}")
+        self.waiting = waiting
+
+
+class NotTheHost(CardserverError):
+    """Raised when a guest governs a table, or breaks it up, holding the host's say over neither."""
+
+    def __init__(self, guest: str) -> None:
+        super().__init__(f"{guest!r} is not the host of this table")
+        self.guest = guest
+
+
+class NoCreation(CardserverError):
+    """Raised when a guest gathers a table where this host lets only its overseer open one."""
+
+    def __init__(self) -> None:
+        super().__init__("This host opens tables from its own panel just now, so ask whoever runs it for one")
+
+
+class TablesFull(CardserverError):
+    """Raised when a table is gathered while this host already holds as many as it opens at once."""
+
+    def __init__(self, most: int) -> None:
+        super().__init__(f"This host gathers {most} tables at once, and that many already stand")
+        self.most = most
+
+
+class TableClosed(CardserverError):
+    """Raised when a table that has been broken up is asked for anything further."""
+
+    def __init__(self, table: TableId) -> None:
+        super().__init__(f"Table {table!r} has been closed")
+        self.table = table
+
+
 REFUSALS: Final[tuple[tuple[type[Exception], HTTPStatus], ...]] = (
     (Unauthenticated, HTTPStatus.UNAUTHORIZED),
+    (Unauthorized, HTTPStatus.UNAUTHORIZED),
     (UnknownTable, HTTPStatus.NOT_FOUND),
     (WrongSeat, HTTPStatus.FORBIDDEN),
     (JournalSealed, HTTPStatus.FORBIDDEN),
@@ -146,7 +197,12 @@ REFUSALS: Final[tuple[tuple[type[Exception], HTTPStatus], ...]] = (
     (TintTaken, HTTPStatus.CONFLICT),
     (GatheringOver, HTTPStatus.CONFLICT),
     (SeatsEmpty, HTTPStatus.CONFLICT),
+    (NotReady, HTTPStatus.CONFLICT),
     (StaleGathering, HTTPStatus.CONFLICT),
+    (NotTheHost, HTTPStatus.FORBIDDEN),
+    (NoCreation, HTTPStatus.FORBIDDEN),
+    (TablesFull, HTTPStatus.SERVICE_UNAVAILABLE),
+    (TableClosed, HTTPStatus.GONE),
     (NoSuchSeat, HTTPStatus.UNPROCESSABLE_ENTITY),
     (GameValidationError, HTTPStatus.UNPROCESSABLE_ENTITY),
 )

@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response
 from starlette.types import Scope
 
-from cardserver.protocol import TableId
+from cardserver.protocols.table import TableId
 
 ROOT: Final[str] = "/"
 MOUNT: Final[str] = "interface"

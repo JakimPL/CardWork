@@ -1,16 +1,23 @@
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Annotated
+from typing import Annotated, Final
 
 from fastapi import Depends, FastAPI, Header, Query
 from fastapi.responses import StreamingResponse
 
 from cardserver.errors import install_error_handlers
-from cardserver.gathering import Gatherings
-from cardserver.identity import SEAT_HEADER, SeatPolicy, confirm_actor, seated
+from cardserver.gathering.gatherings import Gatherings
+from cardserver.identity.headers import SEAT_HEADER
+from cardserver.identity.identity import confirm_actor, seated
+from cardserver.identity.seat_policy import SeatPolicy
 from cardserver.lobby import gathering_routes
+from cardserver.oversight.admin_route import admin_routes
+from cardserver.oversight.oversight import Oversight
 from cardserver.registry import TableRegistry
-from cardserver.schemas import ArrangementRequest, CommandAccepted, MoveRequest
+from cardserver.schemas.arrangement import ArrangementRequest
+from cardserver.schemas.command import CommandAccepted
+from cardserver.schemas.move import MoveRequest
 from cardserver.streams import (
     EVENT_STREAM,
     STREAM_HEADERS,
@@ -21,11 +28,25 @@ from cardserver.streams import (
 from cardwork.models.base import BaseFrozen
 from cardwork.presentation.layout import Layout
 
+SWEEP_SECONDS: Final[float] = 60.0  # TODO: move to advanced settings
+
+
+async def sweeping(oversight: Oversight, period: float) -> None:
+    """Clear the lobby of the tables nobody is at every so often, for as long as the application answers.
+
+    A reap costs nothing where nothing is stale, so a run keeps one on a slow tick rather than reaching for a
+    clock on every request: the room a company walks out of is cleared a minute later, not the moment it empties.
+    """
+    while True:
+        await asyncio.sleep(period)
+        await oversight.reap()
+
 
 def create_app(
     registry: TableRegistry,
     seats: SeatPolicy,
     gatherings: Gatherings | None,
+    oversight: Oversight | None = None,
 ) -> FastAPI:
     """An application serving the tables of one registry to the clients one seat policy admits.
 
@@ -44,12 +65,20 @@ def create_app(
         registry: the tables in service, which the host opens before or during service.
         seats: how a credential becomes a seat at a table.
         gatherings: the tables gathering here, and None where this deployment gathers nobody.
+        oversight: the overseer's view of the lobby, and None where this deployment holds no panel over it.
     """
 
     @asynccontextmanager
     async def lifespan(_application: FastAPI) -> AsyncGenerator[None, None]:
-        yield
-        await registry.close()
+        reaper = None if oversight is None else asyncio.create_task(sweeping(oversight, SWEEP_SECONDS))
+        try:
+            yield
+        finally:
+            if reaper is not None:
+                reaper.cancel()
+                await asyncio.wait((reaper,))
+
+            await registry.close()
 
     app = FastAPI(title="CardWork", lifespan=lifespan)
     install_error_handlers(app)
@@ -111,7 +140,6 @@ def create_app(
         """
         return registry.session(table_id).layout(observer)
 
-    # The answer carries the cursor a game declares, which is one shape per game and so no schema at all.
     @app.get("/tables/{table_id}/view", response_model=None)
     async def read_view(
         table_id: str,
@@ -136,7 +164,6 @@ def create_app(
             headers=STREAM_HEADERS,
         )
 
-    # The answer carries the cursor a game declares, which is one shape per game and so no schema at all.
     @app.get("/tables/{table_id}/journal", response_model=None)
     async def read_journal(table_id: str) -> BaseFrozen:
         """The table's full record, which opens to everyone once the host has called the game over.
@@ -146,6 +173,9 @@ def create_app(
         return registry.session(table_id).record
 
     if gatherings is not None:
-        app.include_router(gathering_routes(gatherings))
+        app.include_router(gathering_routes(gatherings, oversight))
+
+    if oversight is not None:
+        app.include_router(admin_routes(oversight))
 
     return app

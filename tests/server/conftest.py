@@ -11,7 +11,7 @@ from cardserver.app import create_app
 from cardserver.identity import SEAT_HEADER, TokenSeats
 from cardserver.protocol import Presentation, Table
 from cardserver.registry import TableRegistry
-from cardserver.schemas import ArrangementRequest, Arriving, Claiming, MoveRequest
+from cardserver.schemas import ArrangementRequest, Arriving, Claiming, MoveRequest, Readying
 from cardserver.sessions import InService, TableSession
 from cardwork.decks.deck import Order
 from cardwork.moves.actions import Play, Take
@@ -51,6 +51,9 @@ SEAT: Final[str] = f"/tables/{TABLE}/seat"
 TINT: Final[str] = f"/tables/{TABLE}/tint"
 CHOICE: Final[str] = f"/tables/{TABLE}/choice"
 DEALING: Final[str] = f"/tables/{TABLE}/deal"
+READY: Final[str] = f"/tables/{TABLE}/ready"
+GOVERNANCE: Final[str] = f"/tables/{TABLE}/governance"
+CLOSING: Final[str] = f"/tables/{TABLE}/closing"
 
 
 def token_of(seat: int) -> str:
@@ -196,20 +199,34 @@ async def sits(client: AsyncClient, token: str, seat: int | None, base_revision:
     )
 
 
+async def readies(client: AsyncClient, token: str, base_revision: int) -> Response:
+    """One seated guest committing to the settings as they stand."""
+    return await client.put(
+        READY,
+        json=Readying(ready=True, base_revision=base_revision).model_dump(mode="json"),
+        headers=holding(token),
+    )
+
+
 async def seated_company(
     client: AsyncClient,
     names: tuple[str, ...],
 ) -> tuple[str, ...]:
-    """A company arriving one after another and taking the seats in the order they arrived.
+    """A company arriving one after another, taking the seats in order and committing to the settings.
 
-    Every seat of the table the gathering settled comes to be held, which leaves the deal to be called for and
-    nothing standing in its way. Each claim quotes the revision the arrival before it answered with.
+    Every seat of the table the gathering settled comes to be held and every one of them commits, which leaves
+    the deal to be called for and nothing standing in its way. Each command quotes the revision the one before
+    it answered with, so the whole company is seated and ready by the time the deal is asked for.
     """
     tokens: list[str] = []
     for seat, name in enumerate(names):
         admitted = (await arriving(client, name)).json()
         await sits(client, admitted["token"], seat, admitted["gathering"]["revision"])
         tokens.append(str(admitted["token"]))
+
+    for token in tokens:
+        reached = (await client.get(GATHERING, headers=holding(token))).json()
+        await readies(client, token, reached["revision"])
 
     return tuple(tokens)
 

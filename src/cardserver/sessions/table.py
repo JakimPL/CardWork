@@ -1,96 +1,18 @@
 import asyncio
-from typing import Generic, Protocol
+from collections.abc import Callable
+from typing import Generic
 
 from cardserver.errors import JournalSealed
-from cardserver.protocol import Presentation, Table, TableId
+from cardserver.protocols.presentation import Presentation
+from cardserver.protocols.table import Table, TableId
 from cardwork.decks.deck import Order
-from cardwork.models.base import BaseFrozen
 from cardwork.moves.move import Move
 from cardwork.presentation.layout import Layout
 from cardwork.states.state import StateT
 from cardwork.transactions.journal import Journal
-from cardwork.views.event import EventView, ZoneChange
+from cardwork.views.event import EventView
 from cardwork.views.position import PositionView
 from cardwork.zones.zone import ZoneId
-
-
-class Commit(Protocol):
-    """One commit on its way to a client: where it landed, what it moved, and the body a frame carries.
-
-    The cursor a commit leaves is the one part of it a game settles the shape of. Where it landed and which
-    cards moved read alike at every table, so they stand here and the cursor goes out inside the body.
-    """
-
-    @property
-    def seq(self) -> int:
-        """The sequence the commit landed at, which is the id its frame is keyed by."""
-
-    @property
-    def changes(self) -> tuple[ZoneChange, ...]:
-        """Which zones the commit moved cards in, as the observer it was read for learns of them."""
-
-    def model_dump_json(self) -> str:
-        """The commit as the wire carries it."""
-
-
-class InService(Protocol):
-    """One table in service, answering for itself without naming the shape of the cursor its game declares.
-
-    A game states its own state type and the projections carry it, so the sessions of two games are of two
-    types and one registry holds both. Every answer carrying a cursor goes out as JSON under a schema of the
-    game's own, which is what leaves the state type inside the session it was opened with: what a route asks
-    of a table in service is stated here, and stated once.
-    """
-
-    @property
-    def head(self) -> int:
-        """How many commits the table holds, which is the sequence the next one takes."""
-
-    @property
-    def settling(self) -> bool:
-        """Whether the changes the rules owe stand held back on a window just now."""
-
-    @property
-    def record(self) -> BaseFrozen:
-        """Every commit the table holds, cards and all.
-
-        Raises:
-            JournalSealed: while the record stays closed.
-        """
-
-    def reveal(self) -> None:
-        """Open the table's full record for analysis."""
-
-    def layout(self, observer: int | None) -> Layout:
-        """How this table is laid out for one observer."""
-
-    def view(self, observer: int | None) -> BaseFrozen:
-        """The table as one observer is entitled to see it, at the sequence it stands at now."""
-
-    def events(self, observer: int | None, since: int) -> tuple[Commit, ...]:
-        """Every commit from `since` onward as one observer learns of it, in commit order."""
-
-    async def submit(self, move: Move, base_seq: int, key: str) -> int:
-        """Apply one command to the table and answer with the sequence it was committed at."""
-
-    async def arrange(
-        self,
-        zone: ZoneId,
-        order: Order,
-        seat: int,
-        base_seq: int,
-        key: str,
-    ) -> int:
-        """Lay one of a seat's own zones out and answer with the sequence the order was committed at."""
-
-    async def watch(self, cursor: int) -> None:
-        """Wait until the table holds a commit past `cursor`."""
-
-    async def drain(self) -> None:
-        """Wait for a settlement in hand to run."""
-
-    async def close(self) -> None:
-        """Drop a settlement still waiting on its window."""
 
 
 class TableSession(Generic[StateT]):
@@ -115,20 +37,30 @@ class TableSession(Generic[StateT]):
         table: Table[StateT],
         presentation: Presentation,
         grace_seconds: float,
+        clock: Callable[[], float],
     ) -> None:
         self._table_id = table_id
         self._table = table
         self._presentation = presentation
         self._grace_seconds = grace_seconds
+        self._clock = clock
         self._commits = asyncio.Condition()
         self._applied: dict[str, int] = {}
         self._settlement: asyncio.Task[None] | None = None
         self._revealed = False
+        self._closed = False
+        self._reason: str | None = None
+        self._touched = clock()
 
     @property
     def head(self) -> int:
         """How many commits the table holds, which is the sequence the next one takes."""
         return self._table.head
+
+    @property
+    def players(self) -> int:
+        """How many seats the table holds, which is the size overseeing reads a played table by."""
+        return self._table.players
 
     @property
     def settling(self) -> bool:
@@ -139,6 +71,21 @@ class TableSession(Generic[StateT]):
         holds the rules back not at all.
         """
         return self._settlement is not None and not self._settlement.done()
+
+    @property
+    def closed(self) -> bool:
+        """Whether the table has been broken up, which ends its stream the way a game over never does."""
+        return self._closed
+
+    @property
+    def closing(self) -> str | None:
+        """The word left for the seats on why the table was broken up, and none while it stands."""
+        return self._reason
+
+    @property
+    def touched(self) -> float:
+        """When the table last committed, read off its clock, which is what a reaper counts a game idle by."""
+        return self._touched
 
     @property
     def record(self) -> Journal[StateT]:
@@ -239,9 +186,27 @@ class TableSession(Generic[StateT]):
             return transaction.seq
 
     async def watch(self, cursor: int) -> None:
-        """Wait until the table holds a commit past `cursor`, which is what wakes a stream to read it."""
+        """Wait until the table holds a commit past `cursor`, or is broken up, which wakes a stream either way."""
         async with self._commits:
-            await self._commits.wait_for(lambda: self._table.head > cursor)
+            await self._commits.wait_for(lambda: self._table.head > cursor or self._closed)
+
+    async def dismiss(self, reason: str | None) -> None:
+        """Break the table up, waking every stream on it so its seats learn the game is over rather than gone quiet.
+
+        Breaking up is terminal: the flag is raised under the lock and every waiter woken, so a stream reads the
+        table closed the next time it looks and carries a last word for it. The window a move left open is
+        dropped as service ends, since a table nobody may commit to again owes its seats nothing to settle.
+        """
+        async with self._commits:
+            if self._closed:
+                return
+
+            self._closed = True
+            self._reason = reason
+            self._touched = self._clock()
+            self._commits.notify_all()
+
+        await self.close()
 
     async def drain(self) -> None:
         """Wait for a settlement in hand to run, which leaves the table where the rules mean it to be."""
@@ -258,6 +223,7 @@ class TableSession(Generic[StateT]):
     def _publish(self) -> None:
         """Close the table's commits to undo and wake every stream watching, with the lock in hand."""
         self._table.mark_published()
+        self._touched = self._clock()
         self._commits.notify_all()
 
     def _restart_grace(self) -> None:

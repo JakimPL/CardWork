@@ -5,9 +5,9 @@ from typing import Final
 from cardwork.cards.orders import RANK_SEQUENCE
 from cardwork.cards.rank import Rank, Ranks
 
-CODE_LENGTH: Final[int] = 6
-SEPARATORS: Final[str] = " -_"
-APART: Final[str] = " "
+CODE_LENGTH: Final[int] = 6  # TODO: move to advanced configuration
+SEPARATORS: Final[str] = " -_"  # TODO: move to advanced configuration
+APART: Final[str] = "-"  # TODO: move to advanced configuration
 ONE_CHARACTER: Final[int] = 1
 
 READ_AS: Final[Mapping[str, Rank]] = {rank.value: rank for rank in RANK_SEQUENCE}

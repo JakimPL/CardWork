@@ -4,7 +4,7 @@ from typing import Final
 
 import pytest
 
-from cardserver.gathering import Gatherings, SayPolicy, SeatedSay
+from cardserver.gathering import Gatherings, GovernedSay, SayPolicy
 from cardserver.identity import SeatPolicy, TokenSeats
 from cardserver.naming import Named
 from cardserver.protocol import Presentation, Table
@@ -90,7 +90,7 @@ def test_a_credential_becomes_a_seat_the_way_the_port_asks_for_it(policy: type[S
 
 
 def test_a_say_is_confirmed_the_way_the_port_asks_for_it() -> None:
-    assert stated_by(SeatedSay.confirm) == stated_by(SayPolicy.confirm)
+    assert stated_by(GovernedSay.confirm) == stated_by(SayPolicy.confirm)
 
 
 @pytest.mark.parametrize("member", SERVED)

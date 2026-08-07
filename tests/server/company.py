@@ -6,7 +6,7 @@ from typing import Final
 from fastapi import FastAPI
 
 from cardserver.app import create_app
-from cardserver.gathering import Gathering, Gatherings, SeatedSay, Turnstile
+from cardserver.gathering import Gathering, Gatherings, GovernedSay, Turnstile
 from cardserver.naming import Named, Seated
 from cardserver.protocol import TableId
 from cardserver.registry import TableRegistry
@@ -118,14 +118,15 @@ class Gathered:
 
 def gathered(table: TableId, players: int) -> Gathered:
     """One table gathering on its code, at a choice of the demo game seating that many."""
-    registry = TableRegistry(NO_GRACE)
     ticking = Ticking()
+    registry = TableRegistry(NO_GRACE, ticking)
     deals = Deals(registry)
     gatherings = Gatherings(
         deals,
         OFFERINGS,
-        SeatedSay(),
+        GovernedSay(),
         Turnstile.watching(ticking),
+        ticking,
     )
     return Gathered(
         registry=registry,

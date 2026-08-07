@@ -42,6 +42,7 @@ class Layout(BaseFrozen):
     phases: Mapping[str, str]
     interludes: Mapping[str, Interlude]
     award: Award
+    cues: bool = True
 
     @model_validator(mode="after")
     def _the_observer_takes_a_seat(self) -> Self:
