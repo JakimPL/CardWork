@@ -108,6 +108,10 @@ def parser() -> ArgumentParser:
         help="the address a guest is handed, where it differs from the one bound",
     )
     arguments.add_argument(
+        "--forwarded-allow-ips",
+        help="the proxy peers whose forwarding headers name the real caller, and '*' to trust every one",
+    )
+    arguments.add_argument(
         "--log-level",
         choices=tuple(level.value for level in LogLevel),
         help="how much of what the server does reaches the log",
@@ -203,6 +207,7 @@ def a_service(stated: Service, arguments: Namespace) -> Service:
         port=chosen(arguments.port, stated.port),
         advertise=chosen(arguments.advertise, stated.advertise),
         log_level=chosen(arguments.log_level, stated.log_level),
+        forwarded_allow_ips=chosen(arguments.forwarded_allow_ips, stated.forwarded_allow_ips),
     )
 
 
@@ -282,6 +287,11 @@ def main(argv: Sequence[str] | None = None) -> None:
 
     The announcement is flushed as it is written, since the server that follows it holds the process for as
     long as the table lasts and a buffered line would reach a log file after the game rather than before it.
+
+    A run naming trusted proxy peers reads each caller through uvicorn's forwarding headers, so a lobby behind a
+    reverse proxy counts a wrong code against the guest who offered it rather than against the one proxy every
+    guest arrives through. A run naming none leaves the headers untrusted and counts each caller by its direct
+    peer.
     """
     configuration = configured(parser().parse_args(argv))
     hosted = opened(
@@ -300,9 +310,12 @@ def main(argv: Sequence[str] | None = None) -> None:
         ),
         flush=True,
     )
+    forwarded_allow_ips = configuration.service.forwarded_allow_ips
     uvicorn.run(
         hosted.app,
         host=configuration.service.host,
         port=configuration.service.port,
         log_level=configuration.service.log_level,
+        proxy_headers=forwarded_allow_ips is not None,
+        forwarded_allow_ips=forwarded_allow_ips,
     )

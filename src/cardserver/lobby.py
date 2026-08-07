@@ -31,7 +31,11 @@ UNKNOWN_CALLER: Final[str] = "unknown"
 
 
 def caller_of(request: Request) -> str:
-    """The address a request came from, which is what a turnstile counts a wrong code against."""
+    """The address a request came from, which is what a turnstile counts a wrong code against.
+
+    The client is the one the server resolves: a run trusting a reverse proxy's forwarding headers reads here
+    the guest on the far side of it, and a run trusting none reads the peer it was spoken to directly.
+    """
     client = request.client
     return UNKNOWN_CALLER if client is None else client.host
 

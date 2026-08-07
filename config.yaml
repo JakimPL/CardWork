@@ -18,6 +18,7 @@ service:
   port: 8421
   advertise: null
   log_level: info
+  forwarded_allow_ips: null
 
 advanced:
   turnstile_window: 60.0

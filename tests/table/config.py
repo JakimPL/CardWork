@@ -46,6 +46,7 @@ CONFIGURED: Final[Configuration] = Configuration(
         port=9000,
         advertise=None,
         log_level=LogLevel.WARNING,
+        forwarded_allow_ips=None,
     ),
     advanced=ADVANCED,
     admin=ADMIN,

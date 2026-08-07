@@ -183,6 +183,7 @@ export function aLayout(layout: Partial<Layout>): Layout {
     phases: {},
     interludes: INTERLUDES,
     award: "highest",
+    cues: true,
     ...layout,
   };
 }

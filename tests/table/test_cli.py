@@ -38,6 +38,7 @@ A_TARGET: Final[int] = 40
 A_COUNT: Final[int] = 6
 NOBODY: Final[str] = "0"
 ANOTHER_CODE: Final[str] = "QQ778A"
+TRUSTED: Final[str] = "10.0.0.1"
 
 DEPARTING: Final[tuple[str, ...]] = (
     "--game",
@@ -68,6 +69,8 @@ DEPARTING: Final[tuple[str, ...]] = (
     ANNOUNCED,
     "--log-level",
     "debug",
+    "--forwarded-allow-ips",
+    TRUSTED,
 )
 
 DEPARTED: Final[Configuration] = Configuration(
@@ -79,7 +82,13 @@ DEPARTED: Final[Configuration] = Configuration(
         conclusion=Conclusion(rounds=5),
     ),
     artwork=Artwork(pack=PackName.SVG, back="atlas"),
-    service=Service(host="0.0.0.0", port=9001, advertise=ANNOUNCED, log_level=LogLevel.DEBUG),
+    service=Service(
+        host="0.0.0.0",
+        port=9001,
+        advertise=ANNOUNCED,
+        log_level=LogLevel.DEBUG,
+        forwarded_allow_ips=TRUSTED,
+    ),
     advanced=ADVANCED,
     admin=ADMIN,
 )
@@ -293,3 +302,31 @@ def test_a_run_gathers_the_table_it_is_configured_for_and_answers_for_it_where_i
     assert isinstance(listening["app"], FastAPI)
     assert CONFIGURED.table.name in announced
     assert read_out(CONFIGURED.table.code) in announced
+
+
+def test_a_run_trusting_no_proxy_reads_each_caller_by_its_direct_peer(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A run naming no trusted proxy leaves the forwarding headers untrusted, so the server reads no client off them."""
+    listening: dict[str, object] = {}
+    monkeypatch.setattr(uvicorn, "run", lambda app, **arguments: listening.update(arguments, app=app))
+
+    main(["--config", str(a_config_file(tmp_path, CONFIGURED))])
+
+    assert listening["proxy_headers"] is False
+    assert listening["forwarded_allow_ips"] is None
+
+
+def test_a_run_naming_trusted_proxies_reads_the_caller_off_their_forwarding_headers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A run naming the peers it trusts turns the forwarding headers on, so a lobby behind a proxy counts real callers."""
+    listening: dict[str, object] = {}
+    monkeypatch.setattr(uvicorn, "run", lambda app, **arguments: listening.update(arguments, app=app))
+
+    main(["--config", str(a_config_file(tmp_path, CONFIGURED)), "--forwarded-allow-ips", TRUSTED])
+
+    assert listening["proxy_headers"] is True
+    assert listening["forwarded_allow_ips"] == TRUSTED
