@@ -1,10 +1,11 @@
 from pydantic import Field
 
+from cardserver.creation import Creation
 from cardwork.models.base import BaseFrozen
 
 
 class Advanced(BaseFrozen):
-    """The tuning one run answers under: how hard a code is to guess at, and how often an empty lobby is cleared.
+    """The tuning one run answers under: how a code is guarded, who governs a table, and how an empty lobby clears.
 
     A file states these the way it states the table and the service, so the values a person turns to harden a
     public deployment stand in the one place the rest of the run is read from. Each field is asked for outright,
@@ -12,9 +13,15 @@ class Advanced(BaseFrozen):
 
     A window and an allowance are what a code is guarded by: a caller offering more wrong codes than the allowance
     inside the window is turned away until the window runs out. The sweep is how long the lobby waits between one
-    clearing of the tables nobody is at and the next.
+    clearing of the tables nobody is at and the next, and the stale and idle spans are how long a gathering nobody
+    holds and a table nobody commits to linger before that clearing takes them. Whether a table opens democratic
+    and who may gather one at all are the terms a run governs its lobby by until an overseer settles otherwise.
     """
 
     turnstile_window: float = Field(gt=0.0)
     wrong_codes_allowed: int = Field(ge=1)
     sweep_seconds: float = Field(gt=0.0)
+    democratic: bool
+    creation: Creation
+    stale_seconds: float = Field(gt=0.0)
+    idle_seconds: float = Field(gt=0.0)

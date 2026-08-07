@@ -20,6 +20,12 @@ SECRET: Final[str] = "a-hand-of-random-bytes"
 ANOTHER: Final[str] = "another-table"
 A_SMALLER_TABLE: Final[int] = 2
 LONG_ENOUGH: Final[float] = 100_000.0
+OPENING: Final[dict[str, object]] = {
+    "democratic": True,
+    "creation": Creation.SELF_SERVE,
+    "stale_seconds": 900.0,
+    "idle_seconds": 3600.0,
+}
 
 
 def a_founding(table: str) -> Founding:
@@ -34,7 +40,7 @@ def oversight_of(gathered: Gathered, **terms: object) -> Oversight:
         gathered.registry,
         TokenAdmin(SECRET),
         gathered.ticking,
-        **terms,  # type: ignore[arg-type]
+        **{**OPENING, **terms},  # type: ignore[arg-type]
     )
 
 

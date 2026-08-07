@@ -5,6 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from cardserver.codes import code_in
+from cardserver.creation import Creation
 from cardtable.config import Configuration
 from cardtable.games import GAMES_HELD, GameName
 from cardtable.paths import CONFIGURATION
@@ -22,7 +23,15 @@ SPARE: Final[dict[str, object]] = {
     "choice": {"game": GameName.SHOWDOWN.value, "players": 2, "decks": 1, "conclusion": {"rounds": 1}},
     "artwork": {"pack": None, "back": "crosshatch"},
     "service": {"host": "0.0.0.0", "advertise": None, "log_level": LogLevel.DEBUG.value},
-    "advanced": {"turnstile_window": 60.0, "wrong_codes_allowed": 10, "sweep_seconds": 60.0},
+    "advanced": {
+        "turnstile_window": 60.0,
+        "wrong_codes_allowed": 10,
+        "sweep_seconds": 60.0,
+        "democratic": True,
+        "creation": Creation.SELF_SERVE.value,
+        "stale_seconds": 900.0,
+        "idle_seconds": 3600.0,
+    },
 }
 
 

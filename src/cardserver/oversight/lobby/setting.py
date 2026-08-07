@@ -2,7 +2,7 @@ from typing import Annotated, Final
 
 from pydantic import Field
 
-from cardserver.oversight.creation import Creation
+from cardserver.creation import Creation
 from cardwork.models.base import BaseFrozen
 
 NO_LIMIT: Final[int] = 0

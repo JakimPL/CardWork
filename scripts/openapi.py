@@ -6,7 +6,7 @@ from time import monotonic
 from typing import Final
 
 from cardserver.app import create_app
-from cardserver.gathering import Gatherings, SeatedSay, Turnstile
+from cardserver.gathering import Gatherings, GovernedSay, Turnstile
 from cardserver.registry import TableRegistry
 from cardtable.catalogue import OFFERINGS, Deals
 from cardtable.paths import SPECIFICATION
@@ -14,6 +14,9 @@ from cardtable.paths import SPECIFICATION
 NO_GRACE: Final[float] = 0.0
 NO_SEED: Final[int] = 0
 INDENT: Final[int] = 2
+TURNSTILE_WINDOW: Final[float] = 60.0
+WRONG_CODES_ALLOWED: Final[int] = 10
+SWEEP_SECONDS: Final[float] = 60.0
 
 Document = Mapping[str, object]
 
@@ -29,11 +32,16 @@ def document() -> Document:
     registry = TableRegistry(NO_GRACE)
     gatherings = Gatherings(
         Deals(registry, NO_SEED),
-        OFFERINGS,
-        SeatedSay(),
-        Turnstile.watching(monotonic),
+        offerings=OFFERINGS,
+        say=GovernedSay(),
+        turnstile=Turnstile.watching(
+            monotonic,
+            window=TURNSTILE_WINDOW,
+            wrong_codes_allowed=WRONG_CODES_ALLOWED,
+        ),
+        clock=monotonic,
     )
-    return create_app(registry, gatherings, gatherings).openapi()
+    return create_app(registry, gatherings, gatherings, sweep_seconds=SWEEP_SECONDS).openapi()
 
 
 def write(specification: Document, into: Path) -> int:

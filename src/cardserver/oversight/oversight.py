@@ -2,10 +2,10 @@ from collections.abc import Callable
 from typing import Final
 
 from cardserver.codes import a_drawn_code
+from cardserver.creation import Creation
 from cardserver.errors import NoCreation, TablesFull
 from cardserver.gathering.gathering import Gathering
 from cardserver.gathering.gatherings import Gatherings
-from cardserver.oversight.creation import Creation
 from cardserver.oversight.lobby.setting import NO_LIMIT, LobbySetting
 from cardserver.oversight.lobby.view import LobbyView
 from cardserver.oversight.policy import AdminPolicy
@@ -17,10 +17,6 @@ from cardserver.schemas.admitted import Admitted
 from cardserver.schemas.founding import Founding
 from cardserver.sessions.in_service import InService
 
-DEMOCRATIC: Final[bool] = True
-CREATION: Final[Creation] = Creation.SELF_SERVE
-STALE_SECONDS: Final[float] = 900.0
-IDLE_SECONDS: Final[float] = 3600.0
 OVERSEER: Final[str] = ""
 GATHERING_PHASE: Final[str] = "gathering"
 PLAYING_PHASE: Final[str] = "playing"
@@ -45,11 +41,11 @@ class Oversight:
         admin: AdminPolicy,
         clock: Callable[[], float],
         *,
-        democratic: bool = DEMOCRATIC,
-        creation: Creation = CREATION,
+        democratic: bool,
+        creation: Creation,
+        stale_seconds: float,
+        idle_seconds: float,
         capacity: int = NO_LIMIT,
-        stale_seconds: float = STALE_SECONDS,
-        idle_seconds: float = IDLE_SECONDS,
     ) -> None:
         self._gatherings = gatherings
         self._registry = registry

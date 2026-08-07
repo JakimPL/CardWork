@@ -154,7 +154,7 @@ class Deals:
                     a_climbing_match(choice, self._seed),
                     CLIMBING_SCENE,
                     seated,
-                    choice.cues,
+                    cues=choice.cues,
                 )
 
             case GameName.PASSING:
@@ -163,7 +163,7 @@ class Deals:
                     a_passing_match(choice, self._seed),
                     PASSING_SCENE,
                     seated,
-                    choice.cues,
+                    cues=choice.cues,
                 )
 
             case GameName.SHOWDOWN:
@@ -172,7 +172,7 @@ class Deals:
                     a_showdown_match(choice, self._seed),
                     SHOWDOWN_SCENE,
                     seated,
-                    choice.cues,
+                    cues=choice.cues,
                 )
 
             case GameName.SHEDDING:
@@ -181,7 +181,7 @@ class Deals:
                     a_shedding_match(choice, self._seed),
                     SHEDDING_SCENE,
                     seated,
-                    choice.cues,
+                    cues=choice.cues,
                 )
 
     def _put_into_service[StateT: GameState](
@@ -234,4 +234,12 @@ def opened(settings: Settings, choice: Choice, artwork: Artwork, advanced: Advan
         ),
         clock=monotonic,
     )
-    return serve(registry, gatherings, settings, choice, artwork, sweep_seconds=advanced.sweep_seconds)
+    return serve(
+        registry,
+        gatherings,
+        settings,
+        choice,
+        artwork,
+        sweep_seconds=advanced.sweep_seconds,
+        democratic=advanced.democratic,
+    )

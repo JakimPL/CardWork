@@ -4,6 +4,7 @@ from typing import Final
 from yaml import safe_dump
 
 from cardserver.advanced import Advanced
+from cardserver.creation import Creation
 from cardserver.schemas import Choice
 from cardtable.artwork import Artwork
 from cardtable.config import Configuration
@@ -17,7 +18,15 @@ BACK: Final[str] = "crosshatch"
 CODE: Final[str] = "KQAJ72"
 
 GLYPHS: Final[Artwork] = Artwork(pack=None, back=BACK)
-ADVANCED: Final[Advanced] = Advanced(turnstile_window=60.0, wrong_codes_allowed=10, sweep_seconds=60.0)
+ADVANCED: Final[Advanced] = Advanced(
+    turnstile_window=60.0,
+    wrong_codes_allowed=10,
+    sweep_seconds=60.0,
+    democratic=True,
+    creation=Creation.SELF_SERVE,
+    stale_seconds=900.0,
+    idle_seconds=3600.0,
+)
 
 CONFIGURED: Final[Configuration] = Configuration(
     table=Settings(name="baize", code=CODE, seed=7, grace_seconds=0.5),
