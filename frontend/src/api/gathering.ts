@@ -23,3 +23,5 @@ export type Claiming = components["schemas"]["Claiming"];
 export type Tinting = components["schemas"]["Tinting"];
 export type Choosing = components["schemas"]["Choosing"];
 export type Dealing = components["schemas"]["Dealing"];
+export type Readying = components["schemas"]["Readying"];
+export type Governing = components["schemas"]["Governing"];

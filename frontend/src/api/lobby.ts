@@ -1,4 +1,15 @@
-import type { Admitted, Arriving, Choosing, Claiming, Dealing, GatheringView, Offering, Tinting } from "./gathering";
+import type {
+  Admitted,
+  Arriving,
+  Choosing,
+  Claiming,
+  Dealing,
+  GatheringView,
+  Governing,
+  Offering,
+  Readying,
+  Tinting,
+} from "./gathering";
 import { asking, SENDING, STATING, stating } from "./requests";
 import { credentials, type Seat } from "./seat";
 import { follow, type Streamed } from "./streaming";
@@ -12,6 +23,8 @@ const SEAT = "seat";
 const TINT = "tint";
 const CHOICE = "choice";
 const DEAL = "deal";
+const READY = "ready";
+const GOVERNANCE = "governance";
 const SINCE = "since";
 
 /** What no credential at all is offered with, which is how a stranger arrives and how the offerings are read. */
@@ -76,6 +89,16 @@ export function settleChoice(seat: Seat, choosing: Choosing): Promise<GatheringV
 /** Call for the deal, which opens the table the company settled on and ends the gathering. */
 export function deal(seat: Seat, dealing: Dealing): Promise<GatheringView> {
   return stating<GatheringView, Dealing>(gathered(seat.table, DEAL), SENDING, credentials(seat), dealing);
+}
+
+/** Commit to the settings as they stand, or take that commitment back, which every seated guest may do. */
+export function commitReady(seat: Seat, readying: Readying): Promise<GatheringView> {
+  return stating<GatheringView, Readying>(gathered(seat.table, READY), STATING, credentials(seat), readying);
+}
+
+/** Settle how the table is governed, democratically or by the host's own say, which its host alone may do. */
+export function settleGovernance(seat: Seat, governing: Governing): Promise<GatheringView> {
+  return stating<GatheringView, Governing>(gathered(seat.table, GOVERNANCE), STATING, credentials(seat), governing);
 }
 
 /**

@@ -1220,6 +1220,25 @@ button.card {
   color: var(--chalk);
 }
 
+.place .badge {
+  margin-left: 0.5em;
+  padding: 0 0.4em;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  color: var(--chalk-dim);
+  font-size: 0.75em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.place .standing {
+  color: var(--chalk-dim);
+}
+
+.place .standing.ready {
+  color: var(--live);
+}
+
 .place.empty .guest {
   color: var(--chalk-dim);
   font-style: italic;
@@ -1304,12 +1323,41 @@ button.card {
   color: var(--chalk-dim);
 }
 
+.settling .governance {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: calc(var(--gap) / 2);
+  align-items: center;
+  width: auto;
+  color: var(--chalk-dim);
+}
+
+.settling .governance input {
+  width: auto;
+}
+
 .choices {
   display: flex;
   flex-wrap: wrap;
   gap: var(--gap);
   align-items: center;
   width: 100%;
+}
+
+.committing {
+  display: flex;
+  gap: var(--gap);
+  align-items: center;
+}
+
+.commit.ready.committed {
+  border-color: rgb(var(--tint));
+  box-shadow: 0 0 0 2px rgb(var(--tint) / var(--tint-ring));
+}
+
+.committing .pending {
+  color: var(--chalk-dim);
 }
 
 .notice .reading {

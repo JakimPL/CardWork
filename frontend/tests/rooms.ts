@@ -51,10 +51,10 @@ export function aGathering(company: Guest[], gathering: Partial<GatheringView> =
   };
 }
 
-/** A gathering whose every seat is taken, which is the one thing the deal waits on. */
-export function aSeatedGathering(players: number): GatheringView {
+/** A gathering whose every seat is taken, its company committed to the settings where a test asks for it. */
+export function aSeatedGathering(players: number, ready = false): GatheringView {
   const company = TINTS.slice(0, players).map((tint, seat) =>
-    aGuest(seat === 0 ? MINE : `Guest ${seat}`, seat, true, tint),
+    aGuest(seat === 0 ? MINE : `Guest ${seat}`, seat, true, tint, ready),
   );
   return aGathering(company, { choice: aChoice({ players }) });
 }

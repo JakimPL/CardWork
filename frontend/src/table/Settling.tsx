@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 
 import type { Choice, GatheringView, Offering } from "../api/gathering";
 import { endingRead, offeringOf, runningTo, seatingsOf, settledOn } from "../play/choosing";
-import { hasSay } from "../play/company";
+import { hasSay, iAmHost } from "../play/company";
 
 /** The most rounds a company sets a match to run for, which is where the counts a control lists stop. */
 const ROUNDS_MOST = 10;
@@ -13,10 +13,14 @@ const ROUND_COUNTS = [...Array(ROUNDS_MOST).keys()].map((step) => step + 1);
 /** What a guest holding no seat is told, since the players of the game are the ones who settle it. */
 const TOLD = "Take a seat to settle what is played";
 
+/** How the host reads the say they are handing out or keeping, which is the whole of the governance toggle. */
+const GOVERNANCE = "Everyone at the table may change the settings";
+
 interface SettlingProps {
   gathering: GatheringView;
   offerings: Offering[];
   settle: (choice: Choice) => void;
+  govern: (democratic: boolean) => void;
 }
 
 /**
@@ -27,12 +31,14 @@ interface SettlingProps {
  * that admits one count of decks offers no choice of them at all.
  *
  * Settling is for the guests holding seats, which the server answers for itself: a guest standing by reads the
- * choice and is told as much.
+ * choice and is told as much. How the table is governed stands here too, as the host's own to settle: the toggle
+ * hands the say to the whole table or keeps it to the host, and it shows for the host alone.
  */
-export function Settling({ gathering, offerings, settle }: SettlingProps): ReactElement {
+export function Settling({ gathering, offerings, settle, govern }: SettlingProps): ReactElement {
   const { choice } = gathering;
   const offering = offeringOf(offerings, choice.game);
   const saying = hasSay(gathering);
+  const hosting = iAmHost(gathering);
 
   return (
     <div className="settling">
@@ -106,6 +112,12 @@ export function Settling({ gathering, offerings, settle }: SettlingProps): React
         </select>
       </label>
       <p className="ending">Runs to {endingRead(choice.conclusion)}</p>
+      {hosting && (
+        <label className="governance">
+          <input type="checkbox" checked={gathering.democratic} onChange={(event) => govern(event.target.checked)} />
+          {GOVERNANCE}
+        </label>
+      )}
       {!saying && <p className="told">{TOLD}</p>}
     </div>
   );

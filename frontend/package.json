@@ -4,6 +4,9 @@
   "description": "The player interface a CardWork table is played through",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20.12"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

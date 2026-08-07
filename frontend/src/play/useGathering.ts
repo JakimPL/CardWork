@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { Choice, GatheringView, Offering, Tint } from "../api/gathering";
-import { chooseTint, claimSeat, deal, followGathering, readGathering, readOfferings, settleChoice } from "../api/lobby";
+import {
+  chooseTint,
+  claimSeat,
+  commitReady,
+  deal,
+  followGathering,
+  readGathering,
+  readOfferings,
+  settleChoice,
+  settleGovernance,
+} from "../api/lobby";
 import { reasonOf } from "../api/refusal";
 import type { Seat } from "../api/seat";
 import type { Connection } from "./connection";
@@ -19,6 +29,8 @@ export interface Gathered {
   claim: (seat: number | null) => void;
   tint: (chosen: Tint) => void;
   settle: (choice: Choice) => void;
+  ready: (committed: boolean) => void;
+  govern: (democratic: boolean) => void;
   callTheDeal: () => void;
 }
 
@@ -82,6 +94,20 @@ export function useGathering(seat: Seat): Gathered {
     [seat, commanded],
   );
 
+  const ready = useCallback(
+    (committed: boolean) => {
+      commanded((revision) => commitReady(seat, { ready: committed, base_revision: revision }));
+    },
+    [seat, commanded],
+  );
+
+  const govern = useCallback(
+    (democratic: boolean) => {
+      commanded((revision) => settleGovernance(seat, { democratic, base_revision: revision }));
+    },
+    [seat, commanded],
+  );
+
   const callTheDeal = useCallback(() => {
     commanded((revision) => deal(seat, { base_revision: revision }));
   }, [seat, commanded]);
@@ -138,5 +164,5 @@ export function useGathering(seat: Seat): Gathered {
     };
   }, [seat, hold]);
 
-  return { gathering, offerings, connection, trouble, claim, tint, settle, callTheDeal };
+  return { gathering, offerings, connection, trouble, claim, tint, settle, ready, govern, callTheDeal };
 }

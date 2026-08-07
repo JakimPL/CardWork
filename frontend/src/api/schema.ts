@@ -4,6 +4,90 @@
  */
 
 export interface paths {
+    "/admin/lobby": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Lobby
+         * @description The whole lobby as the overseer reads it: every table, and the terms it is held under.
+         */
+        get: operations["read_lobby_admin_lobby_get"];
+        /**
+         * Settle Lobby
+         * @description Settle the terms the lobby is held under: how many tables stand at once, and who may open one.
+         */
+        put: operations["settle_lobby_admin_lobby_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reap Tables
+         * @description Clear away every table nobody is at that has sat too long, and answer with the names cleared.
+         */
+        post: operations["reap_tables_admin_reap_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Table
+         * @description Gather a table on the company's behalf, answering with the card that carries the code it admits on.
+         */
+        post: operations["post_table_admin_tables_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/tables/{table_id}/closing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close Table
+         * @description Break one table up whether it is gathering or in play, and answer with the lobby it leaves behind.
+         */
+        post: operations["close_table_admin_tables__table_id__closing_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/offerings": {
         parameters: {
             query?: never;
@@ -42,7 +126,11 @@ export interface paths {
          */
         get: operations["read_tables_tables_get"];
         put?: never;
-        post?: never;
+        /**
+         * Found
+         * @description Gather a fresh table and seat its founder as the host, answering with the token they speak through.
+         */
+        post: operations["found_tables_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -577,6 +665,16 @@ export interface components {
             target?: number | null;
         };
         /**
+         * Creation
+         * @description Who may gather a table here: everyone, the overseer alone, or everyone until the overseer says otherwise.
+         *
+         *     A friendly host lets the company gather its own tables, a guarded one keeps the opening of them to whoever
+         *     runs it, and a hybrid one starts open and closes on a word: the overseer settling it to `admin-only` is what
+         *     turns a run from the first into the second without a restart.
+         * @enum {string}
+         */
+        Creation: "self-serve" | "admin-only" | "hybrid";
+        /**
          * Dealing
          * @description A guest calling for the deal, which opens the table and ends the gathering.
          */
@@ -612,6 +710,20 @@ export interface components {
              * @enum {string}
              */
             kind: "discard";
+        };
+        /**
+         * Founding
+         * @description Gathering a new table: the name it answers under, the name its host arrives under, and what it opens on.
+         *
+         *     The host names the table and themselves at once, since founding a table is arriving at it: the code is drawn
+         *     for them and handed back, and the token minted seats the host the way an arrival seats any guest.
+         */
+        Founding: {
+            choice: components["schemas"]["Choice"];
+            /** Name */
+            name: string;
+            /** Table */
+            table: string;
         };
         /**
          * GatheringView
@@ -791,6 +903,28 @@ export interface components {
             title: string;
         };
         /**
+         * LobbySetting
+         * @description A change to the terms the lobby is held under, which the overseer settles a field at a time.
+         */
+        LobbySetting: {
+            /** Capacity */
+            capacity?: number | null;
+            creation?: components["schemas"]["Creation"] | null;
+        };
+        /**
+         * LobbyView
+         * @description The lobby as the overseer reads it: every table it holds, and the terms it holds them under.
+         */
+        LobbyView: {
+            /** Capacity */
+            capacity: number;
+            /** Census */
+            census: number;
+            creation: components["schemas"]["Creation"];
+            /** Tables */
+            tables: components["schemas"]["TableCard"][];
+        };
+        /**
          * Move
          * @description A seat's intent, before the rules have had a say.
          *
@@ -880,6 +1014,15 @@ export interface components {
              * @enum {string}
              */
             kind: "play";
+        };
+        /**
+         * Posting
+         * @description The overseer gathering a table on the company's behalf: the name it answers under, and what it opens on.
+         */
+        Posting: {
+            choice: components["schemas"]["Choice"];
+            /** Table */
+            table: string;
         };
         /**
          * Readout
@@ -973,6 +1116,37 @@ export interface components {
          * @enum {string}
          */
         Spread: "slot" | "stack" | "fan" | "row";
+        /**
+         * TableCard
+         * @description One table as the overseer reads it: where it stands, how large, who is at it, and how long it has idled.
+         *
+         *     A gathering and a table in service read the same shape here, so the panel lists both in one hand: a
+         *     gathering carries the code it admits on and the company reading it, and a table in play carries neither,
+         *     since its company was carried to it and its cards are the seats' own.
+         */
+        TableCard: {
+            /**
+             * Closed
+             * @default false
+             */
+            closed: boolean;
+            /** Code */
+            code?: string | null;
+            /** Democratic */
+            democratic?: boolean | null;
+            /** Host */
+            host?: string | null;
+            /** Idle */
+            idle: number;
+            /** Phase */
+            phase: string;
+            /** Present */
+            present?: number | null;
+            /** Seats */
+            seats: number;
+            /** Table */
+            table: string;
+        };
         /** Take */
         Take: {
             /** Group */
@@ -1042,6 +1216,175 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    read_lobby_admin_lobby_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Admin-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LobbyView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    settle_lobby_admin_lobby_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Admin-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LobbySetting"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LobbyView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reap_tables_admin_reap_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Admin-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_table_admin_tables_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Admin-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Posting"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableCard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_table_admin_tables__table_id__closing_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Admin-Token"?: string | null;
+            };
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Closing"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LobbyView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_offerings_offerings_get: {
         parameters: {
             query?: never;
@@ -1078,6 +1421,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": string[];
+                };
+            };
+        };
+    };
+    found_tables_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Founding"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Admitted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
