@@ -3,10 +3,11 @@ from typing import Final
 
 from httpx import AsyncClient
 
-from cardserver.gathering import COMPANY_MOST, TINTS, TURNSTILE_WINDOW, WRONG_CODES_ALLOWED
-from cardserver.schemas import NAME_LONGEST, Arriving
+from cardserver.gathering import COMPANY_MOST, TINTS
+from cardserver.limits import NAME_LONGEST
+from cardserver.schemas import Arriving
 
-from .company import CODE, WRONG_CODE, Gathered
+from .company import CODE, TURNSTILE_WINDOW, WRONG_CODE, WRONG_CODES_ALLOWED, Gathered
 from .conftest import GATHERING, GUESTS, TABLE, arriving, holding
 
 A_MOMENT: Final[float] = 1.0

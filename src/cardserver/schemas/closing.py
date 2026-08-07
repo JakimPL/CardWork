@@ -1,10 +1,9 @@
-from typing import Annotated, Final
+from typing import Annotated
 
 from pydantic import Field
 
+from cardserver.limits import REASON_LONGEST
 from cardwork.models.base import BaseFrozen
-
-REASON_LONGEST: Final[int] = 200  # TODO: move to advanced server configuration
 
 
 class Closing(BaseFrozen):

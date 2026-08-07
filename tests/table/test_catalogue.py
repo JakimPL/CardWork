@@ -20,7 +20,7 @@ from cardwork.presentation.layout import Layout
 from cardwork.rounds.conclusion import Conclusion
 from tests.cases import descriptions
 
-from .config import GLYPHS
+from .config import ADVANCED, GLYPHS
 from .tables import (
     CASES,
     CHOICE,
@@ -157,22 +157,22 @@ def test_every_game_a_host_deals_runs_to_the_ending_the_company_settled() -> Non
 
 
 def test_a_table_gathers_under_the_name_the_settings_give_it() -> None:
-    assert opened(SETTINGS, CHOICE, GLYPHS).table == SETTINGS.name
+    assert opened(SETTINGS, CHOICE, GLYPHS, ADVANCED).table == SETTINGS.name
 
 
 def test_a_table_gathers_behind_the_code_the_settings_state() -> None:
-    assert opened(SETTINGS, CHOICE, GLYPHS).code == SETTINGS.code
+    assert opened(SETTINGS, CHOICE, GLYPHS, ADVANCED).code == SETTINGS.code
 
 
 def test_a_seating_no_game_is_played_at_gathers_no_table() -> None:
     """The rules of a game state the tables it seats, so a choice past them is refused as the room opens."""
     with pytest.raises(GameValidationError):
-        opened(SETTINGS, settled(GameName.PASSING, SEATS_NO_GAME_HOLDS, ONE_DECK), GLYPHS)
+        opened(SETTINGS, settled(GameName.PASSING, SEATS_NO_GAME_HOLDS, ONE_DECK), GLYPHS, ADVANCED)
 
 
 def test_a_count_of_decks_a_game_is_dealt_from_nowhere_gathers_no_table() -> None:
     with pytest.raises(GameValidationError):
-        opened(SETTINGS, settled(GameName.SHOWDOWN, PLAYERS, TWO_DECKS), GLYPHS)
+        opened(SETTINGS, settled(GameName.SHOWDOWN, PLAYERS, TWO_DECKS), GLYPHS, ADVANCED)
 
 
 @pytest.mark.parametrize("case", CASES, ids=descriptions(CASES))

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable, Mapping
 from secrets import token_urlsafe
+from typing import Final
 
 from cardserver.codes import admits
 from cardserver.errors import (
@@ -19,8 +20,8 @@ from cardserver.errors import (
     Unadmitted,
     Unauthenticated,
 )
-from cardserver.gathering.config import COMPANY_MOST, FIRST_REVISION, STANDING, TINTS, TOKEN_BYTES
 from cardserver.gathering.opening import Opening
+from cardserver.limits import TOKEN_BYTES
 from cardserver.naming.seated import Seated
 from cardserver.protocols.table import TableId
 from cardserver.schemas.choice import Choice
@@ -29,6 +30,11 @@ from cardserver.schemas.guest import Guest
 from cardserver.schemas.offering import Offering
 from cardwork.exceptions import GameValidationError
 from cardwork.presentation.tint import Tint
+
+TINTS: Final[tuple[Tint, ...]] = tuple(Tint)
+COMPANY_MOST: Final[int] = len(TINTS)
+FIRST_REVISION: Final[int] = 0
+STANDING: Final[None] = None
 
 
 class Gathering:

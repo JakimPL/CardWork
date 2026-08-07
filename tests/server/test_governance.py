@@ -95,7 +95,14 @@ def test_a_company_of_one_mind_is_dealt(gathered: Gathered) -> None:
 
 
 def test_founding_a_table_hands_the_host_a_code_and_a_token(gathered: Gathered) -> None:
-    admitted = gathered.gatherings.create(Founding(table=HOSTED, name="Ada", choice=a_sealed_round(A_SMALLER_TABLE)))
+    admitted = gathered.gatherings.create(
+        Founding(
+            table=HOSTED,
+            name="Ada",
+            choice=a_sealed_round(A_SMALLER_TABLE),
+        ),
+        democratic=False,
+    )
 
     host = next(guest for guest in admitted.gathering.company if guest.name == "Ada")
 
@@ -129,7 +136,14 @@ def test_a_table_governed_by_its_host_gives_a_seated_guest_no_say(gathered: Gath
 
 
 def test_governing_a_table_is_the_host_s_alone(gathered: Gathered) -> None:
-    gathered.gatherings.create(Founding(table=HOSTED, name="Ada", choice=a_sealed_round(A_SMALLER_TABLE)))
+    gathered.gatherings.create(
+        Founding(
+            table=HOSTED,
+            name="Ada",
+            choice=a_sealed_round(A_SMALLER_TABLE),
+        ),
+        democratic=False,
+    )
     hosted = gathered.gatherings.at(HOSTED)
     hosted.admit("Grace")
     hosted.claim("Grace", 1, hosted.revision)

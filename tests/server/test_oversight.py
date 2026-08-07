@@ -12,7 +12,7 @@ from cardserver.oversight import Creation, LobbySetting, Oversight, Posting, Tok
 from cardserver.schemas import Founding
 
 from ..games.demo import SEATS
-from .company import Gathered, a_sealed_round
+from .company import SWEEP_SECONDS, Gathered, a_sealed_round
 from .conftest import BASE_URL, TABLE
 
 COMPANY: Final[tuple[str, ...]] = ("Ada", "Grace", "Alan")
@@ -148,7 +148,9 @@ async def test_an_idle_table_in_play_is_cleared_away(gathered: Gathered) -> None
 @pytest.fixture(name="overseen")
 async def overseen_fixture(gathered: Gathered) -> AsyncIterator[AsyncClient]:
     oversight = oversight_of(gathered, capacity=8)
-    app = create_app(gathered.registry, gathered.gatherings, gathered.gatherings, oversight)
+    app = create_app(
+        gathered.registry, gathered.gatherings, gathered.gatherings, oversight, sweep_seconds=SWEEP_SECONDS
+    )
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as client:
         yield client
 

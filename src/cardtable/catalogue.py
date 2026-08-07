@@ -11,6 +11,7 @@ from cardgames.frontend.climbing.layout import CLIMBING_SCENE
 from cardgames.frontend.passing.layout import PASSING_SCENE
 from cardgames.frontend.shedding.layout import SHEDDING_SCENE
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
+from cardserver.advanced import Advanced
 from cardserver.gathering.gatherings import Gatherings
 from cardserver.gathering.governed_say import GovernedSay
 from cardserver.gathering.turnstile import Turnstile
@@ -189,13 +190,22 @@ class Deals:
         game: Table[StateT],
         presentation: Presentation,
         seated: Mapping[int, Seated],
-        cues: bool,
+        *,
+        cues: bool = True,
     ) -> None:
         """Open one dealt game under a name, read through its arrangement as its seats were taken and lit."""
-        self._registry.open(table, game, Named(presentation, seated, cues))
+        self._registry.open(
+            table,
+            game,
+            Named(
+                presentation,
+                seated,
+                cues=cues,
+            ),
+        )
 
 
-def opened(settings: Settings, choice: Choice, artwork: Artwork) -> Hosted:
+def opened(settings: Settings, choice: Choice, artwork: Artwork, advanced: Advanced) -> Hosted:
     """The table this run gathers: what it offers, the choice it stands at, and the service carrying both.
 
     This is the one place a game and a transport meet, and the one module of the whole repository naming
@@ -205,7 +215,8 @@ def opened(settings: Settings, choice: Choice, artwork: Artwork) -> Hosted:
     whichever game it plays.
 
     Every guest holding a seat holds a say, which is the whole of what a table among friends asks, and a code
-    guessed at costs the address it came from its allowance off the machine's own clock.
+    guessed at costs the address it came from its allowance off the machine's own clock, at the window and the
+    count the run is tuned to.
 
     Raises:
         GameValidationError: when the choice the run opens at names a game offered nowhere, a table that game
@@ -216,7 +227,11 @@ def opened(settings: Settings, choice: Choice, artwork: Artwork) -> Hosted:
         Deals(registry, settings.seed),
         offerings=OFFERINGS,
         say=GovernedSay(),
-        turnstile=Turnstile.watching(monotonic),
+        turnstile=Turnstile.watching(
+            monotonic,
+            window=advanced.turnstile_window,
+            wrong_codes_allowed=advanced.wrong_codes_allowed,
+        ),
         clock=monotonic,
     )
-    return serve(registry, gatherings, settings, choice, artwork)
+    return serve(registry, gatherings, settings, choice, artwork, sweep_seconds=advanced.sweep_seconds)

@@ -109,7 +109,12 @@ async def takes(client: AsyncClient, token: str, tint: Tint, base_revision: int)
 
 def test_a_name_already_gathering_is_left_as_it_was(gathered: Gathered) -> None:
     with pytest.raises(ValueError, match="already gathering"):
-        gathered.gatherings.open(TABLE, CODE, a_sealed_round(SEATS))
+        gathered.gatherings.open(
+            TABLE,
+            CODE,
+            a_sealed_round(SEATS),
+            democratic=False,
+        )
 
 
 @pytest.mark.parametrize(

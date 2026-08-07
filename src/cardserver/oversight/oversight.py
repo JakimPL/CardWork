@@ -6,7 +6,7 @@ from cardserver.errors import NoCreation, TablesFull
 from cardserver.gathering.gathering import Gathering
 from cardserver.gathering.gatherings import Gatherings
 from cardserver.oversight.creation import Creation
-from cardserver.oversight.lobby.setting import LobbySetting
+from cardserver.oversight.lobby.setting import NO_LIMIT, LobbySetting
 from cardserver.oversight.lobby.view import LobbyView
 from cardserver.oversight.policy import AdminPolicy
 from cardserver.oversight.posting import Posting
@@ -17,7 +17,10 @@ from cardserver.schemas.admitted import Admitted
 from cardserver.schemas.founding import Founding
 from cardserver.sessions.in_service import InService
 
-NO_LIMIT: Final[int] = 0
+DEMOCRATIC: Final[bool] = True
+CREATION: Final[Creation] = Creation.SELF_SERVE
+STALE_SECONDS: Final[float] = 900.0
+IDLE_SECONDS: Final[float] = 3600.0
 OVERSEER: Final[str] = ""
 GATHERING_PHASE: Final[str] = "gathering"
 PLAYING_PHASE: Final[str] = "playing"
@@ -27,9 +30,12 @@ class Oversight:
     """The overseer's view of the whole lobby, and the terms every table here is gathered and cleared under.
 
     This is where the two halves of the lobby are read as one — the tables still gathering and the tables in
-    play — and where a run's own rules on them live: how many may stand at once, who may open one, and how long
-    an empty one lingers before it is cleared. It carries the policy that tells the overseer apart as well, so
-    the panel behind it answers to that alone and a seat reaches none of it.
+    play — and where a run's own rules on them live: how many may stand at once, who may open one, how a fresh
+    one is governed, and how long an empty one lingers before it is cleared. It carries the policy that tells
+    the overseer apart as well, so the panel behind it answers to that alone and a seat reaches none of it.
+
+    The governance a table opens under is settled here once and handed to every table gathered through it, which
+    is the single place a run says whether its tables start democratic; a host toggles their own from there.
     """
 
     def __init__(
@@ -39,15 +45,17 @@ class Oversight:
         admin: AdminPolicy,
         clock: Callable[[], float],
         *,
-        creation: Creation,
-        capacity: int,
-        stale_seconds: float,
-        idle_seconds: float,
+        democratic: bool = DEMOCRATIC,
+        creation: Creation = CREATION,
+        capacity: int = NO_LIMIT,
+        stale_seconds: float = STALE_SECONDS,
+        idle_seconds: float = IDLE_SECONDS,
     ) -> None:
         self._gatherings = gatherings
         self._registry = registry
         self._admin = admin
         self._clock = clock
+        self._democratic = democratic
         self._creation = creation
         self._capacity = capacity
         self._stale_seconds = stale_seconds
@@ -78,7 +86,7 @@ class Oversight:
             raise NoCreation()
 
         self._confirm_room()
-        return self._gatherings.create(founding)
+        return self._gatherings.create(founding, democratic=self._democratic)
 
     def post(self, posting: Posting) -> TableCard:
         """Gather a table the overseer opens on the company's behalf, holding no seat at it themselves.
@@ -89,7 +97,12 @@ class Oversight:
             GameValidationError: when the choice the table opens on names a game offered nowhere.
         """
         self._confirm_room()
-        gathering = self._gatherings.open(posting.table, a_drawn_code(), posting.choice)
+        gathering = self._gatherings.open(
+            posting.table,
+            a_drawn_code(),
+            posting.choice,
+            democratic=self._democratic,
+        )
         return self._gathering_card(posting.table, gathering, self._clock())
 
     def lobby(self) -> LobbyView:

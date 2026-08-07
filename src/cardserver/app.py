@@ -1,7 +1,7 @@
 import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Annotated, Final
+from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, Query
 from fastapi.responses import StreamingResponse
@@ -28,8 +28,6 @@ from cardserver.streams import (
 from cardwork.models.base import BaseFrozen
 from cardwork.presentation.layout import Layout
 
-SWEEP_SECONDS: Final[float] = 60.0  # TODO: move to advanced settings
-
 
 async def sweeping(oversight: Oversight, period: float) -> None:
     """Clear the lobby of the tables nobody is at every so often, for as long as the application answers.
@@ -47,6 +45,8 @@ def create_app(
     seats: SeatPolicy,
     gatherings: Gatherings | None,
     oversight: Oversight | None = None,
+    *,
+    sweep_seconds: float,
 ) -> FastAPI:
     """An application serving the tables of one registry to the clients one seat policy admits.
 
@@ -66,11 +66,12 @@ def create_app(
         seats: how a credential becomes a seat at a table.
         gatherings: the tables gathering here, and None where this deployment gathers nobody.
         oversight: the overseer's view of the lobby, and None where this deployment holds no panel over it.
+        sweep_seconds: how long the lobby waits between one clearing of the tables nobody is at and the next.
     """
 
     @asynccontextmanager
     async def lifespan(_application: FastAPI) -> AsyncGenerator[None, None]:
-        reaper = None if oversight is None else asyncio.create_task(sweeping(oversight, SWEEP_SECONDS))
+        reaper = None if oversight is None else asyncio.create_task(sweeping(oversight, sweep_seconds))
         try:
             yield
         finally:

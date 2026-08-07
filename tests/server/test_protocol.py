@@ -7,7 +7,7 @@ import pytest
 from cardserver.gathering import Gatherings, GovernedSay, SayPolicy
 from cardserver.identity import SeatPolicy, TokenSeats
 from cardserver.naming import Named
-from cardserver.protocol import Presentation, Table
+from cardserver.protocols import Presentation, Table
 from cardserver.sessions import InService, TableSession
 from cardwork.games.game import Game
 from cardwork.presentation.scene import Scene

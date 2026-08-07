@@ -22,6 +22,7 @@ SPARE: Final[dict[str, object]] = {
     "choice": {"game": GameName.SHOWDOWN.value, "players": 2, "decks": 1, "conclusion": {"rounds": 1}},
     "artwork": {"pack": None, "back": "crosshatch"},
     "service": {"host": "0.0.0.0", "advertise": None, "log_level": LogLevel.DEBUG.value},
+    "advanced": {"turnstile_window": 60.0, "wrong_codes_allowed": 10, "sweep_seconds": 60.0},
 }
 
 
@@ -76,6 +77,13 @@ def test_a_field_a_table_is_gathered_with_is_asked_for_outright(tmp_path: Path) 
 
 def test_a_field_a_choice_is_settled_by_is_asked_for_outright(tmp_path: Path) -> None:
     lacking = {**SPARE, "choice": {"game": GameName.SHOWDOWN.value, "players": 2, "conclusion": {"rounds": 1}}}
+
+    with pytest.raises(ValidationError):
+        Configuration.read(a_file_stating(tmp_path, lacking))
+
+
+def test_a_field_the_tuning_is_held_under_is_asked_for_outright(tmp_path: Path) -> None:
+    lacking = {**SPARE, "advanced": {"turnstile_window": 60.0, "wrong_codes_allowed": 10}}
 
     with pytest.raises(ValidationError):
         Configuration.read(a_file_stating(tmp_path, lacking))

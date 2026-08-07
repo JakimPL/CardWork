@@ -219,6 +219,7 @@ def configured(arguments: Namespace) -> Configuration:
         choice=a_choice(stated.choice, arguments),
         artwork=an_artwork(stated.artwork, arguments),
         service=a_service(stated.service, arguments),
+        advanced=stated.advanced,
     )
 
 
@@ -281,6 +282,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         configuration.table,
         configuration.choice,
         configuration.artwork,
+        configuration.advanced,
     )
     print(
         announcement(

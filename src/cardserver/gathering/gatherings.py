@@ -82,14 +82,14 @@ class Gatherings:
             choice,
             self._offerings,
             self._opening,
-            self._clock,
-            host=host,
+            clock=self._clock,
             democratic=democratic,
+            host=host,
         )
         self._gatherings[table] = gathering
         return gathering
 
-    def create(self, founding: Founding, democratic: bool) -> Admitted:
+    def create(self, founding: Founding, *, democratic: bool) -> Admitted:
         """Gather a fresh table on a drawn code and seat its founder as the host, minting their token.
 
         Founding a table is arriving at it, so the founder is admitted the way any guest is and handed the

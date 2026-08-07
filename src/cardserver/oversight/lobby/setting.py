@@ -1,10 +1,11 @@
-from typing import Annotated
+from typing import Annotated, Final
 
 from pydantic import Field
 
-from cardserver.gathering.config import NO_LIMIT  # TODO: not a proper place
 from cardserver.oversight.creation import Creation
 from cardwork.models.base import BaseFrozen
+
+NO_LIMIT: Final[int] = 0
 
 
 class LobbySetting(BaseFrozen):

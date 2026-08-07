@@ -9,7 +9,7 @@ from httpx import ASGITransport, AsyncClient, Response
 
 from cardserver.app import create_app
 from cardserver.identity import SEAT_HEADER, TokenSeats
-from cardserver.protocol import Presentation, Table
+from cardserver.protocols import Presentation, Table
 from cardserver.registry import TableRegistry
 from cardserver.schemas import ArrangementRequest, Arriving, Claiming, MoveRequest, Readying
 from cardserver.sessions import InService, TableSession
@@ -29,6 +29,7 @@ UNSERVED: Final[str] = "no-such-table"
 SEED: Final[int] = 20260802
 NO_GRACE: Final[float] = 0.0
 LONG_GRACE: Final[float] = 30.0
+SWEEP_SECONDS: Final[float] = 60.0
 FIRST_CARD: Final[frozenset[int]] = frozenset({0})
 DEAL: Final[int] = 1
 BASE_URL: Final[str] = "http://cardwork"
@@ -120,7 +121,7 @@ async def served[StateT: GameState](
     registry = TableRegistry(NO_GRACE)
     session = registry.open(TABLE, table, presentation)
     seats = TokenSeats({TABLE: {token_of(seat): seat for seat in range(table.players)}})
-    app = create_app(registry, seats, None)
+    app = create_app(registry, seats, None, sweep_seconds=SWEEP_SECONDS)
     try:
         async with AsyncClient(
             transport=ASGITransport(app=app),
@@ -168,7 +169,7 @@ def session_fixture(registry: TableRegistry) -> InService:
 @pytest.fixture(name="app")
 def app_fixture(registry: TableRegistry) -> FastAPI:
     seats = TokenSeats({TABLE: {token_of(seat): seat for seat in range(SEATS)}})
-    return create_app(registry, seats, None)
+    return create_app(registry, seats, None, sweep_seconds=SWEEP_SECONDS)
 
 
 @pytest.fixture(name="client")

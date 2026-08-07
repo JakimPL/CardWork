@@ -116,6 +116,7 @@ type = "layers"
 layers = [
     "cardserver.app",
     "cardserver.lobby",
+    "cardserver.oversight",
     "cardserver.streams",
     "cardserver.registry",
     "cardserver.gathering",
@@ -124,7 +125,8 @@ layers = [
     "cardserver.errors",
     "cardserver.schemas",
     "cardserver.naming",
-    "cardserver.protocol : cardserver.codes",
+    "cardserver.protocols : cardserver.codes",
+    "cardserver.limits : cardserver.advanced",
 ]
 
 [[tool.importlinter.contracts]]

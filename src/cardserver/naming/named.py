@@ -26,7 +26,8 @@ class Named:
         self,
         presentation: Presentation,
         seated: Mapping[int, Seated],
-        cues: bool,
+        *,
+        cues: bool = True,
     ) -> None:
         self._presentation = presentation
         self._seated = seated

@@ -3,7 +3,8 @@ from typing import Final
 
 from pydantic import Field, field_validator
 
-from cardserver.codes import CODE_LENGTH, a_drawn_code, code_in
+from cardserver.codes import a_drawn_code, code_in
+from cardserver.limits import CODE_LENGTH
 from cardwork.models.base import BaseFrozen
 
 SEEDS: Final[int] = 1 << 32

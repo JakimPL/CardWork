@@ -20,7 +20,7 @@ from cardtable.service import LogLevel, Service
 from cardtable.settings import Settings
 from cardwork.rounds.conclusion import Conclusion
 
-from .config import CODE, CONFIGURED, GLYPHS, a_config_file
+from .config import ADVANCED, CODE, CONFIGURED, GLYPHS, a_config_file
 
 TABLE: Final[str] = "green-baize"
 BUILT: Final[Path] = Path("frontend") / "dist"
@@ -79,6 +79,7 @@ DEPARTED: Final[Configuration] = Configuration(
     ),
     artwork=Artwork(pack=PackName.SVG, back="atlas"),
     service=Service(host="0.0.0.0", port=9001, advertise=ANNOUNCED, log_level=LogLevel.DEBUG),
+    advanced=ADVANCED,
 )
 
 

@@ -1,10 +1,9 @@
-from typing import Annotated, Final
+from typing import Annotated
 
 from pydantic import Field, field_validator
 
+from cardserver.limits import NAME_LONGEST
 from cardwork.models.base import BaseFrozen
-
-NAME_LONGEST: Final[int] = 24  # TODO: move to advanced server configuration
 
 
 class Arriving(BaseFrozen):

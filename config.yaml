@@ -18,3 +18,8 @@ service:
   port: 8421
   advertise: null
   log_level: info
+
+advanced:
+  turnstile_window: 60.0
+  wrong_codes_allowed: 10
+  sweep_seconds: 60.0

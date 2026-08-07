@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from cardserver.errors import Unadmitted
-from cardserver.gathering.config import TURNSTILE_WINDOW, WRONG_CODES_ALLOWED
 
 
 class Turnstile:
@@ -30,9 +29,21 @@ class Turnstile:
         self._refusals: dict[str, tuple[float, ...]] = {}
 
     @classmethod
-    def watching(cls, clock: Callable[[], float]) -> Turnstile:
-        """A turnstile at the allowance a gathering keeps, reading the time off one clock."""
-        return cls(WRONG_CODES_ALLOWED, TURNSTILE_WINDOW, clock)
+    def watching(
+        cls,
+        clock: Callable[[], float],
+        *,
+        window: float,
+        wrong_codes_allowed: int,
+    ) -> Turnstile:
+        """A turnstile at the allowance a run keeps, reading the time off one clock.
+
+        Args:
+            clock: where the current time is read from, which a window is measured against.
+            window: how long a wrong code is counted against the address that offered it.
+            wrong_codes_allowed: how many wrong codes an address may offer inside the window before it waits.
+        """
+        return cls(wrong_codes_allowed, window, clock)
 
     def confirm(self, caller: str) -> None:
         """Confirm this caller may offer a code.

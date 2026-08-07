@@ -3,6 +3,7 @@ from typing import Final
 
 from yaml import safe_dump
 
+from cardserver.advanced import Advanced
 from cardserver.schemas import Choice
 from cardtable.artwork import Artwork
 from cardtable.config import Configuration
@@ -16,6 +17,7 @@ BACK: Final[str] = "crosshatch"
 CODE: Final[str] = "KQAJ72"
 
 GLYPHS: Final[Artwork] = Artwork(pack=None, back=BACK)
+ADVANCED: Final[Advanced] = Advanced(turnstile_window=60.0, wrong_codes_allowed=10, sweep_seconds=60.0)
 
 CONFIGURED: Final[Configuration] = Configuration(
     table=Settings(name="baize", code=CODE, seed=7, grace_seconds=0.5),
@@ -27,6 +29,7 @@ CONFIGURED: Final[Configuration] = Configuration(
     ),
     artwork=GLYPHS,
     service=Service(host="127.0.0.1", port=9000, advertise=None, log_level=LogLevel.WARNING),
+    advanced=ADVANCED,
 )
 
 

@@ -5,6 +5,7 @@ from fastapi import FastAPI
 
 from cardserver.app import create_app
 from cardserver.gathering.gatherings import Gatherings
+from cardserver.oversight.oversight import DEMOCRATIC
 from cardserver.protocols.table import TableId
 from cardserver.registry import TableRegistry
 from cardserver.schemas.choice import Choice
@@ -36,6 +37,8 @@ def serve(
     settings: Settings,
     choice: Choice,
     artwork: Artwork,
+    *,
+    sweep_seconds: float,
 ) -> Hosted:
     """Put one gathering into service: the room a company arrives at, and the table it comes to be dealt.
 
@@ -55,13 +58,14 @@ def serve(
         settings: the name the table gathers under, the code it gathers behind, and how it runs.
         choice: what the gathering opens at, which its company settles from there.
         artwork: which cards the table is drawn with.
+        sweep_seconds: how long the lobby waits between one clearing of the tables nobody is at and the next.
 
     Raises:
         GameValidationError: when the opening choice names a game offered nowhere, a table that game seats
             nowhere, or a count of decks it is dealt from nowhere.
     """
-    gatherings.open(settings.name, settings.code, choice)
-    app = create_app(registry, gatherings, gatherings)
+    gatherings.open(settings.name, settings.code, choice, democratic=DEMOCRATIC)
+    app = create_app(registry, gatherings, gatherings, sweep_seconds=sweep_seconds)
     return Hosted(
         app=app,
         table=settings.name,
