@@ -33,6 +33,11 @@
   --black: #1a1a1a;
   --acting: #f0c040;
   --tint: 240 192 64;
+  --tint-edge: 75%;
+  --tint-wash: 25%;
+  --tint-turn: 45%;
+  --tint-own: 37%;
+  --tint-ring: 50%;
   --live: #6fcf97;
   --hint: #8fd0ff;
   --drained: 0.3;
@@ -40,7 +45,7 @@
   --waiting: 0.78;
   --gap: clamp(4px, 0.8vh, 12px);
   --least: 48px;
-  --dealt: clamp(var(--least), 22vh, 200px);
+  --dealt: clamp(var(--least), 22vmin, 200px);
   --card-height: var(--dealt);
   --card-aspect-width: 71;
   --card-aspect-height: 96;
@@ -95,6 +100,11 @@ body {
  * finds both the player and the turn. Seven hues round the wheel and no green, since the felt is green and a
  * drop target is mint.
  *
+ * The five strengths a tint is drawn at stand at the root beside the triplet — the edge, the wash behind a seat
+ * at rest, the wash behind the seat to act, the wash behind the reader's own, and the ring — so every surface
+ * that carries a colour reads it at the one depth. A place in the room a table gathers in draws by the same five,
+ * which is what makes the seat a guest takes there the seat they find on the felt once the deal is on.
+ *
  * The gold stands at the root as the reading for a table served with no gathering behind it, where no seat
  * carries a tint at all and the turn is the one thing there is to mark.
  */
@@ -135,6 +145,10 @@ body {
  * The three bands of the page, each as wide as the window and no wider: the standing, the table, and the panel a
  * player plays from. A band whose own reading runs longer than that — a table of many seats, each named and
  * counted — keeps its place and reads as far as the window carries it.
+ *
+ * The page lies inside whatever the screen keeps for itself. A phone held side on puts its notch and its home
+ * indicator along the edges the first and last cards of a hand reach, so the page stands clear of both and the
+ * whole of a hand stays under a thumb. A screen keeping nothing back hands the page every pixel of itself.
  */
 
 .page {
@@ -142,6 +156,9 @@ body {
   grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-columns: minmax(0, 1fr);
   height: 100%;
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
 }
 
 /* The standing: the game, and every seat playing it. */
@@ -201,17 +218,17 @@ body {
 }
 
 .plaque[data-tint] {
-  border-color: rgb(var(--tint) / 45%);
-  background: rgb(var(--tint) / 8%);
+  border-color: rgb(var(--tint) / var(--tint-edge));
+  background: rgb(var(--tint) / var(--tint-wash));
 }
 
 .plaque.own {
-  background: rgb(var(--tint) / 20%);
+  background: rgb(var(--tint) / var(--tint-own));
 }
 
 .plaque.acting {
   border-color: rgb(var(--tint));
-  box-shadow: 0 0 0 2px rgb(var(--tint) / 35%);
+  box-shadow: 0 0 0 2px rgb(var(--tint) / var(--tint-ring));
 }
 
 .who {
@@ -263,10 +280,17 @@ body {
  * neighbours give way by rather than room they are drawn over. A table of any size lies inside the felt, and
  * every name on it stays legible.
  *
- * The felt divides the height it was given between the zones at the middle and the seats round the edge: the
- * middle takes up to half of it and the seats take the rest, which is what keeps a table of any size inside the
- * felt and every part of it clear of the panel below. The seats divide their share again by however many of them
- * stand one above another at a side and by how many lines each of them stands in.
+ * The felt divides the height it was given by the lines of cards standing one above another in it: the middle
+ * lies in as many as it shares zones, and each side of the table stands as many seats as it seats, each of them
+ * as deep as its zones lie. Every one of those lines is written over, and the seats carry their names besides, so
+ * the felt puts aside a line of lettering apiece and hands what is left to the cards in equal shares. That share
+ * is the one height every card on the table is drawn at, up to the height a card is dealt at, and it is what keeps
+ * a table of any size inside the felt with every name on it legible.
+ *
+ * The middle takes the height of the line it lies in and the seats take the rest, so a table sharing nothing gives
+ * the whole of the felt to the seats round it. The seats divide their share again by however many of them stand
+ * one above another at a side and by how many lines each of them stands in, and a seat drawn where that comes to
+ * less than the table's own height is drawn at the lesser of the two.
  *
  * It divides its width the same way: a quarter of it to each side that holds seats, and what is left down the
  * middle to the seats facing the near edge and the cards they share.
@@ -283,10 +307,7 @@ body {
 .felt {
   container-type: size;
   display: grid;
-  grid-template:
-    "left across right" minmax(0, auto)
-    "left middle right" minmax(0, 1fr)
-    / auto minmax(0, 1fr) auto;
+  grid-template: "left across right" minmax(0, auto) "left middle right" minmax(0, 1fr) / auto minmax(0, 1fr) auto;
   place-items: center;
   gap: var(--gap);
   min-height: 0;
@@ -295,7 +316,11 @@ body {
 }
 
 .felt > * {
-  --on-the-table: max(var(--least), min(var(--dealt), 50cqh));
+  --lettered: calc(var(--laid) + var(--stacked) * (var(--deepest) + 1));
+  --carded: max(1, var(--laid) + var(--stacked) * var(--deepest));
+  --evenly: max(0px, calc((100cqh - var(--lettering) * var(--lettered)) / var(--carded)));
+  --on-a-card: min(var(--dealt), var(--evenly));
+  --on-the-table: calc(var(--laid) * (var(--on-a-card) + var(--lettering)));
   --round-the-table: calc(100cqh - var(--on-the-table));
   --down-the-middle: calc(100cqw - var(--flanked) * 50cqw);
 }
@@ -324,6 +349,7 @@ body {
 }
 
 .controls {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: calc(var(--gap) / 2);
@@ -371,12 +397,15 @@ body {
  * instead, which is written among the cards themselves further down.
  *
  * The panel keeps the room its outline takes out of the width its cards are drawn to, as the seats round the table
- * keep theirs, so a hand of any size lies inside the page.
+ * keep theirs, so a hand of any size lies inside the page. It reads that width off the band it lies in rather than
+ * off the window, which hands it the band's own padding already taken out, and it takes out what the band cannot
+ * know: the outline the panel is drawn in, the partings between the zones lying along it, and the partings between
+ * the cards a zone lays side by side. What is left is width the cards themselves are drawn to.
  */
 
 .zones.own {
   --upright: var(--dealt);
-  --room: calc(100vw - var(--gap) * 14 - 2px);
+  --room: calc(100cqw - var(--gap) * 2 - 2px - var(--gap) * 2 * var(--parted) - var(--gap) / 2 * var(--jointed));
 
   align-self: flex-start;
   align-items: flex-start;
@@ -387,11 +416,11 @@ body {
 
 .zones.own.acting {
   border-color: rgb(var(--tint));
-  background: rgb(var(--tint) / 12%);
+  background: rgb(var(--tint) / var(--tint-turn));
 }
 
 .zones.shared {
-  --upright: calc(var(--on-the-table) - var(--lettering));
+  --upright: var(--on-a-card);
   --room: calc(var(--down-the-middle) - var(--edging));
 
   grid-area: middle;
@@ -410,7 +439,7 @@ body {
 
 .zones.theirs {
   --upright: min(
-    calc(var(--on-the-table) - var(--lettering)),
+    var(--on-a-card),
     calc((var(--round-the-table) / var(--stacked) - var(--lettering)) / var(--lines) - var(--lettering))
   );
   --room: calc(25cqw - var(--edging));
@@ -446,13 +475,13 @@ body {
 }
 
 .station[data-tint] {
-  border-color: rgb(var(--tint) / 45%);
-  background: rgb(var(--tint) / 6%);
+  border-color: rgb(var(--tint) / var(--tint-edge));
+  background: rgb(var(--tint) / var(--tint-wash));
 }
 
 .station.acting {
   border-color: rgb(var(--tint));
-  background: rgb(var(--tint) / 12%);
+  background: rgb(var(--tint) / var(--tint-turn));
 }
 
 .station.live {
@@ -468,6 +497,9 @@ body {
  * selection whole, name and count and cards alike, since those lie in one range and a carry begins wherever the hand
  * came down. What a player is left holding after one is cards. The line saying where play stands and the reports
  * that stop the table stay text, since those are the words a reader may want to take away.
+ *
+ * A zone states the spread it lies in as its own attribute, so a rule written for one spread reaches that spread
+ * and the sheet reads a heap apart from a fan by the word the layout used.
  */
 
 .slot {
@@ -490,6 +522,8 @@ body {
   align-items: baseline;
   color: var(--chalk-dim);
   white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .count {
@@ -559,12 +593,12 @@ body {
   transform: translate(var(--depth), var(--depth));
 }
 
-.slot.row .cards {
+.slot[data-spread="row"] .cards {
   gap: calc(var(--gap) / 2);
 }
 
-.slot.stack .cards,
-.slot.slot .cards {
+.slot[data-spread="stack"] .cards,
+.slot[data-spread="slot"] .cards {
   gap: calc(var(--gap) / 2);
   min-width: var(--card-width);
 }
@@ -805,11 +839,11 @@ button.card {
  * enough to read every face, and a holding of a dozen and more closes up to the room its zone has.
  */
 
-.slot.fan .card + .card {
+.slot[data-spread="fan"] .card + .card {
   margin-left: calc(var(--card-width) * var(--overlap) * -1);
 }
 
-.slot.fan button.card:hover {
+.slot[data-spread="fan"] button.card:hover {
   transform: translateY(var(--raised));
 }
 
@@ -1147,6 +1181,15 @@ button.card {
   list-style: none;
 }
 
+/*
+ * One place at the table, drawn as the plaque that place becomes: the same edge, the same wash behind it, and
+ * the reader's own carried at the same depth. A guest choosing a colour in the room is choosing the colour they
+ * will be found by on the felt, so the choice reads here as the answer to it, and a place standing empty lies
+ * quiet behind the ones that are taken.
+ *
+ * The full edge round the reader's own place is the room's own mark, standing where the felt marks the turn.
+ */
+
 .place {
   display: flex;
   gap: var(--gap);
@@ -1154,15 +1197,17 @@ button.card {
   padding: calc(var(--gap) / 2) var(--gap);
   border: 1px solid var(--edge);
   border-radius: var(--radius);
-  background: var(--felt);
+  background: rgb(0 0 0 / 18%);
 }
 
 .place[data-tint] {
-  border-color: rgb(var(--tint) / 45%);
+  border-color: rgb(var(--tint) / var(--tint-edge));
+  background: rgb(var(--tint) / var(--tint-wash));
 }
 
 .place.own {
   border-color: rgb(var(--tint));
+  background: rgb(var(--tint) / var(--tint-own));
 }
 
 .place .seat {
@@ -1225,7 +1270,7 @@ button.card {
 
 .tints .swatch.own {
   border-color: var(--chalk-lit);
-  box-shadow: 0 0 0 2px rgb(var(--tint) / 45%);
+  box-shadow: 0 0 0 2px rgb(var(--tint) / var(--tint-ring));
 }
 
 .settling {

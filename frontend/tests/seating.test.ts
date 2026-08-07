@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { turnOf } from "../src/play/seats";
-import { ringOf } from "../src/table/placing";
+import { ringOf, shared } from "../src/table/placing";
 import { crowding } from "../src/table/sizing";
 import { aHolding, aLayout, aTableOf } from "./tables";
 
@@ -17,7 +17,8 @@ function seated(players: number, observer: number): Record<string, number[]> {
 
 /** How many seats one table stands one above another, which is what its cards are drawn to fit. */
 function stacked(players: number): number {
-  return crowding(ringOf(aTableOf(players, 0)))["--stacked"] ?? 0;
+  const layout = aTableOf(players, 0);
+  return crowding(ringOf(layout), shared(layout))["--stacked"] ?? 0;
 }
 
 interface Case {
