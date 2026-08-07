@@ -20,9 +20,10 @@ from cardtable.service import LogLevel, Service
 from cardtable.settings import Settings
 from cardwork.rounds.conclusion import Conclusion
 
-from .config import ADVANCED, CODE, CONFIGURED, GLYPHS, a_config_file
+from .config import ADMIN, ADVANCED, CODE, CONFIGURED, GLYPHS, a_config_file
 
 TABLE: Final[str] = "green-baize"
+ADMIN_TOKEN: Final[str] = "overseer-token"
 BUILT: Final[Path] = Path("frontend") / "dist"
 DRAWN: Final[Path] = ASSETS / PackName.KARE
 PORT: Final[int] = 8000
@@ -80,12 +81,20 @@ DEPARTED: Final[Configuration] = Configuration(
     artwork=Artwork(pack=PackName.SVG, back="atlas"),
     service=Service(host="0.0.0.0", port=9001, advertise=ANNOUNCED, log_level=LogLevel.DEBUG),
     advanced=ADVANCED,
+    admin=ADMIN,
 )
 
 
 def a_hosted_table(artwork: Path | None, interface: Path | None) -> Hosted:
     """A table in hand as the host hands one over, with a pack and a page behind it or neither."""
-    return Hosted(app=FastAPI(), table=TABLE, code=CODE, artwork=artwork, interface=interface)
+    return Hosted(
+        app=FastAPI(),
+        table=TABLE,
+        code=CODE,
+        admin_token=ADMIN_TOKEN,
+        artwork=artwork,
+        interface=interface,
+    )
 
 
 def reading(path: Path, *given: str) -> Configuration:
@@ -204,6 +213,13 @@ def test_the_announcement_names_the_table_and_reads_out_the_code_it_gathers_behi
 
     assert TABLE in announced
     assert read_out(CODE) in announced
+
+
+def test_the_announcement_reads_out_the_admin_token_the_panel_answers_behind() -> None:
+    """The one credential no guest holds, read out on a line of its own for whoever runs the host."""
+    announced = announcement(a_hosted_table(None, BUILT), SETTINGS, GLYPHS, REACHED)
+
+    assert ADMIN_TOKEN in announced
 
 
 def test_the_announcement_hands_a_guest_the_address_that_arrives_at_the_gathering() -> None:

@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from pydantic import Field
 
 from cardserver.creation import Creation
@@ -14,8 +16,9 @@ class Advanced(BaseFrozen):
     A window and an allowance are what a code is guarded by: a caller offering more wrong codes than the allowance
     inside the window is turned away until the window runs out. The sweep is how long the lobby waits between one
     clearing of the tables nobody is at and the next, and the stale and idle spans are how long a gathering nobody
-    holds and a table nobody commits to linger before that clearing takes them. Whether a table opens democratic
-    and who may gather one at all are the terms a run governs its lobby by until an overseer settles otherwise.
+    holds and a table nobody commits to linger before that clearing takes them. Whether a table opens democratic,
+    who may gather one at all, and how many may stand at once are the terms a run governs its lobby by until an
+    overseer settles otherwise; a run stating no cap lets the lobby grow as far as the machine carries it.
     """
 
     turnstile_window: float = Field(gt=0.0)
@@ -23,5 +26,6 @@ class Advanced(BaseFrozen):
     sweep_seconds: float = Field(gt=0.0)
     democratic: bool
     creation: Creation
+    capacity: Annotated[int, Field(ge=1)] | None
     stale_seconds: float = Field(gt=0.0)
     idle_seconds: float = Field(gt=0.0)

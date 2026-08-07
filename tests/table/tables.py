@@ -32,7 +32,7 @@ from cardwork.presentation.scene import Scene
 from cardwork.rounds.conclusion import Conclusion
 from tests.cases import Case
 
-from .config import ADVANCED, CODE, GLYPHS
+from .config import ADMIN, ADVANCED, CODE, GLYPHS
 
 TABLE: Final[str] = "green-baize"
 UNSERVED: Final[str] = "no-such-table"
@@ -241,7 +241,7 @@ async def gathering(choice: Choice) -> AsyncIterator[tuple[AsyncClient, Hosted]]
     the way it ends its service under a server. The table draws with the glyphs its page carries, which
     leaves these reading the endpoints alone whether or not the checkout has fetched a pack.
     """
-    hosted = opened(SETTINGS, choice, GLYPHS, ADVANCED)
+    hosted = opened(SETTINGS, choice, GLYPHS, ADVANCED, ADMIN)
     async with hosted.app.router.lifespan_context(hosted.app):
         async with AsyncClient(transport=ASGITransport(app=hosted.app), base_url=BASE_URL) as client:
             yield client, hosted

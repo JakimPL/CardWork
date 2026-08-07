@@ -29,9 +29,11 @@ SPARE: Final[dict[str, object]] = {
         "sweep_seconds": 60.0,
         "democratic": True,
         "creation": Creation.SELF_SERVE.value,
+        "capacity": None,
         "stale_seconds": 900.0,
         "idle_seconds": 3600.0,
     },
+    "admin": {"secret": None},
 }
 
 

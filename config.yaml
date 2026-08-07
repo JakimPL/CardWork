@@ -25,5 +25,9 @@ advanced:
   sweep_seconds: 60.0
   democratic: true
   creation: self-serve
+  capacity: null
   stale_seconds: 900.0
   idle_seconds: 3600.0
+
+admin:
+  secret: null

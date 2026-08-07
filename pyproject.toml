@@ -106,7 +106,7 @@ layers = [
     "cardtable.catalogue",
     "cardtable.hosting",
     "cardtable.config : cardtable.reaching",
-    "cardtable.settings : cardtable.service : cardtable.interface : cardtable.artwork",
+    "cardtable.settings : cardtable.service : cardtable.interface : cardtable.artwork : cardtable.admin",
     "cardtable.games : cardtable.paths",
 ]
 

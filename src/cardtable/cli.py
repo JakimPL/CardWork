@@ -220,6 +220,7 @@ def configured(arguments: Namespace) -> Configuration:
         artwork=an_artwork(stated.artwork, arguments),
         service=a_service(stated.service, arguments),
         advanced=stated.advanced,
+        admin=stated.admin,
     )
 
 
@@ -244,12 +245,16 @@ def announcement(
     artwork: Artwork,
     reached: Sequence[str],
 ) -> str:
-    """The lines a person reads once a table is gathering: the code it admits on, and where it is reached.
+    """The lines a person reads once a table is gathering: the code it admits on, where it is reached, and the
+    token the overseer's panel answers behind.
 
     Any one of these addresses is the whole of what a guest is handed: opening it arrives at the gathering,
     where a person names themselves, takes a seat and settles what is played with everyone else there. The code
     is read out apart as well as carried in the addresses, since a code said across a room is written down by
     hand at the other end.
+
+    The admin token is read out apart from all of it, on a line of its own, since it is the one credential no
+    guest is meant to hold: whoever runs the host reads it here and hands it to nobody the host admits.
 
     The seed stands among them because a table left to itself draws one: a run reading it back deals this match
     again.
@@ -264,6 +269,7 @@ def announcement(
     if hosted.interface is None:
         lines.append(f"  the endpoints answer on their own, since no interface is built at {INTERFACE}")
 
+    lines.append(f"Overseen behind admin token {hosted.admin_token}")
     return "\n".join(lines)
 
 
@@ -283,6 +289,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         configuration.choice,
         configuration.artwork,
         configuration.advanced,
+        configuration.admin,
     )
     print(
         announcement(

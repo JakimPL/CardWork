@@ -92,6 +92,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tables/{table_id}/closing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close Gathering
+         * @description Break the gathering up, which its host may call for, leaving the company a word on why.
+         */
+        post: operations["close_gathering_tables__table_id__closing_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tables/{table_id}/deal": {
         parameters: {
             query?: never;
@@ -165,6 +185,26 @@ export interface paths {
          */
         get: operations["read_attendance_tables__table_id__gathering_events_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tables/{table_id}/governance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Govern Table
+         * @description Settle how the table is governed, which its host alone may do.
+         */
+        put: operations["govern_table_tables__table_id__governance_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -251,6 +291,26 @@ export interface paths {
          * @description Commit a seat's move to a table, answering with the sequence it landed at.
          */
         post: operations["submit_move_tables__table_id__moves_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tables/{table_id}/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Commit Ready
+         * @description Commit to the settings as they stand, or take that commitment back, which every seated guest may do.
+         */
+        put: operations["commit_ready_tables__table_id__ready_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -452,6 +512,14 @@ export interface components {
             seat: number | null;
         };
         /**
+         * Closing
+         * @description Breaking a table up, with a word for the company on why, which the host or an admin may call for.
+         */
+        Closing: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /**
          * CommandAccepted
          * @description The sequence a command was committed at, which the table stands one commit past.
          *
@@ -571,6 +639,8 @@ export interface components {
             democratic: boolean;
             /** Mine */
             mine: string;
+            /** Reason */
+            reason: string | null;
             /** Revision */
             revision: number;
             /** Table */
@@ -615,6 +685,16 @@ export interface components {
             kind: "give";
             /** Target Player */
             target_player: number;
+        };
+        /**
+         * Governing
+         * @description The host settling how the table is governed: democratically, or by the host's own say alone.
+         */
+        Governing: {
+            /** Base Revision */
+            base_revision: number;
+            /** Democratic */
+            democratic: boolean;
         };
         /**
          * Guest
@@ -682,6 +762,11 @@ export interface components {
          */
         Layout: {
             award: components["schemas"]["Award"];
+            /**
+             * Cues
+             * @default true
+             */
+            cues: boolean;
             /** Gestures */
             gestures: components["schemas"]["Gesture"][];
             /** Interludes */
@@ -813,6 +898,20 @@ export interface components {
             /** Label */
             label: string;
             scope: components["schemas"]["Scope"];
+        };
+        /**
+         * Readying
+         * @description A seated guest committing to the settings as they stand, or taking that commitment back.
+         *
+         *     Readiness is the guest's own word that the choice may be dealt, so it names where the gathering stood when
+         *     the word was given: a setting changing under it is what takes the word back, and a stale one is refused
+         *     rather than read as an answer to a question that has moved on.
+         */
+        Readying: {
+            /** Base Revision */
+            base_revision: number;
+            /** Ready */
+            ready: boolean;
         };
         /** Reject */
         Reject: {
@@ -1057,6 +1156,43 @@ export interface operations {
             };
         };
     };
+    close_gathering_tables__table_id__closing_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Seat-Token"?: string | null;
+            };
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Closing"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GatheringView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     deal_table_tables__table_id__deal_post: {
         parameters: {
             query?: never;
@@ -1199,6 +1335,43 @@ export interface operations {
             };
         };
     };
+    govern_table_tables__table_id__governance_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Seat-Token"?: string | null;
+            };
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Governing"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GatheringView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     arrive_tables__table_id__guests_post: {
         parameters: {
             query?: never;
@@ -1322,6 +1495,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommandAccepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    commit_ready_tables__table_id__ready_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Seat-Token"?: string | null;
+            };
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Readying"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GatheringView"];
                 };
             };
             /** @description Validation Error */

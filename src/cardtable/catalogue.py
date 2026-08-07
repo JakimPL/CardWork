@@ -22,6 +22,7 @@ from cardserver.protocols.table import Table, TableId
 from cardserver.registry import TableRegistry
 from cardserver.schemas.choice import Choice
 from cardserver.schemas.offering import Offering
+from cardtable.admin import Admin
 from cardtable.artwork import Artwork
 from cardtable.games import GameName
 from cardtable.hosting import Hosted, serve
@@ -205,7 +206,13 @@ class Deals:
         )
 
 
-def opened(settings: Settings, choice: Choice, artwork: Artwork, advanced: Advanced) -> Hosted:
+def opened(
+    settings: Settings,
+    choice: Choice,
+    artwork: Artwork,
+    advanced: Advanced,
+    admin: Admin,
+) -> Hosted:
     """The table this run gathers: what it offers, the choice it stands at, and the service carrying both.
 
     This is the one place a game and a transport meet, and the one module of the whole repository naming
@@ -240,6 +247,6 @@ def opened(settings: Settings, choice: Choice, artwork: Artwork, advanced: Advan
         settings,
         choice,
         artwork,
-        sweep_seconds=advanced.sweep_seconds,
-        democratic=advanced.democratic,
+        advanced=advanced,
+        admin=admin,
     )
