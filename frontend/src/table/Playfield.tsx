@@ -79,6 +79,7 @@ export function Playfield({
   const { clear, say } = playing;
   const spoken = saidAlone(playing.standing);
   const ring = ringOf(layout);
+  const middle = shared(layout);
   const artwork = useArtwork();
 
   useEffect(() => {
@@ -111,7 +112,7 @@ export function Playfield({
         role="presentation"
       >
         <Header layout={layout} view={view} playing={playing} />
-        <main className="felt" style={crowding(ring)}>
+        <main className="felt" style={crowding(ring, middle)}>
           {SIDES.map((side) => (
             <Sitting
               key={side}
@@ -123,7 +124,7 @@ export function Playfield({
               playing={playing}
             />
           ))}
-          <Zones place="shared" slots={shared(layout)} view={view} arrivals={arrivals} playing={playing} />
+          <Zones place="shared" slots={middle} view={view} arrivals={arrivals} playing={playing} />
         </main>
         <footer className="controls">
           <Zones place="own" slots={own(layout)} view={view} arrivals={arrivals} playing={playing} />

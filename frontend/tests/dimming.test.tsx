@@ -201,7 +201,7 @@ describe("a hand a set is picked out of", () => {
 
     expect(faded(hand)).toBe(1);
     expect(raised(hand)).toBe(2);
-    expect(table).toContain("slot stack live");
+    expect(table).toContain(`class="slot live" data-spread="stack"`);
     expect(table).toContain(`aria-label="${DISCARDING.caption}"`);
   });
 
@@ -232,7 +232,7 @@ describe("a heap a player draws off", () => {
   it("sends the card onto the holding the game names, which is the seat's own", () => {
     const seat = rendered(DRAWS, A_DRAW, { zone: PILE, indices: [3] }, "own");
 
-    expect(seat).toContain("slot fan live");
+    expect(seat).toContain(`class="slot live" data-spread="fan"`);
     expect(seat).toContain(`aria-label="${DRAWING.caption}"`);
     expect([...seat.matchAll(/class="landing"/g)]).toHaveLength(1);
   });
@@ -242,7 +242,7 @@ describe("the places a selection can be sent onto", () => {
   it("lays a place to send onto over the zone a move commits to, under the words the game gives it", () => {
     const table = drawn(A_TURN, { zone: HAND, indices: [0] }, "shared");
 
-    expect(table).toContain("slot stack live");
+    expect(table).toContain(`class="slot live" data-spread="stack"`);
     expect(table).toContain(`aria-label="${TAKING.caption}"`);
     expect([...table.matchAll(/class="landing"/g)]).toHaveLength(1);
   });

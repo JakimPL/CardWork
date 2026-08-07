@@ -122,7 +122,7 @@ describe("the table one seat reads", () => {
     );
 
     expect(cards).toContain("Your hand");
-    expect([...cards.matchAll(/class="slot [a-z]/g)]).toHaveLength(1);
+    expect([...cards.matchAll(/class="slot"/g)]).toHaveLength(1);
   });
 });
 

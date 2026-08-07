@@ -249,7 +249,7 @@ export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement
       : null;
 
   return (
-    <section className={classes("slot", slot.spread, landing !== null && "live")}>
+    <section className={classes("slot", landing !== null && "live")} data-spread={slot.spread}>
       <header className="slot-label">
         <span className="label">{slot.label}</span>
         {slot.counted && <span className="count">{cards.length}</span>}

@@ -3,14 +3,12 @@ import type { ReactElement } from "react";
 import type { Slot as Arrangement } from "../api/layout";
 import type { PositionView } from "../api/views";
 import type { Arrivals } from "../play/arrivals";
-import type { Offered } from "../play/selection";
 import { onTurn, wordsOf } from "../play/selection";
 import type { Playing } from "../play/usePlay";
 import { classes } from "./classes";
 import type { Placement } from "./placing";
 import { linesOf } from "./placing";
-import type { Run } from "./sizing";
-import { spanning } from "./sizing";
+import { measuring, spanning } from "./sizing";
 import { Slot } from "./Slot";
 import { Words } from "./Words";
 
@@ -67,25 +65,7 @@ export function Zones({ place, slots, view, arrivals, playing }: ZonesProps): Re
   );
 }
 
-/** Each line of a group as the fitting reads it, with the words of a turn taking the room of a card among them. */
-function measuring(lines: Arrangement[][], view: PositionView, said: Offered[]): Run[][] {
-  return lines.map((line, index) => [
-    ...line.map((slot) => reading(slot, view)),
-    ...(index === lines.length - 1 ? saying(said) : []),
-  ]);
-}
-
 /** What tells one line of a group from the next, which is the zones lying along it. */
 function naming(line: Arrangement[]): string {
   return line.map((slot) => slot.zone).join(" ");
-}
-
-/** One zone as the fitting reads it, which is how its cards lie and how many of them the observer is served. */
-function reading(slot: Arrangement, view: PositionView): Run {
-  return { spread: slot.spread, held: view.zones[slot.zone]?.cards.length ?? 0 };
-}
-
-/** The room the words of a turn take, which is a card apiece and none at all where a turn is said in none. */
-function saying(said: Offered[]): Run[] {
-  return said.length === 0 ? [] : [{ spread: "row", held: said.length }];
 }
