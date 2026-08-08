@@ -13,6 +13,7 @@ from cardserver.errors import (
     NoSuchSeat,
     NotReady,
     SeatsEmpty,
+    SeatsHeld,
     SeatTaken,
     StaleGathering,
     TableClosed,
@@ -238,21 +239,27 @@ class Gathering:
         self._tints[guest] = chosen
         self._publish()
 
-    def choose(self, choice: Choice, base_revision: int) -> None:
-        """Settle what the table plays, standing up whoever sat past the seats it comes to hold.
+    def choose(self, guest: str, choice: Choice, base_revision: int) -> None:
+        """Settle what the table plays, the host standing up whoever they seat past the seats it comes to hold.
 
         The settings are what a company commits to, so settling them anew takes back every commitment and
-        leaves the company to give its word again to the table as it now stands.
+        leaves the company to give its word again to the table as it now stands. Shrinking a table under a
+        seated player is the host's alone: any other guest is held to a table that keeps every seat sat in.
 
         Raises:
             GatheringOver: once the table has been dealt.
             StaleGathering: when the gathering has moved past the revision this was built on.
+            SeatsHeld: when a guest other than the host settles a table too small for a seat the company holds.
             GameValidationError: when the choice names a game the host offers nowhere, a table that game
                 seats nowhere, or a count of decks it is dealt from nowhere.
         """
         self._confirm_gathering()
         self._confirm_revision(base_revision)
-        self._choice = self._offered(choice)
+        offered = self._offered(choice)
+        if guest != self._host:
+            self._confirm_room_for_seated(choice.players)
+
+        self._choice = offered
         self._stand_up_past(choice.players)
         self._unready()
         self._publish()
@@ -407,6 +414,20 @@ class Gathering:
         for name, seat in self._seats.items():
             if seat is not None and seat >= players:
                 self._seats[name] = STANDING
+
+    def _confirm_room_for_seated(self, players: int) -> None:
+        """Confirm a table of this size keeps every seat the company sits in, read by where they sit.
+
+        A player who took the last seat is held past by a table one seat smaller as surely as a full one is, so
+        this weighs the seats taken rather than how many sit: any occupied seat the choice leaves outside it is
+        one a change would stand its holder up from.
+
+        Raises:
+            SeatsHeld: when a guest of the company holds a seat the choice would leave outside the table.
+        """
+        held = tuple(seat for seat in self._seats.values() if seat is not None and seat >= players)
+        if held:
+            raise SeatsHeld(players, held)
 
     def _unready(self) -> None:
         """Take back every commitment, which a change to what is played or who plays it calls for."""

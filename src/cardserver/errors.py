@@ -81,6 +81,14 @@ class NameTaken(CardserverError):
         self.name = name
 
 
+class TableTaken(CardserverError):
+    """Raised when a table is gathered, or put into service, under a name another table already answers to."""
+
+    def __init__(self, table: TableId) -> None:
+        super().__init__(f"A table named {table!r} already stands here, so gather yours under another name")
+        self.table = table
+
+
 class SeatTaken(CardserverError):
     """Raised when a seat is claimed while another guest of the company holds it."""
 
@@ -106,6 +114,22 @@ class NoSuchSeat(CardserverError):
         super().__init__(f"Seat {seat} stands outside the {players} seats this table was settled on")
         self.seat = seat
         self.players = players
+
+
+class SeatsHeld(CardserverError):
+    """Raised when a guest other than the host settles a table too small for the seats its company already holds.
+
+    A smaller table stands up whoever sat past it, so shrinking one out from under a seated player is the host's
+    to do alone: any other guest is held to a table that keeps every seat its company sits in.
+    """
+
+    def __init__(self, players: int, held: tuple[int, ...]) -> None:
+        super().__init__(
+            f"A table of {players} seats would stand up the company holding seats {sorted(held)}, "
+            f"so only its host may settle it that small"
+        )
+        self.players = players
+        self.held = held
 
 
 class NoSay(CardserverError):
@@ -193,6 +217,8 @@ REFUSALS: Final[tuple[tuple[type[Exception], HTTPStatus], ...]] = (
     (Unadmitted, HTTPStatus.FORBIDDEN),
     (NoSay, HTTPStatus.FORBIDDEN),
     (NameTaken, HTTPStatus.CONFLICT),
+    (TableTaken, HTTPStatus.CONFLICT),
+    (SeatsHeld, HTTPStatus.CONFLICT),
     (SeatTaken, HTTPStatus.CONFLICT),
     (TintTaken, HTTPStatus.CONFLICT),
     (GatheringOver, HTTPStatus.CONFLICT),

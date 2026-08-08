@@ -165,6 +165,21 @@ describe("what the room offers to play", () => {
     expect(room).toContain("Take a seat to settle what is played");
     expect([...room.matchAll(/<select disabled=""/g)].length).toBeGreaterThan(0);
   });
+
+  it("holds a guest other than the host back from a table too small for the last seat taken", () => {
+    const company = [aGuest(MINE, 0), aGuest("Grace", 2)];
+    const room = drawn(aGathering(company, { choice: aChoice({ game: "climbing", players: 4 }) }));
+
+    expect(room).toContain('value="2" disabled=""');
+    expect(room).not.toContain('value="3" disabled=""');
+  });
+
+  it("reads the host the whole range, since standing a seated player up is theirs to do", () => {
+    const company = [aGuest(MINE, 0, true, "rose", false, true), aGuest("Grace", 2)];
+    const room = drawn(aGathering(company, { choice: aChoice({ game: "climbing", players: 4 }) }));
+
+    expect(room).not.toContain('value="2" disabled=""');
+  });
 });
 
 describe("the move hints the table may put out", () => {

@@ -179,3 +179,14 @@ async def test_a_guest_founds_a_table_over_the_open_route(overseen: AsyncClient)
     assert admitted.status_code == HTTPStatus.OK
     assert admitted.json()["token"]
     assert admitted.json()["gathering"]["company"][0]["host"] is True
+
+
+async def test_founding_a_table_under_a_name_already_gathering_is_refused(overseen: AsyncClient) -> None:
+    """The name the table under test gathers on is taken, so founding another on it is a refusal, not a fault."""
+    refused = await overseen.post(
+        "/tables",
+        json=a_founding(TABLE).model_dump(mode="json"),
+    )
+
+    assert refused.status_code == HTTPStatus.CONFLICT
+    assert refused.json()["error"] == "TableTaken"

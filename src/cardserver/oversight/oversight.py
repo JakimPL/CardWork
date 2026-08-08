@@ -75,7 +75,7 @@ class Oversight:
         Raises:
             NoCreation: when this host opens tables from its panel alone just now.
             TablesFull: when this host already holds as many tables as it gathers at once.
-            ValueError: when a table of that name is already gathering.
+            TableTaken: when a table of that name is already gathering.
             GameValidationError: when the choice the table opens on names a game offered nowhere.
         """
         if not self._creation.open_to_guests:
@@ -89,7 +89,7 @@ class Oversight:
 
         Raises:
             TablesFull: when this host already holds as many tables as it gathers at once.
-            ValueError: when a table of that name is already gathering.
+            TableTaken: when a table of that name is already gathering.
             GameValidationError: when the choice the table opens on names a game offered nowhere.
         """
         self._confirm_room()

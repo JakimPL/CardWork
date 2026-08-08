@@ -43,6 +43,21 @@ export function iAmHost(gathering: GatheringView): boolean {
   return me(gathering)?.host ?? false;
 }
 
+/**
+ * The fewest players a table may be settled to while it keeps every seat its company sits in.
+ *
+ * A player who took the last seat holds a table that size open as surely as a full one does, so this reads the
+ * floor off where the company sits rather than off how many sit: one past the highest seat taken, and none at
+ * all where nobody is seated. It mirrors `cardserver.gathering.Gathering`, which stands only the host up under
+ * a seated player and holds every other guest to a table this size at the least.
+ */
+export function seatFloor(gathering: GatheringView): number {
+  const held = seatedGuests(gathering)
+    .map((guest) => guest.seat)
+    .filter((seat): seat is number => seat !== null);
+  return held.length === 0 ? 0 : Math.max(...held) + 1;
+}
+
 /** Whether the guest reading the page has committed to the settings as they stand. */
 export function iAmReady(gathering: GatheringView): boolean {
   return me(gathering)?.ready ?? false;

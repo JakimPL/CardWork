@@ -7,6 +7,7 @@ import pytest
 from httpx import AsyncClient, Response
 from pydantic import ValidationError
 
+from cardserver.errors import TableTaken
 from cardserver.gathering import TINTS
 from cardserver.naming import Seated
 from cardserver.schemas import Choice, Choosing, Dealing, Offering, Tinting
@@ -108,7 +109,7 @@ async def takes(client: AsyncClient, token: str, tint: Tint, base_revision: int)
 
 
 def test_a_name_already_gathering_is_left_as_it_was(gathered: Gathered) -> None:
-    with pytest.raises(ValueError, match="already gathering"):
+    with pytest.raises(TableTaken, match="already stands here"):
         gathered.gatherings.open(
             TABLE,
             CODE,
@@ -281,18 +282,20 @@ async def test_a_seated_guest_settles_what_the_table_plays(visitor: AsyncClient,
     assert answered.json()["choice"]["players"] == A_SMALLER_TABLE
 
 
-async def test_a_smaller_table_stands_up_whoever_sat_past_the_seats_it_holds(
+async def test_a_democratic_guest_may_not_shrink_a_table_under_a_seat_the_company_holds(
     visitor: AsyncClient,
     gathered: Gathered,
 ) -> None:
+    """Grace took the last seat, so a guest of a host-less table shrinking under it is refused, not obeyed."""
     settling = await arrives(visitor, "Ada")
     await sits(visitor, settling, 0, gathered.gathering.revision)
     outside = await arrives(visitor, "Grace")
     await sits(visitor, outside, A_SMALLER_TABLE, gathered.gathering.revision)
     answered = await chooses(visitor, settling, a_sealed_round(A_SMALLER_TABLE), gathered.gathering.revision)
 
-    assert guest_named(answered.json(), "Grace")["seat"] is None
-    assert guest_named(answered.json(), "Ada")["seat"] == 0
+    assert answered.status_code == HTTPStatus.CONFLICT
+    assert answered.json()["error"] == "SeatsHeld"
+    assert gathered.gathering.seat_of("Grace") == A_SMALLER_TABLE
 
 
 async def test_a_game_this_host_offers_nowhere_is_played_nowhere(visitor: AsyncClient, gathered: Gathered) -> None:

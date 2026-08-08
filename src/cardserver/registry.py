@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from time import monotonic
 
-from cardserver.errors import UnknownTable
+from cardserver.errors import TableTaken, UnknownTable
 from cardserver.protocols.presentation import Presentation
 from cardserver.protocols.table import Table, TableId
 from cardserver.sessions.in_service import InService
@@ -44,11 +44,11 @@ class TableRegistry:
         joining asks for both and the host holding the game holds the layout of it too.
 
         Raises:
-            ValueError: when a table of that name is already in service, which would leave the record
+            TableTaken: when a table of that name is already in service, which would leave the record
                 a client was reading replaced under it.
         """
         if table_id in self._sessions:
-            raise ValueError(f"A table named {table_id!r} is already in service")
+            raise TableTaken(table_id)
 
         session = TableSession(
             table_id,

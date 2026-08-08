@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 
 import type { Choice, GatheringView, Offering } from "../api/gathering";
 import { endingRead, offeringOf, runningTo, seatingsOf, settledOn } from "../play/choosing";
-import { hasSay, iAmHost } from "../play/company";
+import { hasSay, iAmHost, seatFloor } from "../play/company";
 
 /** The most rounds a company sets a match to run for, which is where the counts a control lists stop. */
 const ROUNDS_MOST = 10;
@@ -34,15 +34,18 @@ interface SettlingProps {
  * that admits one count of decks offers no choice of them at all.
  *
  * Settling is for the guests holding seats, which the server answers for itself: a guest standing by reads the
- * choice and is told as much. Whether the table lights the cards a seat may play settles here beside the game, as
- * one of the settings the deal opens on. How the table is governed stands here too, as the host's own to settle:
- * the toggle hands the say to the whole table or keeps it to the host, and it shows for the host alone.
+ * choice and is told as much. The player counts a guest other than the host may pick keep every seat the company
+ * sits in, since shrinking a table under a seated player is the host's alone; the host reads the whole range.
+ * Whether the table lights the cards a seat may play settles here beside the game, as one of the settings the
+ * deal opens on. How the table is governed stands here too, as the host's own to settle: the toggle hands the say
+ * to the whole table or keeps it to the host, and it shows for the host alone.
  */
 export function Settling({ gathering, offerings, settle, govern }: SettlingProps): ReactElement {
   const { choice } = gathering;
   const offering = offeringOf(offerings, choice.game);
   const saying = hasSay(gathering);
   const hosting = iAmHost(gathering);
+  const floor = hosting ? 0 : seatFloor(gathering);
 
   return (
     <div className="settling">
@@ -72,7 +75,7 @@ export function Settling({ gathering, offerings, settle, govern }: SettlingProps
           }}
         >
           {(offering === null ? [choice.players] : seatingsOf(offering)).map((players) => (
-            <option key={players} value={players}>
+            <option key={players} value={players} disabled={players < floor}>
               {players}
             </option>
           ))}

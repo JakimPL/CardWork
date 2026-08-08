@@ -3,6 +3,7 @@ from collections.abc import Callable
 from cardserver.codes import a_drawn_code
 from cardserver.errors import (
     NotTheHost,
+    TableTaken,
     Unadmitted,
     Unauthenticated,
     UnknownTable,
@@ -69,12 +70,12 @@ class Gatherings:
         """Gather one table under a name, on a code, at the choice it opens with.
 
         Raises:
-            ValueError: when a table of that name is already gathering, which would leave the company that
+            TableTaken: when a table of that name is already gathering, which would leave the company that
                 was at it holding tokens for a room that had been replaced under them.
             GameValidationError: when the opening choice names a game the host offers nowhere.
         """
         if table in self._gatherings:
-            raise ValueError(f"A table named {table!r} is already gathering")
+            raise TableTaken(table)
 
         gathering = Gathering(
             table,
@@ -97,7 +98,7 @@ class Gatherings:
         carries it for them to pass on to whoever they mean to gather.
 
         Raises:
-            ValueError: when a table of that name is already gathering.
+            TableTaken: when a table of that name is already gathering.
             GameValidationError: when the choice the table opens on names a game offered nowhere.
         """
         gathering = self.open(
@@ -261,11 +262,12 @@ class Gatherings:
             NoSay: when this guest holds no say over what the table plays.
             GatheringOver: once the table has been dealt.
             StaleGathering: when the gathering has moved past the revision this was built on.
+            SeatsHeld: when a guest other than the host settles a table too small for a seat the company holds.
             GameValidationError: when the choice names a game or a table the host plays nowhere.
         """
         gathering = self.at(table)
         self._say.confirm(gathering, guest)
-        gathering.choose(choosing.choice, choosing.base_revision)
+        gathering.choose(guest, choosing.choice, choosing.base_revision)
         return gathering.view(guest)
 
     def deal(
