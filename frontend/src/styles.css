@@ -1112,7 +1112,7 @@ button.card {
   color: var(--chalk-dim);
 }
 
-.notice input,
+.notice input:not([type="checkbox"]),
 .notice select {
   flex: 1;
   padding: calc(var(--gap) / 2) var(--gap);
@@ -1121,6 +1121,16 @@ button.card {
   background: var(--ink);
   color: var(--chalk);
   font: inherit;
+}
+
+/* A box stands at the size of the word beside it and stays hard against it, since the two read as one line. */
+
+.notice input[type="checkbox"] {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  margin: 0;
+  accent-color: var(--live);
 }
 
 .notice button {
@@ -1322,13 +1332,12 @@ button.card {
 
 /*
  * What the table plays, standing in a panel of its own: an edge and a wash set the settings apart from the
- * company above them, and a caption at the head says what the controls under it settle. The same edge and the
- * same wash a place is drawn with carry here, so the room reads as two surfaces — who is at the table, and what
- * it plays.
+ * company above them. The same edge and the same wash a place is drawn with carry here, so the room reads as
+ * two surfaces — who is at the table, and what it plays.
  *
  * The controls stand in tracks that share the width out between them, two across where the room admits two and
  * one where it does not, so a select reaches the end of its track. What reads as a sentence rather than a
- * control — the caption, the ending, the two toggles, the word to a guest standing by — takes the whole width.
+ * control — the ending, the two toggles, the word to a guest standing by — takes the whole width.
  */
 
 .settling {
@@ -1360,17 +1369,11 @@ button.card {
   opacity: 0.45;
 }
 
-.settling .plays,
 .settling .ending,
 .settling .told,
 .settling .governance,
 .settling .cues {
   grid-column: 1 / -1;
-}
-
-.settling .plays {
-  color: var(--chalk-dim);
-  letter-spacing: 0.08em;
 }
 
 .settling .ending,
@@ -1388,6 +1391,12 @@ button.card {
   color: var(--chalk-dim);
 }
 
+/*
+ * The presses the room ends on stand together along one line, with the connection reading at their right. What
+ * the table still waits on takes a line of its own beneath them, so it reads as the footnote to the press it
+ * belongs to.
+ */
+
 .choices {
   display: flex;
   flex-wrap: wrap;
@@ -1396,18 +1405,14 @@ button.card {
   width: 100%;
 }
 
-.committing {
-  display: flex;
-  gap: var(--gap);
-  align-items: center;
-}
-
 .commit.ready.committed {
   border-color: rgb(var(--tint));
   box-shadow: 0 0 0 2px rgb(var(--tint) / var(--tint-ring));
 }
 
-.committing .pending {
+.choices .pending {
+  order: 1;
+  flex-basis: 100%;
   color: var(--chalk-dim);
 }
 

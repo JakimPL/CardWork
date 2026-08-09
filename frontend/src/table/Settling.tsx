@@ -4,9 +4,6 @@ import type { Choice, GatheringView, Offering } from "../api/gathering";
 import { endingRead, offeringOf, runningTo, seatingsOf, settledOn } from "../play/choosing";
 import { hasSay, iAmHost, seatFloor } from "../play/company";
 
-/** What the panel of settings is headed by, which says at a glance what the controls under it settle. */
-const PLAYS = "What the table plays";
-
 /** The most rounds a company sets a match to run for, which is where the counts a control lists stop. */
 const ROUNDS_MOST = 10;
 
@@ -52,7 +49,6 @@ export function Settling({ gathering, offerings, settle, govern }: SettlingProps
 
   return (
     <div className="settling">
-      <p className="plays">{PLAYS}</p>
       <label>
         Game
         <select
