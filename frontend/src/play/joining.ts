@@ -69,6 +69,18 @@ export function fragmentFor(seat: Seat): string {
   return `#${stated.toString()}`;
 }
 
+/**
+ * The address a guest is handed to join one table, which is the line whoever is already at it passes on.
+ *
+ * It is built from the address this page was reached at, so a table read over a home network and a table behind
+ * an advertised address each hand out a line that reaches the server the reader is already talking to. The code
+ * rides the fragment as the token does, which is what keeps it out of every log between here and there.
+ */
+export function invitationTo(table: string, code: string, at: URL | Location): string {
+  const stated = new URLSearchParams({ [TABLE_FIELD]: table, [CODE_FIELD]: code });
+  return `${at.origin}${at.pathname}#${stated.toString()}`;
+}
+
 /** The fields a fragment states, read whether or not it was handed over with its leading mark. */
 function stating(fragment: string): URLSearchParams {
   return new URLSearchParams(fragment.replace(/^#/, ""));

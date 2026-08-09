@@ -34,7 +34,7 @@ describe("the tints a page offers", () => {
     expect([...TINTS].sort()).toEqual(Object.keys(EVERY).sort());
   });
 
-  it("offers each of them once, so no two guests are told apart by the same colour", () => {
+  it("offers each of them once, so no two guests are told apart by the same color", () => {
     expect(new Set(TINTS).size).toBe(TINTS.length);
   });
 
@@ -54,7 +54,7 @@ describe("the tint one guest of a gathering holds", () => {
     expect(myTint(aGathering([aGuest("Grace", 0, true, HIS)]))).toBeNull();
   });
 
-  it("names the guest holding one, so the page leaves the colours another guest plays under to them", () => {
+  it("names the guest holding one, so the page leaves the colors another guest plays under to them", () => {
     const room = aGathering([aGuest("Grace", 0, true, HIS)]);
 
     expect(tintHeldBy(room, HIS)?.name).toBe("Grace");

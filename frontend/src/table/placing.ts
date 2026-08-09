@@ -94,7 +94,7 @@ export function linesOf(place: Placement, slots: Slot[]): Slot[][] {
  * drawn. So a table of four reads left, across and right, and a table of seven two seats up each side and two
  * across, and the middle of it belongs to the zones every seat shares.
  *
- * Each side is a run of its own on the page, so the room a seat takes is the room its neighbours give way by: no
+ * Each side is a run of its own on the page, so the room a seat takes is the room its neighbors give way by: no
  * seat is drawn over another and no name is covered, whatever the cards at either of them come to.
  */
 export function ringOf(layout: Layout): Ring {

@@ -17,7 +17,7 @@ import { handled } from "./dragging";
  */
 const RED_SUITS = new Set(["♥", "♦"]);
 
-/** The face a joker draws, which is the mark and the colour it stands as. */
+/** The face a joker draws, which is the mark and the color it stands as. */
 const JOKER_MARK = "*";
 const RED_JOKER = "♥";
 const BLACK_JOKER = "♠";
@@ -102,7 +102,7 @@ export function CardFace({ card, selected, dimmed, arriving, onPick, handling }:
   );
 }
 
-/** How a place in a zone reads: the back of a card, or a face in the colour its suit draws in. */
+/** How a place in a zone reads: the back of a card, or a face in the color its suit draws in. */
 function facing(card: ProjectedCard): string[] {
   if (card === null) {
     return ["back"];
@@ -143,7 +143,7 @@ function glyphs(card: ProjectedCard): ReactElement | null {
   return card === null ? null : shown(faceOf(card.card));
 }
 
-/** The rank and suit one card draws as, which a joker takes the colour it was dealt in. */
+/** The rank and suit one card draws as, which a joker takes the color it was dealt in. */
 function faceOf(card: CardOrJoker): Face {
   if ("rank" in card) {
     return { rank: card.rank, suit: card.suit };

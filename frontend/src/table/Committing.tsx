@@ -25,7 +25,7 @@ interface CommittingProps {
  * The one press the room carries a seated guest through, from committing to the settings to calling the deal.
  *
  * It is a seated guest's own commitment first: they press to say the settings may be dealt and press again to
- * take that word back, and the line beside it reads what the table still waits on. Once nothing does, the press
+ * take that word back, and the line under it reads what the table still waits on. Once nothing does, the press
  * becomes the deal itself where the guest may call it, and where a host-governed table keeps the deal to the
  * host it reads as the wait it is. A guest standing by neither commits nor deals, and the press tells them so.
  */
@@ -40,7 +40,7 @@ export function Committing({ gathering, ready, callTheDeal }: CommittingProps): 
       );
     case "ready":
       return (
-        <div className="committing">
+        <>
           <button
             type="button"
             className={classes("commit", "ready", commit.ready && "committed")}
@@ -50,7 +50,7 @@ export function Committing({ gathering, ready, callTheDeal }: CommittingProps): 
             {commit.ready ? READIED : READY}
           </button>
           <span className="pending">{commit.pending}</span>
-        </div>
+        </>
       );
     case "deal":
       return (

@@ -39,7 +39,7 @@ interface PlayfieldProps {
  *
  * The three bands are the whole page and they fit the window between them, so a player reads the table without
  * scrolling for any part of it. The middle band is the table itself: the zones every seat shares lie at the
- * centre of it and the other players sit round three sides of them — up the left, across the top and down the
+ * center of it and the other players sit round three sides of them — up the left, across the top and down the
  * right — each with the cards the table reads of them, which is what a game of cards looks like. Every zone
  * drawn, every figure read and every word of the phase comes from the layout the game stated, which is what
  * leaves this page holding no knowledge of any game.

@@ -5,8 +5,8 @@ import { myTint, tintHeldBy } from "../play/company";
 import { TINTS } from "../play/tints";
 import { classes } from "./classes";
 
-/** What the row of swatches is called, which is the one thing a colour says about whose it is. */
-const YOURS = "Your colour";
+/** What the row of swatches is called, which is the one thing a color says about whose it is. */
+const YOURS = "Your color";
 
 interface TintsProps {
   gathering: GatheringView;
@@ -14,17 +14,17 @@ interface TintsProps {
 }
 
 /**
- * The colours the company is told apart by: one swatch a tint, and one press to take a free one.
+ * The colors the company is told apart by: one swatch a tint, and one press to take a free one.
  *
  * A guest is handed a tint as they arrive and may take any the company has left, seated or standing alike, since
- * a colour belongs to the guest rather than to the seat. The one this guest holds stands marked, and the ones
+ * a color belongs to the guest rather than to the seat. The one this guest holds stands marked, and the ones
  * another guest holds are left to them, which is the answer the table gives as well.
  */
 export function Tints({ gathering, tint }: TintsProps): ReactElement {
   const held = myTint(gathering);
   return (
     <div className="tints">
-      <span className="colour">{YOURS}</span>
+      <span className="color">{YOURS}</span>
       {TINTS.map((one) => (
         <Swatch key={one} gathering={gathering} one={one} held={held} tint={tint} />
       ))}
@@ -39,7 +39,7 @@ interface SwatchProps {
   tint: (chosen: Tint) => void;
 }
 
-/** One colour of the eight: who holds it, whether it is this guest's, and the press that takes it. */
+/** One color of the eight: who holds it, whether it is this guest's, and the press that takes it. */
 function Swatch({ gathering, one, held, tint }: SwatchProps): ReactElement {
   const holder = tintHeldBy(gathering, one);
   const own = one === held;
@@ -59,7 +59,7 @@ function Swatch({ gathering, one, held, tint }: SwatchProps): ReactElement {
   );
 }
 
-/** What one swatch says of itself: the colour, and the guest holding it where somebody does. */
+/** What one swatch says of itself: the color, and the guest holding it where somebody does. */
 function reads(one: Tint, holder: Guest | null, own: boolean): string {
   if (own) {
     return `${one}, yours`;

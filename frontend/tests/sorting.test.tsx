@@ -19,7 +19,7 @@ import {
   placesOf,
   restingOn,
   sent,
-  travelled,
+  traveled,
 } from "../src/table/dragging";
 import type { Placement } from "../src/table/placing";
 import { own, shared } from "../src/table/placing";
@@ -389,13 +389,13 @@ describe("a card of a run whose order the table keeps", () => {
 
 describe("the hand on a card", () => {
   it("reads as a press where it has gone as good as nowhere from the point it set out from", () => {
-    expect(travelled(TAKEN, { across: 210, down: 505 })).toBe(false);
-    expect(travelled(TAKEN, { across: 213, down: 503 })).toBe(false);
+    expect(traveled(TAKEN, { across: 210, down: 505 })).toBe(false);
+    expect(traveled(TAKEN, { across: 213, down: 503 })).toBe(false);
   });
 
   it("reads as carrying the card once it has taken it anywhere at all", () => {
-    expect(travelled(TAKEN, { across: 250, down: 505 })).toBe(true);
-    expect(travelled(TAKEN, { across: 210, down: 475 })).toBe(true);
+    expect(traveled(TAKEN, { across: 250, down: 505 })).toBe(true);
+    expect(traveled(TAKEN, { across: 210, down: 475 })).toBe(true);
   });
 
   it("reads as carrying a card taken a whole place along, which stands barely off the place it reached", () => {
@@ -403,7 +403,7 @@ describe("the hand on a card", () => {
 
     expect(carried.to).toBe(2);
     expect(Math.abs(carried.by.across)).toBeLessThanOrEqual(A_NUDGE);
-    expect(travelled(carried, { across: 310, down: 505 })).toBe(true);
+    expect(traveled(carried, { across: 310, down: 505 })).toBe(true);
   });
 });
 
