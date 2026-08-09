@@ -46,6 +46,10 @@ export interface Gathered {
  * The stream is held while the page is in view, which is also what reads this guest as present, so the company
  * on screen is the company watching the room. A tab that looks away leaves it and rejoins where it left off.
  *
+ * The deal is the last thing a gathering has to say, so the reading that carries it is where the stream is let
+ * go and the table takes the page from there, whether that reading arrived on the stream, as the answer to the
+ * call for the deal, or as the room a tab found already dealt.
+ *
  * Every command quotes the revision it was built on, so two guests settling the choice at once leaves the
  * second told rather than overruled, and the answer to a command is a reading of the room like any other.
  *
@@ -61,9 +65,11 @@ export function useGathering(seat: Seat): Gathered {
   const [trouble, setTrouble] = useState<string | null>(null);
   const [closed, setClosed] = useState<Closed | null>(null);
   const reached = useRef(UNREAD);
+  const dealt = useRef(false);
 
   const hold = useCallback((view: GatheringView) => {
     reached.current = Math.max(reached.current, view.revision);
+    dealt.current ||= view.dealt;
     setGathering((held) => (held !== null && held.revision > view.revision ? held : view));
   }, []);
 
@@ -121,28 +127,41 @@ export function useGathering(seat: Seat): Gathered {
   useEffect(() => {
     const attending = { held: true };
     let release: (() => void) | null = null;
+    let stop: (() => void) | null = null;
+
+    const letGo = (): void => {
+      stop?.();
+      stop = null;
+    };
 
     const following = (): (() => void) => {
-      const stop = followGathering(seat, reached.current + 1, {
-        onOpen: () => {
-          setConnection("following");
-          setTrouble(null);
-        },
-        onFrame: hold,
-        onClosed: setClosed,
-        onDropped: (reason) => {
-          setConnection("resuming");
-          setTrouble(reason);
-        },
-        onRefused: (reason) => {
-          setConnection("refused");
-          setTrouble(reason);
-        },
-      });
+      if (!dealt.current) {
+        stop = followGathering(seat, reached.current + 1, {
+          onOpen: () => {
+            setConnection("following");
+            setTrouble(null);
+          },
+          onFrame: (view) => {
+            hold(view);
+            if (dealt.current) {
+              letGo();
+            }
+          },
+          onClosed: setClosed,
+          onDropped: (reason) => {
+            setConnection("resuming");
+            setTrouble(reason);
+          },
+          onRefused: (reason) => {
+            setConnection("refused");
+            setTrouble(reason);
+          },
+        });
+      }
 
       return () => {
         setConnection("joining");
-        stop();
+        letGo();
       };
     };
 
