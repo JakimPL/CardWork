@@ -1,5 +1,6 @@
 from argparse import ArgumentParser, Namespace
 from collections.abc import Sequence
+from logging import basicConfig
 from pathlib import Path
 from typing import Final
 
@@ -22,6 +23,7 @@ from cardwork.rounds.conclusion import Conclusion
 PROGRAM: Final[str] = "cardtable"
 DESCRIPTION: Final[str] = "Gather one table of a CardWork game for local play."
 NO_PACK: Final[str] = "none"
+REPORTED: Final[str] = "%(asctime)s %(levelname)s [%(process)d] %(name)s: %(message)s"
 
 
 def parser() -> ArgumentParser:
@@ -278,12 +280,28 @@ def announcement(
     return "\n".join(lines)
 
 
+def report_at(level: LogLevel) -> None:
+    """Open the run's log: every line stamped with the moment, the level, the process and what wrote it.
+
+    The process stands in each line because a table lives in the memory of one. A log holding lines from two of
+    them is a host answering as two tables, each with a gathering and a code of its own, which is the first
+    thing to read in a deployment behind a server that starts a process per request or per worker.
+
+    The server writes its own lines through the same log, so what a run says of itself and what it says of the
+    requests it answered stand in one place and in one order.
+    """
+    basicConfig(level=level.reported, format=REPORTED)
+
+
 def main(argv: Sequence[str] | None = None) -> None:
     """Gather the table a run is configured for and answer for it until the process is stopped.
 
     The gathering and the table it becomes live as long as the process does, which is why a match runs under no
     reloader: the company at a table and the position it stands at are held in memory, and a restart gathers a
     fresh one.
+
+    The log opens at the level the run states before the table is gathered, so what the host says of itself and
+    what the server says of the requests it answers reach one place from the first line onward.
 
     The announcement is flushed as it is written, since the server that follows it holds the process for as
     long as the table lasts and a buffered line would reach a log file after the game rather than before it.
@@ -294,6 +312,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     peer.
     """
     configuration = configured(parser().parse_args(argv))
+    report_at(configuration.service.log_level)
     hosted = opened(
         configuration.table,
         configuration.choice,

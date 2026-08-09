@@ -1,4 +1,5 @@
 from enum import StrEnum
+from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from typing import Final
 
 from pydantic import Field
@@ -19,6 +20,25 @@ class LogLevel(StrEnum):
     INFO = "info"
     DEBUG = "debug"
     TRACE = "trace"
+
+    @property
+    def reported(self) -> int:
+        """The level the standard library reads this as, which is what the table's own log is held to.
+
+        The server states one level finer than the library holds names for, and a run asking for that reads
+        everything the library has, which is its debug.
+        """
+        match self:
+            case LogLevel.CRITICAL:
+                return CRITICAL
+            case LogLevel.ERROR:
+                return ERROR
+            case LogLevel.WARNING:
+                return WARNING
+            case LogLevel.INFO:
+                return INFO
+            case LogLevel.DEBUG | LogLevel.TRACE:
+                return DEBUG
 
 
 class Service(BaseFrozen):

@@ -1,8 +1,10 @@
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from http import HTTPStatus
-from typing import Final
+from logging import INFO, WARNING, Logger, getLogger
+from typing import Any, Final
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
 from starlette.responses import Response
@@ -16,6 +18,9 @@ from cardwork.exceptions import (
     NotYourTurn,
     StalePosition,
 )
+
+LOGGER: Final[Logger] = getLogger("cardserver")
+MISSTATED: Final[HTTPStatus] = HTTPStatus.UNPROCESSABLE_ENTITY
 
 
 class CardserverError(Exception):
@@ -234,22 +239,82 @@ REFUSALS: Final[tuple[tuple[type[Exception], HTTPStatus], ...]] = (
 )
 
 
+def a_misstatement(error: Exception) -> str:
+    """What a request the schemas turned away got wrong: each field named, and what was wanted there.
+
+    The framework states those fields in a list of its own, which this reads into one sentence. A refusal
+    carrying no such list stands as the sentence it states for itself.
+    """
+    if isinstance(error, RequestValidationError):
+        misstated = "; ".join(_a_field_misstated(field) for field in error.errors())
+        if misstated:
+            return misstated
+
+    return str(error)
+
+
 def install_error_handlers(app: FastAPI) -> None:
     """Teach an application to answer every refusal the domain and the adapter state with its own status.
 
     Registering one handler per kind is what keeps the mapping total over the refusals listed and open
     at the edges: a game that raises its own subclass of one of them is answered the same way, and an
     error outside the list reaches the server as the defect it is.
+
+    A request the schemas could make nothing of is answered here as well, since the framework states that one
+    in a shape of its own: every refusal the server writes therefore carries the kind and the sentence a client
+    reads, so a page has something to put in front of a person whatever it asked for.
     """
     for kind, status in REFUSALS:
         app.add_exception_handler(kind, _answer_with(status))
+
+    app.add_exception_handler(RequestValidationError, _answer_a_misstatement)
+
+
+def _a_field_misstated(stated: Mapping[str, Any]) -> str:
+    """One field a request got wrong, named where the schemas locate it and said as they state it.
+
+    The framework hands these over as bare mappings, so the two fields a person reads are taken by name and
+    the rest — the kind of the check and the value it was handed — stay where they were.
+    """
+    located = ".".join(str(part) for part in stated["loc"])
+    return f"{located}: {stated['msg']}"
 
 
 def _answer_with(status: HTTPStatus) -> Callable[[Request, Exception], Response]:
     """A handler naming the refusal and the sentence behind it, under the status that kind is owed."""
 
-    def handle(_request: Request, error: Exception) -> Response:
+    def handle(request: Request, error: Exception) -> Response:
         body = ErrorBody(error=type(error).__name__, detail=str(error))
-        return JSONResponse(status_code=status, content=body.model_dump())
+        return _refused(request, status, body, INFO)
 
     return handle
+
+
+def _answer_a_misstatement(request: Request, error: Exception) -> Response:
+    """A request the schemas could make nothing of, answered in the shape every refusal here takes."""
+    body = ErrorBody(error=type(error).__name__, detail=a_misstatement(error))
+    return _refused(request, MISSTATED, body, WARNING)
+
+
+def _refused(
+    request: Request,
+    status: HTTPStatus,
+    body: ErrorBody,
+    level: int,
+) -> Response:
+    """The answer one refusal goes out as, written to the log on its way.
+
+    A refusal is the ordinary answer to a client asking for what the rules withhold, so it is reported at the
+    level a run states its own doings at. A request the schemas could make nothing of is reported louder, since
+    it says the client, or whatever carried the request here, is putting one together wrongly.
+    """
+    LOGGER.log(
+        level,
+        "%s %s — %d %s: %s",
+        request.method,
+        request.url.path,
+        status,
+        body.error,
+        body.detail,
+    )
+    return JSONResponse(status_code=status, content=body.model_dump())
