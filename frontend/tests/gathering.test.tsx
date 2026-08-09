@@ -227,6 +227,13 @@ describe("the one press the room carries a seated guest through", () => {
     expect(room).toContain("One seat still to be taken");
   });
 
+  it("stands beside the presses at the foot, with what the table waits on reading under them both", () => {
+    const room = drawn(aGathering([aGuest(MINE, 0, true, "rose", true)], { choice: aChoice({ players: 2 }) }));
+
+    expect(room).toMatch(/class="choices"><button type="button" class="commit ready committed"/);
+    expect(room).toMatch(/<span class="pending">[^<]*<\/span><button type="button">Leave the table/);
+  });
+
   it("becomes the deal itself once every seat is taken and every seated guest has committed", () => {
     const room = drawn(aSeatedGathering(3, true));
 
