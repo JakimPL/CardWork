@@ -17,8 +17,8 @@ Four packages:
   four games are playable in a browser, across a room or over a LAN.
 
 `docs/architecture.md` is the design and the reasoning behind it; `docs/combinations.md`, `docs/rounds.md`,
-`docs/presentation.md` and `docs/games/` state the parts a game reaches for and the four games themselves.
-What follows is enough to start.
+`docs/presentation.md` and `docs/games/` state the parts a game reaches for and the four games themselves;
+`docs/deployment.md` states how a table is put on the internet. What follows is enough to start.
 
 ## Getting set up
 
@@ -284,6 +284,18 @@ A run bound to `0.0.0.0` is reached from another machine at the address it annou
 one room needs nothing further; `--advertise` states an address instead, for a run behind a name or a tunnel.
 
 A table lives as long as the process: the position is held in memory, and a restart deals a fresh one.
+
+## Putting one on the internet
+
+A machine you have a shell on needs nothing beyond the command above and a proxy for the certificate. Shared
+hosting is the case that asks for more: cPanel and its like run Python by importing a WSGI callable under
+workers they start and stop as they please, and a table asks for one process and one event loop that outlive
+any request. `deploy/main.py` is the entry that answers that — it starts the table once on the loopback and
+passes every request through to it, streaming the answer as it is written.
+
+`docs/deployment.md` is the guide: what a table asks of a machine, how to place the file and state
+`config.yaml` beside it, the header a host fills in that would otherwise freeze the room a page reads, and
+what to read when a deployment misbehaves.
 
 ## The interface
 

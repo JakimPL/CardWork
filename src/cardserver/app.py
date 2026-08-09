@@ -11,6 +11,7 @@ from cardserver.gathering.gatherings import Gatherings
 from cardserver.identity.headers import SEAT_HEADER
 from cardserver.identity.identity import confirm_actor, seated
 from cardserver.identity.seat_policy import SeatPolicy
+from cardserver.keeping import UNKEPT, Keeping
 from cardserver.lobby import gathering_routes
 from cardserver.oversight.admin_route import admin_routes
 from cardserver.oversight.oversight import Oversight
@@ -61,6 +62,10 @@ def create_app(
     routes ask only for a seat, which is why the two arrive as two arguments: a host gathering its tables hands
     the same object over twice, and one serving a table already seated hands over a policy and no lobby at all.
 
+    Every answer states that it is to be kept nowhere, since what a table answers is how it stands at the
+    moment it was asked. The interface served over the top of these endpoints states a policy of its own and
+    keeps it.
+
     Args:
         registry: the tables in service, which the host opens before or during service.
         seats: how a credential becomes a seat at a table.
@@ -82,6 +87,7 @@ def create_app(
             await registry.close()
 
     app = FastAPI(title="CardWork", lifespan=lifespan)
+    app.add_middleware(Keeping, policy=UNKEPT)
     install_error_handlers(app)
 
     def observer_of(

@@ -1,34 +1,3 @@
-"""Passenger's way in to a table: one process holds the game, and every request is handed to it.
-
-A table lives in the memory of the process that gathered it — the company, the position, the windows a
-take-back stands in and the streams that carry all of it — and that process answers with one event loop
-running for as long as it does. Passenger offers neither: it starts a worker per request load, stops one
-whenever it likes, and a WSGI callable answers inside a loop of its own that is closed the moment the answer
-is whole. An application imported into that lives as long as one request.
-
-So nothing here holds a table. This starts the table's own server once, on the loopback address nobody
-outside the machine reaches, and passes every request through to it as it stands: the headers as they came,
-the body as it was written, and the answer streamed back chunk by chunk so an event stream reaches the page
-as it is written rather than when it ends. However many workers Passenger runs and however often it recycles
-them, the company stays at the one table.
-
-Set it up:
-
-  * put this file where cPanel's `passenger_wsgi.py` reads its application from, which is what the
-    "Application startup file" field of the Python app names;
-  * state below where the checkout stands and which port the table answers on, and leave that port closed
-    at the firewall — the table is reached through this file alone;
-  * in `config.yaml`, state `service.host: 127.0.0.1`, `service.port` as below, and
-    `service.forwarded_allow_ips: 127.0.0.1`, so the table counts each guest by the address this hands it
-    rather than by the one proxy every guest arrives through;
-  * pin `table.code`, `table.seed` and `admin.secret` there too, so a restart gathers behind the code
-    already handed out and oversees under the token already held.
-
-The table writes its log where `LOG` says, this writes its own beside it, and every line of both carries the
-process that wrote it: two processes announcing a table is a host serving two of them, which is the first
-thing to look for when a company finds itself in an empty room.
-"""
-
 import fcntl
 import logging
 import os
@@ -44,7 +13,8 @@ from time import monotonic, sleep
 from typing import Any, Final
 from urllib.parse import quote
 
-HOME: Final[Path] = Path(__file__).resolve().parent
+HOME: Final[Path] = Path(__file__).resolve().parents[1]
+PACKAGES: Final[Path] = HOME / "src"
 CONFIGURATION: Final[Path] = HOME / "config.yaml"
 LOG: Final[Path] = HOME / "table.log"
 LOCK: Final[Path] = HOME / "table.lock"
@@ -92,6 +62,23 @@ def listening() -> bool:
         return probe.connect_ex((ADDRESS, PORT)) == LISTENING
 
 
+def surroundings() -> dict[str, str]:
+    """What the table's process is started with, the checkout named among the places it imports from.
+
+    A host runs this file under an interpreter of its own making, and the table is to be the package standing
+    beside it rather than any other of that name. Naming the checkout here is what settles that, and whatever
+    the host already stated is kept, since that is where its own installed packages are found.
+    """
+    stated = dict(os.environ)
+    standing = [str(place) for place in (HOME, PACKAGES) if place.is_dir()]
+    already = stated.get("PYTHONPATH")
+    if already:
+        standing.append(already)
+
+    stated["PYTHONPATH"] = os.pathsep.join(standing)
+    return stated
+
+
 def start_the_table() -> None:
     """Start the one process the table lives in, and wait for it to answer.
 
@@ -102,6 +89,13 @@ def start_the_table() -> None:
     with LOCK.open("w", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         if listening():
+            return
+
+        if not CONFIGURATION.is_file():
+            LOGGER.error(
+                "no configuration stands at %s, which is the file a table is gathered from",
+                CONFIGURATION,
+            )
             return
 
         LOGGER.info("no table answers on %s:%d, starting one", ADDRESS, PORT)
@@ -126,7 +120,7 @@ def start_the_table() -> None:
                 stdout=log,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,
-                env=dict(os.environ),
+                env=surroundings(),
             )
         finally:
             log.close()
@@ -134,7 +128,10 @@ def start_the_table() -> None:
         started = monotonic()
         while monotonic() - started < STARTING_PATIENCE:
             if listening():
-                LOGGER.info("the table answers after %.1f seconds", monotonic() - started)
+                LOGGER.info(
+                    "the table answers after %.1f seconds",
+                    monotonic() - started,
+                )
                 return
 
             sleep(BETWEEN_PROBES)
@@ -196,7 +193,10 @@ def address_of(environ: Environ) -> str:
     return f"{path}?{query}" if query else path
 
 
-def streaming(connection: HTTPConnection, answered: HTTPResponse) -> Iterator[bytes]:
+def streaming(
+    connection: HTTPConnection,
+    answered: HTTPResponse,
+) -> Iterator[bytes]:
     """The answer as it is written, a chunk at a time.
 
     An event stream is an answer that never ends: the table writes a frame whenever the room changes, and a
@@ -216,7 +216,12 @@ def unreached(start_response: StartResponse, trouble: OSError) -> list[bytes]:
     The answer states a kind and a sentence, which is the shape the table states its own refusals in, so a page
     shown this puts the same kind of words in front of a person as it does for any other refusal.
     """
-    LOGGER.error("the table at %s:%d could not be reached: %s", ADDRESS, PORT, trouble)
+    LOGGER.error(
+        "the table at %s:%d could not be reached: %s",
+        ADDRESS,
+        PORT,
+        trouble,
+    )
     body = dumps(
         {
             "error": "Unreached",
@@ -230,7 +235,10 @@ def unreached(start_response: StartResponse, trouble: OSError) -> list[bytes]:
     return [body]
 
 
-def application(environ: Environ, start_response: StartResponse) -> Iterator[bytes] | list[bytes]:
+def application(
+    environ: Environ,
+    start_response: StartResponse,
+) -> Iterator[bytes] | list[bytes]:
     """One request handed to the table, and its answer handed back as it is written."""
     a_table_stands()
     connection = HTTPConnection(ADDRESS, PORT, timeout=CONNECT_PATIENCE)

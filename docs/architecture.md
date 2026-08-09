@@ -1694,7 +1694,9 @@ and a checkout holding no build serves the endpoints alone.
 
 **A table lives as long as the process.** A position is held in memory and a restart deals a fresh one, so
 the host runs under no reloader and `uv run cardtable` is the whole of starting one. Ending the process ends
-the service through the application's own lifespan, which drops every timer still in hand.
+the service through the application's own lifespan, which drops every timer still in hand. That one claim is
+what a public deployment is arranged around, since a host offering a worker per request load offers no place
+for a table to live: `docs/deployment.md` states the arrangement that answers it.
 
 ### The page
 
