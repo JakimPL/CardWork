@@ -98,8 +98,11 @@ on its own leaves a table that starts and then answers for no page.
 page:
 
 ```bash
-make interface          # or: npm --prefix frontend install && npm --prefix frontend run build
+make interface          # or: npm install && npm run build --workspace frontend
 ```
+
+Both are run at the checkout root: the interface is an npm workspace of the repository, so `package.json` and
+`package-lock.json` stand beside the entry file and the packages land in a `node_modules` there.
 
 A checkout holding no build serves the endpoints alone, which reads as a domain answering JSON and drawing
 nothing. Every deploy carrying a frontend change needs this again.

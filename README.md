@@ -300,12 +300,13 @@ what to read when a deployment misbehaves.
 ## The interface
 
 `frontend/` is the page a table is played through — React and TypeScript, built by Vite into
-`frontend/dist`, which the host mounts at the root of the same application:
+`frontend/dist`, which the host mounts at the root of the same application. It is an npm workspace of the
+repository, so its dependencies are installed once at the root and `frontend/` holds source alone:
 
 ```bash
 make interface                    # install, test and build it
 make types                        # regenerate its API types from the endpoints
-npm --prefix frontend run dev     # a development server, proxying /tables to the table config.yaml opens
+npm run dev --workspace frontend  # a development server, proxying /tables to the table config.yaml opens
 ```
 
 A game states how it is read and the page draws whatever it is handed: the layout names the zones, where
