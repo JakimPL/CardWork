@@ -1,13 +1,13 @@
 import type { ReactElement } from "react";
 
 import type { Choice, GatheringView, Offering, Tint } from "../api/gathering";
-import { readOut } from "../play/codes";
 import type { Connection } from "../play/connection";
 import { CONNECTIONS } from "../play/connection";
 import { leave } from "../play/useStanding";
 import { classes } from "./classes";
 import { Committing } from "./Committing";
 import { Company } from "./Company";
+import { Invitation } from "./Invitation";
 import { Settling } from "./Settling";
 
 interface GatheringProps {
@@ -50,9 +50,7 @@ export function Gathering({
       <p className="gathered">
         Table <strong>{gathering.table}</strong> is gathering, as <strong>{gathering.mine}</strong>
       </p>
-      <p className="code">
-        Join code <strong>{readOut(gathering.code)}</strong>
-      </p>
+      <Invitation table={gathering.table} code={gathering.code} />
       <Company gathering={gathering} claim={claim} tint={tint} />
       <Settling gathering={gathering} offerings={offerings} settle={settle} govern={govern} />
       {trouble !== null && <p className="trouble">{trouble}</p>}

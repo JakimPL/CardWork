@@ -47,6 +47,13 @@ describe("the room a table gathers in", () => {
     expect(room).not.toContain(CODE);
   });
 
+  it("offers the line that carries somebody else to the table, so the code need not be said at all", () => {
+    const room = drawn(aGathering([aGuest(MINE, null)]));
+
+    expect(room).toContain('class="invite"');
+    expect(room).toContain("Copy invitation");
+  });
+
   it("stands one place per seat of the table the company settled on", () => {
     const room = drawn(aGathering([], { choice: aChoice({ players: 4 }) }));
 
