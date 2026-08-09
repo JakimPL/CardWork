@@ -189,17 +189,36 @@ host buffering, and the remedy is in the application root's `.htaccess`: compres
 
 ## 6. Restarting, and changing what a table is
 
-The table stands in a session of its own, which carries it through every recycling the host does — and
-equally through the restart the panel offers, which restarts workers. So a deploy whose changes are in the
-Python reaches the table when the table's own process is replaced:
+The table stands in a session of its own, which carries it through every recycling the host does — and equally
+through the restart the panel offers, which reaches the workers and stops there. So a deploy whose changes are
+in the Python takes hold once the table's own process is replaced, and `tmp/restart.txt` is what asks for that:
 
 ```bash
-fuser -k 8421/tcp        # or: pkill -f cardtable
+mkdir -p tmp && touch tmp/restart.txt        # the panel's own restart button touches this same file
 ```
 
-The next request finds nothing answering and gathers a new table, under whatever the files now say. This ends
-the game in progress, hands out a fresh join code where `table.code` is unpinned, and is the only way a
-changed configuration takes hold.
+The next request through the entry file finds a table older than the ask, stops it, and starts one from the
+files as they now stand. `table.pid` is where the entry writes down which process the table runs in and which
+ask it stands for, so the ask reaches that process and reaches it once however many workers arrive together.
+
+A table the entry did not start is one it can name no process for — a checkout that predates this arrangement,
+or a table started by hand. It says so in the log, once per ask, and stopping that one is the operator's:
+
+```bash
+pgrep -af cardtable.cli        # what is standing — one line, and its process
+pkill -f cardtable.cli         # stop it
+```
+
+Shared hosts differ in what they install, and `fuser` and `lsof` are often absent. `ps -u "$USER" -o pid,args |
+grep '[c]ardtable.cli'` names the process wherever `pgrep` is missing too, and what says the port went quiet
+asks nothing of the host beyond its Python:
+
+```bash
+python3 -c "import socket;print('quiet' if socket.socket().connect_ex(('127.0.0.1',8421)) else 'answering')"
+```
+
+Either way, replacing the table ends the game in progress, hands out a fresh join code where `table.code` is
+unpinned, and is what a changed `config.yaml` waits on.
 
 ## 7. Reading the log
 
@@ -208,10 +227,19 @@ logged line carries the process that wrote it, and a table announces itself once
 
 ```
 2026-08-09 17:04:11 INFO [31820] passenger: no table answers on 127.0.0.1:8421, starting one
-2026-08-09 17:04:13 INFO [31820] passenger: the table answers after 1.8 seconds
+2026-08-09 17:04:13 INFO [31820] passenger: the table answers on process 31834 after 1.8 seconds
 Table 'cardtable' is gathering — join code K 7 A Q 3 J
   https://cards.jakim.it/#table=cardtable&code=K7AQ3J
   dealt from seed 20260806
+```
+
+A deploy that took hold reads as a table stopped and a table started, and names the process on both sides of
+it, which is what says the ask reached the table rather than the workers in front of it:
+
+```
+2026-08-09 19:22:04 INFO [31998] passenger: process 31834 was started before the last ask for a table afresh, stopping it
+2026-08-09 19:22:05 INFO [31998] passenger: the table on process 31834 stopped after 0.4 seconds
+2026-08-09 19:22:07 INFO [31998] passenger: the table answers on process 32104 after 1.9 seconds
 ```
 
 Several `passenger:` PIDs are ordinary — those are the workers, and a run of them all reaching one table is
@@ -233,7 +261,8 @@ pgrep -af cardtable                   # what is running now
 | `The table this page is served by is not answering just now` | the child did not start, or did not start in time | `table.log` holds what it said as it tried |
 | The endpoints answer and no page draws | `frontend/dist` is absent | `make interface` on the server (§4.2) |
 | A wrong join code locks everybody out at once | every guest counted as one caller | state `service.forwarded_allow_ips: 127.0.0.1` (§4.6) |
-| A deploy changes nothing at all | the table is the process that was already running | stop it (§6) |
+| A deploy changes nothing at all | the table is the process that was already running | ask for one afresh (§6); `table.log` says where the ask reached a table it cannot stop |
+| The panel reports a restart and the table is unchanged | the panel restarts workers, and the table is neither | the same ask (§6), which the button itself makes where `tmp/restart.txt` is what it touches |
 | The panel reports the app as started, and the domain answers 500 | the entry file was imported and raised | the panel's own error log, then `table.log` |
 
 ## 9. Hosts other than cPanel

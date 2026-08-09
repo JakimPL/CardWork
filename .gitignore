@@ -16,6 +16,9 @@ __pycache__/
 *.txt
 *.log
 
+table.lock
+table.pid
+
 /assets/
 
 node_modules/
