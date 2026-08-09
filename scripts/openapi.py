@@ -21,6 +21,8 @@ INDENT: Final[int] = 2
 TURNSTILE_WINDOW: Final[float] = 60.0
 WRONG_CODES_ALLOWED: Final[int] = 10
 SWEEP_SECONDS: Final[float] = 60.0
+STREAM_PATIENCE: Final[float] = 20.0
+PRESENCE_STANDS: Final[float] = 60.0
 STALE_SECONDS: Final[float] = 900.0
 IDLE_SECONDS: Final[float] = 3600.0
 DEMOCRATIC: Final[bool] = True
@@ -49,6 +51,7 @@ def document() -> Document:
             wrong_codes_allowed=WRONG_CODES_ALLOWED,
         ),
         clock=monotonic,
+        presence_stands=PRESENCE_STANDS,
     )
     oversight = Oversight(
         gatherings,
@@ -61,7 +64,9 @@ def document() -> Document:
         idle_seconds=IDLE_SECONDS,
         capacity=NO_LIMIT,
     )
-    return create_app(registry, gatherings, gatherings, oversight, sweep_seconds=SWEEP_SECONDS).openapi()
+    return create_app(
+        registry, gatherings, gatherings, oversight, sweep_seconds=SWEEP_SECONDS, stream_patience=STREAM_PATIENCE
+    ).openapi()
 
 
 def write(specification: Document, into: Path) -> int:

@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 from json import dumps
 from typing import Final
@@ -71,55 +72,63 @@ async def commits(
     session: InService,
     observer: int | None,
     since: int,
+    patience: float,
 ) -> AsyncIterator[str]:
-    """Every commit from `since` onward as one observer learns of it, and each further one as it lands.
+    """Every commit from `since` onward as one observer learns of it, waiting out the patience for the first.
 
-    The journal is the stream's buffer, so a client is served from the record itself and the session
-    only has to say when there is more. A slow reader falls behind and catches up; nothing is dropped
-    and nothing is held for it.
+    The journal is the stream's buffer, so a client is served from the record itself and the session only has
+    to say when there is more. A slow reader falls behind and catches up; nothing is dropped and nothing is
+    held for it.
+
+    A stream carries what the table has to say and ends there, and the client picks it up again from the commit
+    it acknowledged. Ending is what puts each answer whole on the wire, so a host that hands an answer on once
+    it is finished carries a table as promptly as one that passes every write straight through.
     """
-    cursor = since
-    while True:
-        events = session.events(observer, cursor)
-        for event in events:
-            yield frame(event)
-
-        cursor += len(events)
-        if session.closed:
-            yield dismissed(session)
+    events = session.events(observer, since)
+    if not events and not session.closed:
+        try:
+            await asyncio.wait_for(session.watch(since), patience)
+        except TimeoutError:
             return
 
-        await session.watch(cursor)
+        events = session.events(observer, since)
+
+    for event in events:
+        yield frame(event)
+
+    if session.closed:
+        yield dismissed(session)
 
 
 async def attendance(
     gathering: Gathering,
     guest: str,
     since: int,
+    patience: float,
 ) -> AsyncIterator[str]:
-    """How a gathering stands from `since` onward, again at every revision it reaches, until it is dealt.
+    """How a gathering stands once it reaches `since`, waiting out the patience for it to get there.
 
-    A gathering is a room rather than a record, so each frame carries the whole of how it stands and a client
-    holds the last one it read. The guest is read as present for as long as the stream is held, which is what
-    makes the company a page draws the company watching it, and hanging up takes their name out of the room.
+    A gathering is a room rather than a record, so the frame carries the whole of how it stands and a client
+    holds the last one it read. Opening the stream is what reads this guest as here, which is what makes the
+    company a page draws the company watching it: the word stands for a while, so a page that keeps following
+    keeps its place in the room and one that is gone falls out of it.
 
-    The deal is the last thing a gathering has to say, so the frame carrying it closes the stream and every page
-    holding one is carried to the table by it. Breaking the gathering up is the other last word: the stream
-    carries a frame of its own for it, so a page learns the room is gone rather than watching it fall silent.
+    A stream carries the room once and ends there, and the client picks it up again at the revision after the
+    frame it read. A room that has moved several times over meets the next stream as it now stands, so catching
+    up costs one frame however far behind it fell, and a room that stands still is asked for afresh.
+
+    The deal is the last thing a gathering has to say, so the frame carrying it is the last one there is to
+    read. Breaking the gathering up is the other last word: the stream carries a frame of its own for it, so a
+    page learns the room is gone rather than watching it fall silent.
     """
     gathering.attends(guest)
     try:
-        cursor = since
-        while True:
-            view = await gathering.since(cursor, guest)
-            if view.closed:
-                yield broken(view)
-                return
+        view = await asyncio.wait_for(gathering.since(since, guest), patience)
+    except TimeoutError:
+        return
 
-            yield standing(view)
-            if view.dealt:
-                return
+    if view.closed:
+        yield broken(view)
+        return
 
-            cursor = view.revision + 1
-    finally:
-        gathering.leaves(guest)
+    yield standing(view)

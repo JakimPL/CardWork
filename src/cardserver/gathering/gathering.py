@@ -60,6 +60,7 @@ class Gathering:
         opening: Opening,
         *,
         clock: Callable[[], float],
+        presence_stands: float,
         democratic: bool,
         host: str | None = None,
     ) -> None:
@@ -68,12 +69,13 @@ class Gathering:
         self._offerings = offerings
         self._opening = opening
         self._clock = clock
+        self._presence_stands = presence_stands
         self._host = host
         self._democratic = democratic
         self._seats: dict[str, int | None] = {}
         self._tints: dict[str, Tint] = {}
         self._tokens: dict[str, str] = {}
-        self._watching: dict[str, int] = {}
+        self._watching: dict[str, float] = {}
         self._ready: dict[str, bool] = {}
         self._revision = FIRST_REVISION
         self._changed = asyncio.Event()
@@ -115,8 +117,8 @@ class Gathering:
 
     @property
     def present(self) -> int:
-        """How many of the company are holding a stream open, which is how many are here to read a change."""
-        return sum(1 for watching in self._watching.values() if watching > 0)
+        """How many of the company are here to read a change, counted by whose word still stands."""
+        return len(self._attending(self._clock()))
 
     @property
     def touched(self) -> float:
@@ -191,14 +193,20 @@ class Gathering:
         )
 
     def attends(self, guest: str) -> None:
-        """Read a guest as present, which is what holding a stream on the gathering says of them."""
-        self._watching[guest] = self._watching.get(guest, 0) + 1
-        self._publish()
+        """Read a guest as here, and read as gone whoever's stream has stopped saying they are.
 
-    def leaves(self, guest: str) -> None:
-        """Read a guest as gone once the last stream they were holding has been hung up."""
-        self._watching[guest] = max(self._watching.get(guest, 0) - 1, 0)
-        self._publish()
+        A stream says a guest is here for a while rather than for as long as it is held, since a stream stands
+        for a spell and is picked up again: a guest who keeps following is read as present throughout, and one
+        whose page is gone falls out of the room once their word runs out. The company here is counted on both
+        sides of it, so somebody arriving or falling away moves the revision and a guest saying again what
+        already stood moves nothing — which is what leaves a page's own following out of what it commands on.
+        """
+        now = self._clock()
+        attending = self._attending(now)
+        self._watching = {name: until for name, until in self._watching.items() if until > now}
+        self._watching[guest] = now + self._presence_stands
+        if self._attending(now) != attending:
+            self._publish()
 
     def claim(self, guest: str, seat: int | None, base_revision: int) -> None:
         """Seat one guest at the table, or stand them up where they name no seat.
@@ -353,17 +361,22 @@ class Gathering:
 
     def _company(self) -> tuple[Guest, ...]:
         """Everyone at the gathering, in the order they arrived."""
+        attending = self._attending(self._clock())
         return tuple(
             Guest(
                 name=name,
                 tint=self._tints[name],
                 seat=seat,
-                present=self._watching.get(name, 0) > 0,
+                present=name in attending,
                 ready=self._ready.get(name, False),
                 host=name == self._host,
             )
             for name, seat in self._seats.items()
         )
+
+    def _attending(self, now: float) -> frozenset[str]:
+        """Everyone whose stream has said they are here recently enough for the word to still stand."""
+        return frozenset(name for name, until in self._watching.items() if until > now)
 
     def _seated(self) -> Mapping[int, Seated]:
         """The name and tint every taken seat is read by."""

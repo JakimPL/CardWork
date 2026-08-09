@@ -19,6 +19,11 @@ class Advanced(BaseFrozen):
     holds and a table nobody commits to linger before that clearing takes them. Whether a table opens democratic,
     who may gather one at all, and how many may stand at once are the terms a run governs its lobby by until an
     overseer settles otherwise; a run stating no cap lets the lobby grow as far as the machine carries it.
+
+    A stream stands for a spell and is picked up again from the frame it left off at, so the patience is how long
+    one waits for something to carry before it ends, and presence is how long a guest is read as being here after
+    a stream of theirs last said so. A company that keeps following is read as present throughout, which asks
+    that presence outlast the patience by enough for the pause between one stream and the next.
     """
 
     turnstile_window: float = Field(gt=0.0)
@@ -29,3 +34,5 @@ class Advanced(BaseFrozen):
     capacity: Annotated[int, Field(ge=1)] | None
     stale_seconds: float = Field(gt=0.0)
     idle_seconds: float = Field(gt=0.0)
+    stream_patience: float = Field(gt=0.0)
+    presence_stands: float = Field(gt=0.0)

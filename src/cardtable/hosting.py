@@ -130,6 +130,7 @@ def serve(
         gatherings,
         oversight,
         sweep_seconds=advanced.sweep_seconds,
+        stream_patience=advanced.stream_patience,
     )
     return Hosted(
         app=app,

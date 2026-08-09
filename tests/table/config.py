@@ -29,6 +29,8 @@ ADVANCED: Final[Advanced] = Advanced(
     capacity=None,
     stale_seconds=900.0,
     idle_seconds=3600.0,
+    stream_patience=20.0,
+    presence_stands=60.0,
 )
 ADMIN: Final[Admin] = Admin(secret=SECRET)
 

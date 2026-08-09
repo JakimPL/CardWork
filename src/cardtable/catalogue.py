@@ -240,6 +240,7 @@ def opened(
             wrong_codes_allowed=advanced.wrong_codes_allowed,
         ),
         clock=monotonic,
+        presence_stands=advanced.presence_stands,
     )
     return serve(
         registry,

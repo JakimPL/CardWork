@@ -9,7 +9,7 @@ from cardserver.schemas import Choosing, Founding, Governing
 from ..games.demo import SEATS
 from .company import Gathered, a_sealed_round
 from .conftest import ATTENDANCE, TABLE, holding
-from .harness import Streamed
+from .harness import Following
 
 COMPANY: Final[tuple[str, ...]] = ("Ada", "Grace", "Alan")
 A_FREE_TINT = TINTS[-1]
@@ -207,13 +207,12 @@ def test_breaking_a_gathering_up_closes_it_with_a_word_on_why(gathered: Gathered
 async def test_a_broken_up_gathering_is_the_last_thing_a_stream_carries(gathered: Gathered) -> None:
     token = gathered.gathering.admit("Ada")
 
-    async with Streamed(gathered.app, ATTENDANCE, holding(token)) as stream:
-        await stream.status()
+    async with Following(gathered.app, ATTENDANCE, holding(token)) as stream:
         await stream.frame()
         gathered.gatherings.break_up(TABLE, "closing up")
         closed = await stream.frame()
-        ended = await stream.frame()
+        nothing_after = await stream.quiet()
 
     assert "event: closed" in closed
     assert "closing up" in closed
-    assert ended == ""
+    assert nothing_after is True

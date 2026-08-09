@@ -45,12 +45,14 @@ class Gatherings:
         say: SayPolicy,
         turnstile: Turnstile,
         clock: Callable[[], float],
+        presence_stands: float,
     ) -> None:
         self._opening = opening
         self._offerings = offerings
         self._say = say
         self._turnstile = turnstile
         self._clock = clock
+        self._presence_stands = presence_stands
         self._gatherings: dict[TableId, Gathering] = {}
 
     @property
@@ -84,6 +86,7 @@ class Gatherings:
             self._offerings,
             self._opening,
             clock=self._clock,
+            presence_stands=self._presence_stands,
             democratic=democratic,
             host=host,
         )

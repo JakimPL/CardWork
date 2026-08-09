@@ -43,6 +43,8 @@ def caller_of(request: Request) -> str:
 def gathering_routes(
     gatherings: Gatherings,
     oversight: Oversight | None = None,
+    *,
+    stream_patience: float,
 ) -> APIRouter:
     """The routes a table is gathered at, which an application serving a lobby carries beside the rest.
 
@@ -57,6 +59,7 @@ def gathering_routes(
     Args:
         gatherings: the tables gathering here, which is also where a credential becomes a seat.
         oversight: how many tables may stand and who may open one, and None where no company gathers its own.
+        stream_patience: how long a stream on a gathering waits for the room to move before it ends.
     """
     router = APIRouter()
 
@@ -115,9 +118,9 @@ def gathering_routes(
         since: Annotated[int, Query(ge=0)] = STREAM_START,
         last_event_id: Annotated[int | None, Header(alias="Last-Event-ID")] = None,
     ) -> StreamingResponse:
-        """How the gathering stands, again at every revision it reaches, until the table is dealt."""
+        """How the gathering stands, which a client reads again by asking again from where this leaves off."""
         gathering = gatherings.at(table_id)
-        stream = attendance(gathering, guest, resume_point(last_event_id, since))
+        stream = attendance(gathering, guest, resume_point(last_event_id, since), stream_patience)
         return StreamingResponse(
             stream,
             media_type=EVENT_STREAM,

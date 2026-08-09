@@ -229,7 +229,7 @@ export interface paths {
         };
         /**
          * Read Events
-         * @description Every commit this client is entitled to, from where it left off and onward as they land.
+         * @description Every commit this client is entitled to, from where it left off, asked for again from there.
          */
         get: operations["read_events_tables__table_id__events_get"];
         put?: never;
@@ -269,7 +269,7 @@ export interface paths {
         };
         /**
          * Read Attendance
-         * @description How the gathering stands, again at every revision it reaches, until the table is dealt.
+         * @description How the gathering stands, which a client reads again by asking again from where this leaves off.
          */
         get: operations["read_attendance_tables__table_id__gathering_events_get"];
         put?: never;

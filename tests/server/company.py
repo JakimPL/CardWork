@@ -32,6 +32,8 @@ DEALT_FROM: Final[int] = 20260806
 TURNSTILE_WINDOW: Final[float] = 60.0
 WRONG_CODES_ALLOWED: Final[int] = 10
 SWEEP_SECONDS: Final[float] = 60.0
+STREAM_PATIENCE: Final[float] = 0.5
+PRESENCE_STANDS: Final[float] = 60.0
 
 OFFERINGS: Final[tuple[Offering, ...]] = (
     Offering(
@@ -134,6 +136,7 @@ def gathered(table: TableId, players: int) -> Gathered:
             wrong_codes_allowed=WRONG_CODES_ALLOWED,
         ),
         clock=ticking,
+        presence_stands=PRESENCE_STANDS,
     )
     return Gathered(
         registry=registry,
@@ -151,5 +154,6 @@ def gathered(table: TableId, players: int) -> Gathered:
             gatherings,
             gatherings,
             sweep_seconds=SWEEP_SECONDS,
+            stream_patience=STREAM_PATIENCE,
         ),
     )

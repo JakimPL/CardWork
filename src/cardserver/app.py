@@ -48,6 +48,7 @@ def create_app(
     oversight: Oversight | None = None,
     *,
     sweep_seconds: float,
+    stream_patience: float,
 ) -> FastAPI:
     """An application serving the tables of one registry to the clients one seat policy admits.
 
@@ -72,6 +73,7 @@ def create_app(
         gatherings: the tables gathering here, and None where this deployment gathers nobody.
         oversight: the overseer's view of the lobby, and None where this deployment holds no panel over it.
         sweep_seconds: how long the lobby waits between one clearing of the tables nobody is at and the next.
+        stream_patience: how long a stream waits for something to carry before it ends and is asked for afresh.
     """
 
     @asynccontextmanager
@@ -162,9 +164,9 @@ def create_app(
         since: Annotated[int, Query(ge=0)] = STREAM_START,
         last_event_id: Annotated[int | None, Header(alias="Last-Event-ID")] = None,
     ) -> StreamingResponse:
-        """Every commit this client is entitled to, from where it left off and onward as they land."""
+        """Every commit this client is entitled to, from where it left off, asked for again from there."""
         session = registry.session(table_id)
-        stream = commits(session, observer, resume_point(last_event_id, since))
+        stream = commits(session, observer, resume_point(last_event_id, since), stream_patience)
         return StreamingResponse(
             stream,
             media_type=EVENT_STREAM,
@@ -180,7 +182,7 @@ def create_app(
         return registry.session(table_id).record
 
     if gatherings is not None:
-        app.include_router(gathering_routes(gatherings, oversight))
+        app.include_router(gathering_routes(gatherings, oversight, stream_patience=stream_patience))
 
     if oversight is not None:
         app.include_router(admin_routes(oversight))
