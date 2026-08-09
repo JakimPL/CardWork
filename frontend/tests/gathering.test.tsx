@@ -254,12 +254,28 @@ describe("the one press the room carries a seated guest through", () => {
 });
 
 describe("the commitment the company reads of one another", () => {
-  it("marks each seated guest ready or not, so the company reads who is waiting on whom", () => {
+  it("draws a committed place apart from one the table still waits on, so a glance reads who is waiting on whom", () => {
     const company = [aGuest(MINE, 0, true, "rose", true), aGuest("Grace", 1, true, "teal", false)];
     const room = drawn(aGathering(company, { choice: aChoice({ players: 2 }) }));
 
-    expect([...room.matchAll(/class="standing ready">Ready</g)]).toHaveLength(1);
-    expect([...room.matchAll(/class="standing unready">Not ready</g)]).toHaveLength(1);
+    expect([...room.matchAll(/class="place taken own ready"/g)]).toHaveLength(1);
+    expect([...room.matchAll(/class="place taken"/g)]).toHaveLength(1);
+  });
+
+  it("marks the committed place, and leaves the mark off one still to commit", () => {
+    const company = [aGuest(MINE, 0, true, "rose", true), aGuest("Grace", 1, true, "teal", false)];
+    const room = drawn(aGathering(company, { choice: aChoice({ players: 2 }) }));
+
+    expect([...room.matchAll(/class="commitment"[^>]*>✓</g)]).toHaveLength(1);
+    expect([...room.matchAll(/class="commitment"[^>]*><\//g)]).toHaveLength(1);
+  });
+
+  it("reads each commitment out in words, since the colour and the mark say it only to a reader who sees them", () => {
+    const company = [aGuest(MINE, 0, true, "rose", true), aGuest("Grace", 1, true, "teal", false)];
+    const room = drawn(aGathering(company, { choice: aChoice({ players: 2 }) }));
+
+    expect(room).toContain('aria-label="Ready"');
+    expect(room).toContain('aria-label="Not ready"');
   });
 
   it("names the guest who gathered the table, whose say governs it host by host", () => {

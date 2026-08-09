@@ -1207,9 +1207,16 @@ button.card {
  * quiet behind the ones that are taken.
  *
  * The full edge round the reader's own place is the room's own mark, standing where the felt marks the turn.
+ *
+ * A place carries its guest's commitment as the depth its colour is drawn at: half of every strength while the
+ * table waits on them, and the whole of it once they have committed. One local property says which of the two a
+ * place stands at, so the five root strengths remain the one statement of what a tint looks like, and the room
+ * reads at a glance as the felt does — a seat drawn full is a seat there is nothing left to wait for.
  */
 
 .place {
+  --committed: 0.5;
+
   display: flex;
   gap: var(--gap);
   align-items: center;
@@ -1219,14 +1226,18 @@ button.card {
   background: rgb(0 0 0 / 18%);
 }
 
+.place.ready {
+  --committed: 1;
+}
+
 .place[data-tint] {
-  border-color: rgb(var(--tint) / var(--tint-edge));
-  background: rgb(var(--tint) / var(--tint-wash));
+  border-color: rgb(var(--tint) / calc(var(--tint-edge) * var(--committed)));
+  background: rgb(var(--tint) / calc(var(--tint-wash) * var(--committed)));
 }
 
 .place.own {
-  border-color: rgb(var(--tint));
-  background: rgb(var(--tint) / var(--tint-own));
+  border-color: rgb(var(--tint) / calc(100% * var(--committed)));
+  background: rgb(var(--tint) / calc(var(--tint-own) * var(--committed)));
 }
 
 .place .seat {
@@ -1250,12 +1261,10 @@ button.card {
   letter-spacing: 0.06em;
 }
 
-.place .standing {
-  color: var(--chalk-dim);
-}
-
-.place .standing.ready {
+.place .commitment {
+  width: 1.2em;
   color: var(--live);
+  text-align: center;
 }
 
 .place.empty .guest {
