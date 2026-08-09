@@ -1,0 +1,9 @@
+{
+  "name": "cardwork",
+  "version": "0.0.1",
+  "description": "A card table, its rules held in Python and played through a page",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ]
+}

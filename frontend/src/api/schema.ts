@@ -4,6 +4,90 @@
  */
 
 export interface paths {
+    "/admin/lobby": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Lobby
+         * @description The whole lobby as the overseer reads it: every table, and the terms it is held under.
+         */
+        get: operations["read_lobby_admin_lobby_get"];
+        /**
+         * Settle Lobby
+         * @description Settle the terms the lobby is held under: how many tables stand at once, and who may open one.
+         */
+        put: operations["settle_lobby_admin_lobby_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reap Tables
+         * @description Clear away every table nobody is at that has sat too long, and answer with the names cleared.
+         */
+        post: operations["reap_tables_admin_reap_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Table
+         * @description Gather a table on the company's behalf, answering with the card that carries the code it admits on.
+         */
+        post: operations["post_table_admin_tables_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/tables/{table_id}/closing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close Table
+         * @description Break one table up whether it is gathering or in play, and answer with the lobby it leaves behind.
+         */
+        post: operations["close_table_admin_tables__table_id__closing_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/offerings": {
         parameters: {
             query?: never;
@@ -42,7 +126,11 @@ export interface paths {
          */
         get: operations["read_tables_tables_get"];
         put?: never;
-        post?: never;
+        /**
+         * Found
+         * @description Gather a fresh table and seat its founder as the host, answering with the token they speak through.
+         */
+        post: operations["found_tables_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -92,6 +180,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tables/{table_id}/closing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close Gathering
+         * @description Break the gathering up, which its host may call for, leaving the company a word on why.
+         */
+        post: operations["close_gathering_tables__table_id__closing_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tables/{table_id}/deal": {
         parameters: {
             query?: never;
@@ -121,7 +229,7 @@ export interface paths {
         };
         /**
          * Read Events
-         * @description Every commit this client is entitled to, from where it left off and onward as they land.
+         * @description Every commit this client is entitled to, from where it left off, asked for again from there.
          */
         get: operations["read_events_tables__table_id__events_get"];
         put?: never;
@@ -161,10 +269,30 @@ export interface paths {
         };
         /**
          * Read Attendance
-         * @description How the gathering stands, again at every revision it reaches, until the table is dealt.
+         * @description How the gathering stands, which a client reads again by asking again from where this leaves off.
          */
         get: operations["read_attendance_tables__table_id__gathering_events_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tables/{table_id}/governance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Govern Table
+         * @description Settle how the table is governed, which its host alone may do.
+         */
+        put: operations["govern_table_tables__table_id__governance_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -251,6 +379,26 @@ export interface paths {
          * @description Commit a seat's move to a table, answering with the sequence it landed at.
          */
         post: operations["submit_move_tables__table_id__moves_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tables/{table_id}/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Commit Ready
+         * @description Commit to the settings as they stand, or take that commitment back, which every seated guest may do.
+         */
+        put: operations["commit_ready_tables__table_id__ready_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -413,9 +561,18 @@ export interface components {
          *     company settles rather than something the host fixes. The game is named as a plain word for the same reason
          *     a phase is: the vocabulary belongs to whatever holds the rules, and the adapter reads a name it confirms
          *     against what the host says it offers.
+         *
+         *     `cues` is the one field the rules read nothing of: whether the table lights the cards a seat may play, which
+         *     a company settles like the rest and an advanced one turns off. It travels with the choice so a page settles
+         *     it beside the game and it reaches the table the deal opens, where the layout carries it to every seat.
          */
         Choice: {
             conclusion: components["schemas"]["Conclusion"];
+            /**
+             * Cues
+             * @default true
+             */
+            cues: boolean;
             /** Decks */
             decks: number;
             /** Game */
@@ -441,6 +598,14 @@ export interface components {
             base_revision: number;
             /** Seat */
             seat: number | null;
+        };
+        /**
+         * Closing
+         * @description Breaking a table up, with a word for the company on why, which the host or an admin may call for.
+         */
+        Closing: {
+            /** Reason */
+            reason?: string | null;
         };
         /**
          * CommandAccepted
@@ -500,6 +665,16 @@ export interface components {
             target?: number | null;
         };
         /**
+         * Creation
+         * @description Who may gather a table here: everyone, the overseer alone, or everyone until the overseer says otherwise.
+         *
+         *     A friendly host lets the company gather its own tables, a guarded one keeps the opening of them to whoever
+         *     runs it, and a hybrid one starts open and closes on a word: the overseer settling it to `admin-only` is what
+         *     turns a run from the first into the second without a restart.
+         * @enum {string}
+         */
+        Creation: "self-serve" | "admin-only" | "hybrid";
+        /**
          * Dealing
          * @description A guest calling for the deal, which opens the table and ends the gathering.
          */
@@ -537,23 +712,47 @@ export interface components {
             kind: "discard";
         };
         /**
+         * Founding
+         * @description Gathering a new table: the name it answers under, the name its host arrives under, and what it opens on.
+         *
+         *     The host names the table and themselves at once, since founding a table is arriving at it: the code is drawn
+         *     for them and handed back, and the token minted seats the host the way an arrival seats any guest.
+         */
+        Founding: {
+            choice: components["schemas"]["Choice"];
+            /** Name */
+            name: string;
+            /** Table */
+            table: string;
+        };
+        /**
          * GatheringView
          * @description A gathering as one of its guests reads it: the company, what is settled, and where the gathering stands.
          *
          *     `revision` counts the changes the gathering has been through, and a command quotes the one it was built on
          *     the way a move quotes a sequence, so two guests settling the choice at once leaves the second told rather
          *     than overruled. `dealt` turns true once, which is what carries every page from the gathering to the table.
+         *
+         *     `democratic` is how the table is governed: true where every seated guest settles what is played, and false
+         *     where the say is the host's alone. `closed` turns true when the gathering is broken up before it is dealt,
+         *     which ends it the way the deal does but carries the company nowhere.
          */
         GatheringView: {
             choice: components["schemas"]["Choice"];
+            /** Closed */
+            closed: boolean;
             /** Code */
             code: string;
             /** Company */
             company: components["schemas"]["Guest"][];
             /** Dealt */
             dealt: boolean;
+            /** Democratic */
+            democratic: boolean;
             /** Mine */
             mine: string;
+            /** Reason */
+            reason: string | null;
             /** Revision */
             revision: number;
             /** Table */
@@ -600,6 +799,16 @@ export interface components {
             target_player: number;
         };
         /**
+         * Governing
+         * @description The host settling how the table is governed: democratically, or by the host's own say alone.
+         */
+        Governing: {
+            /** Base Revision */
+            base_revision: number;
+            /** Democratic */
+            democratic: boolean;
+        };
+        /**
          * Guest
          * @description One person at a gathering as the company reads them: the name, the tint, the seat, and whether they are here.
          *
@@ -607,12 +816,20 @@ export interface components {
          *     them apart from the rest of the company at a glance, and no two guests hold one. The seat is the one they
          *     have taken, and none while they are standing. Presence follows the stream a page holds open, so the company
          *     reads as the room does.
+         *
+         *     `ready` is whether the guest has committed to the settings as they stand, which only a seated guest may do
+         *     and any change to what is played or who plays it takes back. `host` marks the guest who gathered the table,
+         *     whose say governs it while it is settled host by host rather than company-wide.
          */
         Guest: {
+            /** Host */
+            host: boolean;
             /** Name */
             name: string;
             /** Present */
             present: boolean;
+            /** Ready */
+            ready: boolean;
             /** Seat */
             seat: number | null;
             tint: components["schemas"]["Tint"];
@@ -646,6 +863,10 @@ export interface components {
          *     gestures, reads the cursor through the readouts and captions the phase from `phases`. What is left over —
          *     the size of a card, the colour of a highlight, the moment a heap collapses — is the interface's own.
          *
+         *     The line runs between which thing is meant and what it looks like: a plaque states which of eight tints a
+         *     player is told apart by, and what that tint draws as belongs to the interface, exactly as a spread states
+         *     how cards lie against each other and where they lie belongs to the page.
+         *
          *     Every claim a layout makes about itself is checked as it is built, which leaves an interface free to trust
          *     it: one slot per zone, a slot belonging to a seat of the table or to the table itself, one slot per place
          *     among the slots of one owner, one plaque per seat, one gesture per move, every zone a gesture names laid
@@ -653,6 +874,11 @@ export interface components {
          */
         Layout: {
             award: components["schemas"]["Award"];
+            /**
+             * Cues
+             * @default true
+             */
+            cues: boolean;
             /** Gestures */
             gestures: components["schemas"]["Gesture"][];
             /** Interludes */
@@ -675,6 +901,28 @@ export interface components {
             slots: components["schemas"]["Slot"][];
             /** Title */
             title: string;
+        };
+        /**
+         * LobbySetting
+         * @description A change to the terms the lobby is held under, which the overseer settles a field at a time.
+         */
+        LobbySetting: {
+            /** Capacity */
+            capacity?: number | null;
+            creation?: components["schemas"]["Creation"] | null;
+        };
+        /**
+         * LobbyView
+         * @description The lobby as the overseer reads it: every table it holds, and the terms it holds them under.
+         */
+        LobbyView: {
+            /** Capacity */
+            capacity: number;
+            /** Census */
+            census: number;
+            creation: components["schemas"]["Creation"];
+            /** Tables */
+            tables: components["schemas"]["TableCard"][];
         };
         /**
          * Move
@@ -768,6 +1016,15 @@ export interface components {
             kind: "play";
         };
         /**
+         * Posting
+         * @description The overseer gathering a table on the company's behalf: the name it answers under, and what it opens on.
+         */
+        Posting: {
+            choice: components["schemas"]["Choice"];
+            /** Table */
+            table: string;
+        };
+        /**
          * Readout
          * @description A field of the cursor shown to the player, under the word the game calls it by.
          *
@@ -784,6 +1041,20 @@ export interface components {
             /** Label */
             label: string;
             scope: components["schemas"]["Scope"];
+        };
+        /**
+         * Readying
+         * @description A seated guest committing to the settings as they stand, or taking that commitment back.
+         *
+         *     Readiness is the guest's own word that the choice may be dealt, so it names where the gathering stood when
+         *     the word was given: a setting changing under it is what takes the word back, and a stale one is refused
+         *     rather than read as an answer to a question that has moved on.
+         */
+        Readying: {
+            /** Base Revision */
+            base_revision: number;
+            /** Ready */
+            ready: boolean;
         };
         /** Reject */
         Reject: {
@@ -845,6 +1116,37 @@ export interface components {
          * @enum {string}
          */
         Spread: "slot" | "stack" | "fan" | "row";
+        /**
+         * TableCard
+         * @description One table as the overseer reads it: where it stands, how large, who is at it, and how long it has idled.
+         *
+         *     A gathering and a table in service read the same shape here, so the panel lists both in one hand: a
+         *     gathering carries the code it admits on and the company reading it, and a table in play carries neither,
+         *     since its company was carried to it and its cards are the seats' own.
+         */
+        TableCard: {
+            /**
+             * Closed
+             * @default false
+             */
+            closed: boolean;
+            /** Code */
+            code?: string | null;
+            /** Democratic */
+            democratic?: boolean | null;
+            /** Host */
+            host?: string | null;
+            /** Idle */
+            idle: number;
+            /** Phase */
+            phase: string;
+            /** Present */
+            present?: number | null;
+            /** Seats */
+            seats: number;
+            /** Table */
+            table: string;
+        };
         /** Take */
         Take: {
             /** Group */
@@ -914,6 +1216,175 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    read_lobby_admin_lobby_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Admin-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LobbyView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    settle_lobby_admin_lobby_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Admin-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LobbySetting"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LobbyView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reap_tables_admin_reap_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Admin-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_table_admin_tables_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Admin-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Posting"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableCard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_table_admin_tables__table_id__closing_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Admin-Token"?: string | null;
+            };
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Closing"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LobbyView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_offerings_offerings_get: {
         parameters: {
             query?: never;
@@ -950,6 +1421,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": string[];
+                };
+            };
+        };
+    };
+    found_tables_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Founding"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Admitted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1005,6 +1509,43 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["Choosing"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GatheringView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_gathering_tables__table_id__closing_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Seat-Token"?: string | null;
+            };
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Closing"];
             };
         };
         responses: {
@@ -1170,6 +1711,43 @@ export interface operations {
             };
         };
     };
+    govern_table_tables__table_id__governance_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Seat-Token"?: string | null;
+            };
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Governing"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GatheringView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     arrive_tables__table_id__guests_post: {
         parameters: {
             query?: never;
@@ -1293,6 +1871,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommandAccepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    commit_ready_tables__table_id__ready_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Seat-Token"?: string | null;
+            };
+            path: {
+                table_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Readying"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GatheringView"];
                 };
             };
             /** @description Validation Error */

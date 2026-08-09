@@ -1,4 +1,5 @@
 from enum import StrEnum
+from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from typing import Final
 
 from pydantic import Field
@@ -20,6 +21,25 @@ class LogLevel(StrEnum):
     DEBUG = "debug"
     TRACE = "trace"
 
+    @property
+    def reported(self) -> int:
+        """The level the standard library reads this as, which is what the table's own log is held to.
+
+        The server states one level finer than the library holds names for, and a run asking for that reads
+        everything the library has, which is its debug.
+        """
+        match self:
+            case LogLevel.CRITICAL:
+                return CRITICAL
+            case LogLevel.ERROR:
+                return ERROR
+            case LogLevel.WARNING:
+                return WARNING
+            case LogLevel.INFO:
+                return INFO
+            case LogLevel.DEBUG | LogLevel.TRACE:
+                return DEBUG
+
 
 class Service(BaseFrozen):
     """Where a table answers, where it says it answers, and how much it says while it does.
@@ -32,9 +52,16 @@ class Service(BaseFrozen):
     answers at each of them and at none by that name, so `advertise` states the one a person is handed. A run
     stating none is handed the address the machine holds on its own network, which is what a table behind a
     router or a tunnel departs from.
+
+    A run behind a reverse proxy names in `forwarded_allow_ips` the peers it trusts to have set the forwarding
+    headers, so the caller a table counts a wrong code against is the guest on the far side of the proxy rather
+    than the proxy every guest arrives through. The value is what uvicorn reads: one address, several parted by
+    commas, or `*` to trust every peer. A run naming none trusts no forwarding header and counts each caller by
+    the peer it is spoken to directly, which is what a table reached without a proxy in front of it holds to.
     """
 
     host: str = Field(min_length=1)
     port: int = Field(default=PORT, ge=LOWEST_PORT, le=HIGHEST_PORT)
     advertise: str | None
     log_level: LogLevel
+    forwarded_allow_ips: str | None

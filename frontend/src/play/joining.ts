@@ -5,11 +5,14 @@ import type { Seat } from "../api/seat";
  *
  * They are read out of the fragment of the address, which the browser keeps to itself: the code a guest arrives
  * on and the token they speak through afterwards both stand there and in no address a server logs. The host
- * prints one such address as it gathers a table, so a person joins by opening the line they were handed.
+ * prints one such address as it gathers a table, so a person joins by opening the line they were handed. The
+ * admin token the overseer's panel answers behind rides the fragment the same way, which is what keeps the one
+ * credential no guest holds out of every log as well.
  */
 export const TABLE_FIELD = "table";
 export const TOKEN_FIELD = "token";
 export const CODE_FIELD = "code";
+export const ADMIN_FIELD = "admin";
 
 /**
  * Where a tab stands: the table it is at, and the code it has yet to arrive on.
@@ -21,6 +24,7 @@ export const CODE_FIELD = "code";
 export interface Standing {
   seat: Seat | null;
   code: string | null;
+  admin: string | null;
 }
 
 /** The seat a fragment names, and nothing where it names no table. */
@@ -39,9 +43,14 @@ export function codeIn(fragment: string): string | null {
   return named(stating(fragment), CODE_FIELD);
 }
 
+/** The admin token a fragment carries, which is what the overseer's panel answers behind, and nothing otherwise. */
+export function adminIn(fragment: string): string | null {
+  return named(stating(fragment), ADMIN_FIELD);
+}
+
 /** Where a fragment leaves a tab standing, which is the whole of what the address says of it. */
 export function standingIn(fragment: string): Standing {
-  return { seat: seatIn(fragment), code: codeIn(fragment) };
+  return { seat: seatIn(fragment), code: codeIn(fragment), admin: adminIn(fragment) };
 }
 
 /**

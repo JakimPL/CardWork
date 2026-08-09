@@ -2,7 +2,7 @@ from random import Random
 
 import pytest
 
-from cardserver.errors import UnknownTable
+from cardserver.errors import TableTaken, UnknownTable
 from cardserver.registry import TableRegistry
 
 from ..games.demo import DECK, SEATS, SealedRoundGame
@@ -24,7 +24,7 @@ async def test_a_table_out_of_service_is_named_in_the_refusal(registry: TableReg
 
 
 async def test_a_name_already_in_service_is_left_as_it_was(registry: TableRegistry) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(TableTaken):
         registry.open(TABLE, another_table(), SEALED_SCENE)
 
 

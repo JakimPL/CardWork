@@ -13,6 +13,12 @@ __pycache__/
 *.coverage
 *.coverage.*
 
+*.txt
+*.log
+
+table.lock
+table.pid
+
 /assets/
 
 node_modules/

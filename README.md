@@ -17,8 +17,8 @@ Four packages:
   four games are playable in a browser, across a room or over a LAN.
 
 `docs/architecture.md` is the design and the reasoning behind it; `docs/combinations.md`, `docs/rounds.md`,
-`docs/presentation.md` and `docs/games/` state the parts a game reaches for and the four games themselves.
-What follows is enough to start.
+`docs/presentation.md` and `docs/games/` state the parts a game reaches for and the four games themselves;
+`docs/deployment.md` states how a table is put on the internet. What follows is enough to start.
 
 ## Getting set up
 
@@ -285,15 +285,28 @@ one room needs nothing further; `--advertise` states an address instead, for a r
 
 A table lives as long as the process: the position is held in memory, and a restart deals a fresh one.
 
+## Putting one on the internet
+
+A machine you have a shell on needs nothing beyond the command above and a proxy for the certificate. Shared
+hosting is the case that asks for more: cPanel and its like run Python by importing a WSGI callable under
+workers they start and stop as they please, and a table asks for one process and one event loop that outlive
+any request. `deploy/main.py` is the entry that answers that — it starts the table once on the loopback and
+passes every request through to it, streaming the answer as it is written.
+
+`docs/deployment.md` is the guide: what a table asks of a machine, how to place the file and state
+`config.yaml` beside it, the header a host fills in that would otherwise freeze the room a page reads, and
+what to read when a deployment misbehaves.
+
 ## The interface
 
 `frontend/` is the page a table is played through — React and TypeScript, built by Vite into
-`frontend/dist`, which the host mounts at the root of the same application:
+`frontend/dist`, which the host mounts at the root of the same application. It is an npm workspace of the
+repository, so its dependencies are installed once at the root and `frontend/` holds source alone:
 
 ```bash
 make interface                    # install, test and build it
 make types                        # regenerate its API types from the endpoints
-npm --prefix frontend run dev     # a development server, proxying /tables to the table config.yaml opens
+npm run dev --workspace frontend  # a development server, proxying /tables to the table config.yaml opens
 ```
 
 A game states how it is read and the page draws whatever it is handed: the layout names the zones, where

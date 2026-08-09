@@ -7,7 +7,7 @@ from httpx import HTTPStatusError
 from cardtable.catalogue import opened
 from cardtable.games import GameName
 
-from .config import GLYPHS
+from .config import ADMIN, ADVANCED, GLYPHS
 from .tables import (
     CHOICE,
     GATHERING,
@@ -57,7 +57,7 @@ async def test_a_table_stands_in_service_nowhere_until_its_company_deals_it() ->
 
 
 def test_a_hosted_table_hands_out_the_code_it_gathers_behind() -> None:
-    assert opened(SETTINGS, CHOICE, GLYPHS).code == SETTINGS.code
+    assert opened(SETTINGS, CHOICE, GLYPHS, ADVANCED, ADMIN).code == SETTINGS.code
 
 
 async def test_a_guest_arriving_at_one_table_is_minted_a_token_of_that_gathering_alone() -> None:

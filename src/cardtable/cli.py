@@ -1,5 +1,6 @@
 from argparse import ArgumentParser, Namespace
 from collections.abc import Sequence
+from logging import basicConfig
 from pathlib import Path
 from typing import Final
 
@@ -22,6 +23,7 @@ from cardwork.rounds.conclusion import Conclusion
 PROGRAM: Final[str] = "cardtable"
 DESCRIPTION: Final[str] = "Gather one table of a CardWork game for local play."
 NO_PACK: Final[str] = "none"
+REPORTED: Final[str] = "%(asctime)s %(levelname)s [%(process)d] %(name)s: %(message)s"
 
 
 def parser() -> ArgumentParser:
@@ -106,6 +108,10 @@ def parser() -> ArgumentParser:
     arguments.add_argument(
         "--advertise",
         help="the address a guest is handed, where it differs from the one bound",
+    )
+    arguments.add_argument(
+        "--forwarded-allow-ips",
+        help="the proxy peers whose forwarding headers name the real caller, and '*' to trust every one",
     )
     arguments.add_argument(
         "--log-level",
@@ -203,6 +209,7 @@ def a_service(stated: Service, arguments: Namespace) -> Service:
         port=chosen(arguments.port, stated.port),
         advertise=chosen(arguments.advertise, stated.advertise),
         log_level=chosen(arguments.log_level, stated.log_level),
+        forwarded_allow_ips=chosen(arguments.forwarded_allow_ips, stated.forwarded_allow_ips),
     )
 
 
@@ -219,6 +226,8 @@ def configured(arguments: Namespace) -> Configuration:
         choice=a_choice(stated.choice, arguments),
         artwork=an_artwork(stated.artwork, arguments),
         service=a_service(stated.service, arguments),
+        advanced=stated.advanced,
+        admin=stated.admin,
     )
 
 
@@ -243,12 +252,16 @@ def announcement(
     artwork: Artwork,
     reached: Sequence[str],
 ) -> str:
-    """The lines a person reads once a table is gathering: the code it admits on, and where it is reached.
+    """The lines a person reads once a table is gathering: the code it admits on, where it is reached, and the
+    token the overseer's panel answers behind.
 
     Any one of these addresses is the whole of what a guest is handed: opening it arrives at the gathering,
     where a person names themselves, takes a seat and settles what is played with everyone else there. The code
     is read out apart as well as carried in the addresses, since a code said across a room is written down by
     hand at the other end.
+
+    The admin token is read out apart from all of it, on a line of its own, since it is the one credential no
+    guest is meant to hold: whoever runs the host reads it here and hands it to nobody the host admits.
 
     The seed stands among them because a table left to itself draws one: a run reading it back deals this match
     again.
@@ -263,7 +276,21 @@ def announcement(
     if hosted.interface is None:
         lines.append(f"  the endpoints answer on their own, since no interface is built at {INTERFACE}")
 
+    lines.append(f"Overseen behind admin token {hosted.admin_token}")
     return "\n".join(lines)
+
+
+def report_at(level: LogLevel) -> None:
+    """Open the run's log: every line stamped with the moment, the level, the process and what wrote it.
+
+    The process stands in each line because a table lives in the memory of one. A log holding lines from two of
+    them is a host answering as two tables, each with a gathering and a code of its own, which is the first
+    thing to read in a deployment behind a server that starts a process per request or per worker.
+
+    The server writes its own lines through the same log, so what a run says of itself and what it says of the
+    requests it answered stand in one place and in one order.
+    """
+    basicConfig(level=level.reported, format=REPORTED)
 
 
 def main(argv: Sequence[str] | None = None) -> None:
@@ -273,14 +300,25 @@ def main(argv: Sequence[str] | None = None) -> None:
     reloader: the company at a table and the position it stands at are held in memory, and a restart gathers a
     fresh one.
 
+    The log opens at the level the run states before the table is gathered, so what the host says of itself and
+    what the server says of the requests it answers reach one place from the first line onward.
+
     The announcement is flushed as it is written, since the server that follows it holds the process for as
     long as the table lasts and a buffered line would reach a log file after the game rather than before it.
+
+    A run naming trusted proxy peers reads each caller through uvicorn's forwarding headers, so a lobby behind a
+    reverse proxy counts a wrong code against the guest who offered it rather than against the one proxy every
+    guest arrives through. A run naming none leaves the headers untrusted and counts each caller by its direct
+    peer.
     """
     configuration = configured(parser().parse_args(argv))
+    report_at(configuration.service.log_level)
     hosted = opened(
         configuration.table,
         configuration.choice,
         configuration.artwork,
+        configuration.advanced,
+        configuration.admin,
     )
     print(
         announcement(
@@ -291,9 +329,12 @@ def main(argv: Sequence[str] | None = None) -> None:
         ),
         flush=True,
     )
+    forwarded_allow_ips = configuration.service.forwarded_allow_ips
     uvicorn.run(
         hosted.app,
         host=configuration.service.host,
         port=configuration.service.port,
         log_level=configuration.service.log_level,
+        proxy_headers=forwarded_allow_ips is not None,
+        forwarded_allow_ips=forwarded_allow_ips,
     )

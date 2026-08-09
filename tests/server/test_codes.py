@@ -165,7 +165,7 @@ def test_a_hand_is_written_as_the_code_it_reads_from() -> None:
 
 
 def test_a_hand_is_spoken_one_rank_apart_from_the_next() -> None:
-    assert spoken(HAND) == "K 10 A J 2"
+    assert spoken(HAND) == "K10AJ2"
     assert ranks_in(spoken(HAND)) == HAND
 
 

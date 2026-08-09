@@ -2,50 +2,50 @@
 
 install:
 	uv sync --all-extras
-	npm --prefix frontend install
+	npm install
 
 format:
 	uv run isort src tests scripts
 	uv run black src tests scripts
-	npm --prefix frontend run format
+	npm run format --workspace frontend
 
 lint:
 	uv run isort --check-only src tests scripts
 	uv run black --check src tests scripts
 	uv run pylint src scripts
-	npm --prefix frontend run lint
+	npm run lint --workspace frontend
 
 typecheck:
 	uv run mypy
-	npm --prefix frontend run typecheck
+	npm run typecheck --workspace frontend
 
 imports:
 	uv run lint-imports
 
 test:
 	uv run pytest -n auto
-	npm --prefix frontend run test
+	npm run test --workspace frontend
 
 coverage:
 	uv run pytest --cov --cov-report=term-missing
 
 check: lint typecheck imports coverage
-	npm --prefix frontend run test
+	npm run test --workspace frontend
 
 assets:
 	uv run python -m scripts.assets
 
 build:
-	npm --prefix frontend run build
+	npm run build --workspace frontend
 
 interface:
-	npm --prefix frontend install
-	npm --prefix frontend run test
-	npm --prefix frontend run build
+	npm install
+	npm run test --workspace frontend
+	npm run build --workspace frontend
 
 types:
 	uv run python -m scripts.openapi
-	npm --prefix frontend run types
+	npm run types --workspace frontend
 
 TABLE_ARGUMENTS = \
 	$(if $(GAME),--game $(GAME)) \

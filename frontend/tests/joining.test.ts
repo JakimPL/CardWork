@@ -2,13 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import type { Seat } from "../src/api/seat";
 import type { Standing } from "../src/play/joining";
-import { codeIn, fragmentFor, seatIn, standingIn } from "../src/play/joining";
+import { adminIn, codeIn, fragmentFor, seatIn, standingIn } from "../src/play/joining";
 
 interface JoiningCase {
   description: string;
   fragment: string;
   seat: Seat | null;
   code: string | null;
+  admin?: string | null;
 }
 
 const CASES: JoiningCase[] = [
@@ -66,6 +67,13 @@ const CASES: JoiningCase[] = [
     seat: null,
     code: null,
   },
+  {
+    description: "the admin token the overseer's panel answers behind, which names no table at all",
+    fragment: "#admin=oversee-999",
+    seat: null,
+    code: null,
+    admin: "oversee-999",
+  },
 ];
 
 const STANDING = CASES.filter((one): one is JoiningCase & { seat: Seat } => one.seat !== null);
@@ -82,9 +90,15 @@ describe("the code a fragment carries", () => {
   });
 });
 
+describe("the admin token a fragment carries", () => {
+  it.each(CASES)("$description", ({ fragment, admin }) => {
+    expect(adminIn(fragment)).toEqual(admin ?? null);
+  });
+});
+
 describe("where a fragment leaves a tab standing", () => {
-  it.each(CASES)("$description", ({ fragment, seat, code }) => {
-    const standing: Standing = { seat, code };
+  it.each(CASES)("$description", ({ fragment, seat, code, admin }) => {
+    const standing: Standing = { seat, code, admin: admin ?? null };
 
     expect(standingIn(fragment)).toEqual(standing);
   });
@@ -92,7 +106,7 @@ describe("where a fragment leaves a tab standing", () => {
 
 describe("the fragment a tab is reached through", () => {
   it.each(STANDING)("reads back as the seat it was written for: $description", ({ seat }) => {
-    expect(standingIn(fragmentFor(seat))).toEqual({ seat, code: null });
+    expect(standingIn(fragmentFor(seat))).toEqual({ seat, code: null, admin: null });
   });
 
   it("writes the table and the token alone, which is the whole of what a tab remembers", () => {

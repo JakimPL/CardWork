@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 
 import type { Seat } from "../api/seat";
 import { useGathering } from "../play/useGathering";
+import { Closed } from "./Closed";
 import { Gathering } from "./Gathering";
 import { Table } from "./Table";
 import { Waiting } from "./Waiting";
@@ -18,7 +19,13 @@ interface RoomProps {
  * The seat a token holds is the seat it goes on to play, so nothing is asked again on the way over.
  */
 export function Room({ seat }: RoomProps): ReactElement {
-  const { gathering, offerings, connection, trouble, claim, tint, settle, callTheDeal } = useGathering(seat);
+  const { gathering, offerings, connection, trouble, closed, claim, tint, settle, ready, govern, callTheDeal } =
+    useGathering(seat);
+
+  const gone = closed ?? (gathering?.closed === true ? { reason: gathering.reason } : null);
+  if (gone !== null) {
+    return <Closed table={seat.table} reason={gone.reason} />;
+  }
 
   if (gathering === null || offerings === null) {
     return <Waiting table={seat.table} connection={connection} trouble={trouble} />;
@@ -37,6 +44,8 @@ export function Room({ seat }: RoomProps): ReactElement {
       claim={claim}
       tint={tint}
       settle={settle}
+      ready={ready}
+      govern={govern}
       callTheDeal={callTheDeal}
     />
   );

@@ -5,6 +5,7 @@ import { reasonOf } from "../api/refusal";
 import { arrivalIn } from "../play/arriving";
 import { ranksIn, readOut } from "../play/codes";
 import { arrivedAt, leave } from "../play/useStanding";
+import { Founding } from "./Founding";
 
 /** The longest a name reads at a table, which mirrors `cardserver.schemas.NAME_LONGEST`. */
 const NAME_LONGEST = 24;
@@ -21,7 +22,8 @@ interface ArrivingProps {
  * The whole of an arrival is stated here at once. The address a host announces carries the table and the code, so
  * a guest opening the line they were handed names themselves and nothing more; a tab opened at the bare address
  * is offered the tables gathering, the one a host usually holds already chosen, and names a table itself where
- * the host answers none.
+ * the host answers none. A person who was handed no line may open a table of their own from here instead, which
+ * seats them as its host.
  *
  * A code is what one person says and another writes down — spaced, hyphenated or in lower case, all of them the
  * same hand of ranks. What is typed reads back rank by rank, and the arrival goes up once a table, a whole code
@@ -36,10 +38,15 @@ export function Arriving({ table, code, tables }: ArrivingProps): ReactElement {
   const [offered, setOffered] = useState(code ?? "");
   const [trouble, setTrouble] = useState<string | null>(null);
   const [knocking, setKnocking] = useState(false);
+  const [founding, setFounding] = useState(false);
 
   const gathering = tables ?? [];
   const joining = stated === "" ? (gathering[0] ?? "") : stated;
   const arrival = arrivalIn({ table: joining, code: offered, name });
+
+  if (founding) {
+    return <Founding back={() => setFounding(false)} />;
+  }
 
   const knock = (event: SyntheticEvent): void => {
     event.preventDefault();
@@ -103,6 +110,11 @@ export function Arriving({ table, code, tables }: ArrivingProps): ReactElement {
         <button type="submit" disabled={knocking || arrival === null}>
           {knocking ? "Arriving" : "Arrive at the table"}
         </button>
+        {table === null && (
+          <button type="button" onClick={() => setFounding(true)}>
+            Open a new table
+          </button>
+        )}
         {table !== null && (
           <button type="button" onClick={leave}>
             Name another table

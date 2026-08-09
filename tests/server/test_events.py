@@ -11,7 +11,7 @@ from cardserver.streams import frame, resume_point
 
 from ..games.demo import tray_of
 from .conftest import DEAL, EVENTS, MOVES, credentials, sealing
-from .harness import Streamed
+from .harness import Following, Streamed
 
 DATA: Final[str] = "data: "
 RESUME_HEADER: Final[str] = "Last-Event-ID"
@@ -39,7 +39,7 @@ async def test_a_stream_opens_with_the_commits_already_made(app: FastAPI) -> Non
 
 
 async def test_a_stream_carries_a_commit_as_it_lands(app: FastAPI, client: AsyncClient) -> None:
-    async with Streamed(app, EVENTS, credentials(0)) as stream:
+    async with Following(app, EVENTS, credentials(0)) as stream:
         await stream.status()
         await stream.frame()
 
@@ -47,6 +47,14 @@ async def test_a_stream_carries_a_commit_as_it_lands(app: FastAPI, client: Async
         landed = await stream.frame()
 
     assert payload(landed)["seq"] == DEAL
+
+
+async def test_a_stream_ends_where_the_table_has_nothing_to_say(app: FastAPI) -> None:
+    """A stream stands for its patience and ends, which is what puts each answer whole on the wire."""
+    async with Following(app, f"{EVENTS}?since={DEAL}", credentials(0)) as stream:
+        nothing_yet = await stream.quiet()
+
+    assert nothing_yet is True
 
 
 async def test_a_stream_resumes_after_the_last_commit_a_client_read(app: FastAPI, client: AsyncClient) -> None:

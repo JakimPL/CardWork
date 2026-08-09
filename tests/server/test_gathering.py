@@ -7,6 +7,7 @@ import pytest
 from httpx import AsyncClient, Response
 from pydantic import ValidationError
 
+from cardserver.errors import TableTaken
 from cardserver.gathering import TINTS
 from cardserver.naming import Seated
 from cardserver.schemas import Choice, Choosing, Dealing, Offering, Tinting
@@ -21,6 +22,7 @@ from .company import (
     ONE_DECK,
     OTHER_GAME,
     OTHER_TITLE,
+    PRESENCE_STANDS,
     ROUNDS,
     TWO_DECKS,
     Gathered,
@@ -44,12 +46,14 @@ from .conftest import (
     seated_company,
     sits,
 )
-from .harness import Streamed
+from .harness import Following, Streamed
 from .layout import TITLE
 
 DATA: Final[str] = "data: "
 COMPANY: Final[tuple[str, ...]] = ("Ada", "Grace", "Alan")
 STANDING: Final[None] = None
+A_MOMENT: Final[float] = 1.0
+FIRST_SEAT: Final[int] = 0
 A_SMALLER_TABLE: Final[int] = 2
 PAST_THE_TABLE: Final[int] = SEATS + 1
 
@@ -108,8 +112,13 @@ async def takes(client: AsyncClient, token: str, tint: Tint, base_revision: int)
 
 
 def test_a_name_already_gathering_is_left_as_it_was(gathered: Gathered) -> None:
-    with pytest.raises(ValueError, match="already gathering"):
-        gathered.gatherings.open(TABLE, CODE, a_sealed_round(SEATS))
+    with pytest.raises(TableTaken, match="already stands here"):
+        gathered.gatherings.open(
+            TABLE,
+            CODE,
+            a_sealed_round(SEATS),
+            democratic=False,
+        )
 
 
 @pytest.mark.parametrize(
@@ -276,18 +285,20 @@ async def test_a_seated_guest_settles_what_the_table_plays(visitor: AsyncClient,
     assert answered.json()["choice"]["players"] == A_SMALLER_TABLE
 
 
-async def test_a_smaller_table_stands_up_whoever_sat_past_the_seats_it_holds(
+async def test_a_democratic_guest_may_not_shrink_a_table_under_a_seat_the_company_holds(
     visitor: AsyncClient,
     gathered: Gathered,
 ) -> None:
+    """Grace took the last seat, so a guest of a host-less table shrinking under it is refused, not obeyed."""
     settling = await arrives(visitor, "Ada")
     await sits(visitor, settling, 0, gathered.gathering.revision)
     outside = await arrives(visitor, "Grace")
     await sits(visitor, outside, A_SMALLER_TABLE, gathered.gathering.revision)
     answered = await chooses(visitor, settling, a_sealed_round(A_SMALLER_TABLE), gathered.gathering.revision)
 
-    assert guest_named(answered.json(), "Grace")["seat"] is None
-    assert guest_named(answered.json(), "Ada")["seat"] == 0
+    assert answered.status_code == HTTPStatus.CONFLICT
+    assert answered.json()["error"] == "SeatsHeld"
+    assert gathered.gathering.seat_of("Grace") == A_SMALLER_TABLE
 
 
 async def test_a_game_this_host_offers_nowhere_is_played_nowhere(visitor: AsyncClient, gathered: Gathered) -> None:
@@ -499,7 +510,7 @@ async def test_a_guest_holding_a_stream_is_read_as_present(visitor: AsyncClient,
     assert guest_named(read, "Grace")["present"] is False
 
 
-async def test_a_guest_who_hung_up_is_read_as_gone(visitor: AsyncClient, gathered: Gathered) -> None:
+async def test_a_guest_whose_word_has_run_out_is_read_as_gone(visitor: AsyncClient, gathered: Gathered) -> None:
     watching = await arrives(visitor, "Ada")
     reading = await arrives(visitor, "Grace")
 
@@ -507,14 +518,68 @@ async def test_a_guest_who_hung_up_is_read_as_gone(visitor: AsyncClient, gathere
         await stream.status()
         await stream.frame()
 
+    gathered.ticking.on(PRESENCE_STANDS + A_MOMENT)
+
     assert guest_named(await read_by(visitor, reading), "Ada")["present"] is False
+
+
+async def test_a_guest_who_keeps_following_is_read_as_present_throughout(
+    visitor: AsyncClient,
+    gathered: Gathered,
+) -> None:
+    """A stream says a guest is here for a while, so a page picking it up again keeps its place in the room."""
+    watching = await arrives(visitor, "Ada")
+    reading = await arrives(visitor, "Grace")
+
+    async with Following(gathered.app, ATTENDANCE, holding(watching)) as stream:
+        await stream.frame()
+        gathered.ticking.on(PRESENCE_STANDS - A_MOMENT)
+        await stream.quiet()
+        gathered.ticking.on(PRESENCE_STANDS - A_MOMENT)
+        read = await read_by(visitor, reading)
+
+    assert guest_named(read, "Ada")["present"] is True
+
+
+async def test_a_guest_following_again_leaves_the_revision_where_it_stood(
+    visitor: AsyncClient,
+    gathered: Gathered,
+) -> None:
+    """Saying again what already stood moves nothing, which leaves a page's own following out of its commands."""
+    token = await arrives(visitor, "Ada")
+
+    async with Streamed(gathered.app, ATTENDANCE, holding(token)) as stream:
+        await stream.status()
+        await stream.frame()
+
+    stood = gathered.gathering.revision
+
+    async with Streamed(gathered.app, ATTENDANCE, holding(token)) as stream:
+        await stream.status()
+        await stream.frame()
+
+    assert gathered.gathering.revision == stood
+
+
+async def test_a_seat_is_taken_on_the_revision_a_stream_carried(
+    visitor: AsyncClient,
+    gathered: Gathered,
+) -> None:
+    """What a page reads off the stream is what it commands on, so the room it saw is the room it acts in."""
+    token = await arrives(visitor, "Ada")
+
+    async with Following(gathered.app, ATTENDANCE, holding(token)) as stream:
+        carried = await stream.frame()
+        taken = await sits(visitor, token, FIRST_SEAT, payload(carried)["revision"])
+
+    assert taken.status_code == HTTPStatus.OK
+    assert guest_named(taken.json(), "Ada")["seat"] == FIRST_SEAT
 
 
 async def test_a_stream_carries_the_gathering_again_as_it_changes(visitor: AsyncClient, gathered: Gathered) -> None:
     watching = await arrives(visitor, "Ada")
 
-    async with Streamed(gathered.app, ATTENDANCE, holding(watching)) as stream:
-        await stream.status()
+    async with Following(gathered.app, ATTENDANCE, holding(watching)) as stream:
         await stream.frame()
         await arrives(visitor, "Grace")
         written = await stream.frame()
@@ -537,12 +602,11 @@ async def test_a_stream_resumes_after_the_revision_a_client_read(visitor: AsyncC
 async def test_the_deal_is_the_last_thing_a_stream_carries(visitor: AsyncClient, gathered: Gathered) -> None:
     tokens = await seated_company(visitor, COMPANY)
 
-    async with Streamed(gathered.app, ATTENDANCE, holding(tokens[0])) as stream:
-        await stream.status()
+    async with Following(gathered.app, ATTENDANCE, holding(tokens[0])) as stream:
         await stream.frame()
         await deals(visitor, tokens[0], gathered.gathering.revision)
         written = await stream.frame()
-        closed = await stream.frame()
+        nothing_after = await stream.quiet()
 
     assert payload(written)["dealt"] is True
-    assert closed == ""
+    assert nothing_after is True

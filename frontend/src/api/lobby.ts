@@ -1,4 +1,16 @@
-import type { Admitted, Arriving, Choosing, Claiming, Dealing, GatheringView, Offering, Tinting } from "./gathering";
+import type {
+  Admitted,
+  Arriving,
+  Choosing,
+  Claiming,
+  Dealing,
+  Founding,
+  GatheringView,
+  Governing,
+  Offering,
+  Readying,
+  Tinting,
+} from "./gathering";
 import { asking, SENDING, STATING, stating } from "./requests";
 import { credentials, type Seat } from "./seat";
 import { follow, type Streamed } from "./streaming";
@@ -12,6 +24,8 @@ const SEAT = "seat";
 const TINT = "tint";
 const CHOICE = "choice";
 const DEAL = "deal";
+const READY = "ready";
+const GOVERNANCE = "governance";
 const SINCE = "since";
 
 /** What no credential at all is offered with, which is how a stranger arrives and how the offerings are read. */
@@ -53,6 +67,18 @@ export function arrive(table: string, arriving: Arriving): Promise<Admitted> {
   return stating<Admitted, Arriving>(gathered(table, GUESTS), SENDING, UNCREDENTIALED, arriving);
 }
 
+/**
+ * Gather a fresh table and take the host's seat at it, answering with the token to speak through from then on.
+ *
+ * Founding a table is arriving at it: the founder names the table and themselves at once, the code is drawn for
+ * them, and the token minted seats them as the host the way an arrival seats any guest.
+ *
+ * @throws Refused when a table already answers under the name, or when the lobby holds as many tables as it may.
+ */
+export function found(founding: Founding): Promise<Admitted> {
+  return stating<Admitted, Founding>(TABLES, SENDING, UNCREDENTIALED, founding);
+}
+
 /** The gathering as this guest reads it: the company, what is settled, and where it stands. */
 export function readGathering(seat: Seat): Promise<GatheringView> {
   return asking<GatheringView>(gathered(seat.table, GATHERING), credentials(seat));
@@ -76,6 +102,16 @@ export function settleChoice(seat: Seat, choosing: Choosing): Promise<GatheringV
 /** Call for the deal, which opens the table the company settled on and ends the gathering. */
 export function deal(seat: Seat, dealing: Dealing): Promise<GatheringView> {
   return stating<GatheringView, Dealing>(gathered(seat.table, DEAL), SENDING, credentials(seat), dealing);
+}
+
+/** Commit to the settings as they stand, or take that commitment back, which every seated guest may do. */
+export function commitReady(seat: Seat, readying: Readying): Promise<GatheringView> {
+  return stating<GatheringView, Readying>(gathered(seat.table, READY), STATING, credentials(seat), readying);
+}
+
+/** Settle how the table is governed, democratically or by the host's own say, which its host alone may do. */
+export function settleGovernance(seat: Seat, governing: Governing): Promise<GatheringView> {
+  return stating<GatheringView, Governing>(gathered(seat.table, GOVERNANCE), STATING, credentials(seat), governing);
 }
 
 /**

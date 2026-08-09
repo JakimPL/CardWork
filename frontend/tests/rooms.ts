@@ -19,12 +19,19 @@ export const OFFERINGS: Offering[] = [PASSING, CLIMBING, SHOWDOWN];
 export const RUNS_TO: Conclusion = { rounds: 3, target: null, lead: null };
 
 export function aChoice(choice: Partial<Choice> = {}): Choice {
-  return { game: PASSING.game, players: 3, decks: 1, conclusion: RUNS_TO, ...choice };
+  return { game: PASSING.game, players: 3, decks: 1, conclusion: RUNS_TO, cues: true, ...choice };
 }
 
-/** One guest of the company: the name and tint they arrived under, the seat they hold, and whether their page is open. */
-export function aGuest(name: string, seat: number | null, present = true, tint: Tint = FIRST_TINT): Guest {
-  return { name, tint, seat, present };
+/** One guest of the company: the name and tint they arrived under, the seat they hold, whether their page is open, whether they have readied, and whether they gathered the table. */
+export function aGuest(
+  name: string,
+  seat: number | null,
+  present = true,
+  tint: Tint = FIRST_TINT,
+  ready = false,
+  host = false,
+): Guest {
+  return { name, tint, seat, present, ready, host };
 }
 
 /** A gathering as one of its guests reads it, at whatever company and choice a test states. */
@@ -37,14 +44,17 @@ export function aGathering(company: Guest[], gathering: Partial<GatheringView> =
     mine: MINE,
     revision: 4,
     dealt: false,
+    closed: false,
+    democratic: true,
+    reason: null,
     ...gathering,
   };
 }
 
-/** A gathering whose every seat is taken, which is the one thing the deal waits on. */
-export function aSeatedGathering(players: number): GatheringView {
+/** A gathering whose every seat is taken, its company committed to the settings where a test asks for it. */
+export function aSeatedGathering(players: number, ready = false): GatheringView {
   const company = TINTS.slice(0, players).map((tint, seat) =>
-    aGuest(seat === 0 ? MINE : `Guest ${seat}`, seat, true, tint),
+    aGuest(seat === 0 ? MINE : `Guest ${seat}`, seat, true, tint, ready),
   );
   return aGathering(company, { choice: aChoice({ players }) });
 }

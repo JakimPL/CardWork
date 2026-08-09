@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 
-import type { GatheringView, Tint } from "../api/gathering";
+import type { GatheringView, Guest, Tint } from "../api/gathering";
 import { holderOf, mine, seatsOf, standingBy } from "../play/company";
 import { classes } from "./classes";
 import { Tints } from "./Tints";
@@ -45,7 +45,12 @@ interface PlaceProps {
   claim: (seat: number | null) => void;
 }
 
-/** One place at the table: the seat, the guest holding it, and the press that takes or gives it up. */
+/**
+ * One place at the table: the seat, the guest holding it, and the press that takes or gives it up.
+ *
+ * A held place reads whether its guest gathered the table and whether they have committed to the settings, so
+ * the company on screen carries who governs the table and who is waiting on whom before the deal.
+ */
 function Place({ gathering, seat, claim }: PlaceProps): ReactElement {
   const holder = holderOf(gathering, seat);
   const own = mine(gathering, seat);
@@ -54,10 +59,19 @@ function Place({ gathering, seat, claim }: PlaceProps): ReactElement {
       <span className="seat">Seat {seat}</span>
       <span className={classes("guest", holder !== null && (holder.present ? "present" : "away"))}>
         {holder?.name ?? EMPTY}
+        {holder?.host === true && <span className="badge host">host</span>}
       </span>
+      {holder !== null && (
+        <span className={classes("standing", holder.ready ? "ready" : "unready")}>{stateOf(holder)}</span>
+      )}
       <button type="button" disabled={holder !== null && !own} onClick={() => claim(own ? null : seat)}>
         {own ? "Stand up" : "Sit here"}
       </button>
     </li>
   );
+}
+
+/** How a seated guest's commitment reads, which the company holds beside their name before the deal. */
+function stateOf(holder: Guest): string {
+  return holder.ready ? "Ready" : "Not ready";
 }

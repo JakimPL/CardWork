@@ -61,7 +61,7 @@ repos:
 
       - id: interface-format
         name: interface format
-        entry: npm --prefix frontend run format
+        entry: npm run format --workspace frontend
         language: system
         files: ^frontend/
         verbose: True
@@ -70,7 +70,7 @@ repos:
 
       - id: interface-typecheck
         name: interface typecheck
-        entry: npm --prefix frontend run typecheck
+        entry: npm run typecheck --workspace frontend
         language: system
         files: ^frontend/
         verbose: True
@@ -79,7 +79,7 @@ repos:
 
       - id: interface-test
         name: interface tests
-        entry: npm --prefix frontend run test
+        entry: npm run test --workspace frontend
         language: system
         files: ^frontend/
         stages:

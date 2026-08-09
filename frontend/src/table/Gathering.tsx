@@ -2,11 +2,11 @@ import type { ReactElement } from "react";
 
 import type { Choice, GatheringView, Offering, Tint } from "../api/gathering";
 import { readOut } from "../play/codes";
-import { dealReading, dealReady } from "../play/company";
 import type { Connection } from "../play/connection";
 import { CONNECTIONS } from "../play/connection";
 import { leave } from "../play/useStanding";
 import { classes } from "./classes";
+import { Committing } from "./Committing";
 import { Company } from "./Company";
 import { Settling } from "./Settling";
 
@@ -18,6 +18,8 @@ interface GatheringProps {
   claim: (seat: number | null) => void;
   tint: (chosen: Tint) => void;
   settle: (choice: Choice) => void;
+  ready: (committed: boolean) => void;
+  govern: (democratic: boolean) => void;
   callTheDeal: () => void;
 }
 
@@ -39,6 +41,8 @@ export function Gathering({
   claim,
   tint,
   settle,
+  ready,
+  govern,
   callTheDeal,
 }: GatheringProps): ReactElement {
   return (
@@ -50,12 +54,10 @@ export function Gathering({
         Join code <strong>{readOut(gathering.code)}</strong>
       </p>
       <Company gathering={gathering} claim={claim} tint={tint} />
-      <Settling gathering={gathering} offerings={offerings} settle={settle} />
+      <Settling gathering={gathering} offerings={offerings} settle={settle} govern={govern} />
       {trouble !== null && <p className="trouble">{trouble}</p>}
       <div className="choices">
-        <button type="button" disabled={!dealReady(gathering)} onClick={callTheDeal}>
-          {dealReading(gathering)}
-        </button>
+        <Committing gathering={gathering} ready={ready} callTheDeal={callTheDeal} />
         <button type="button" onClick={leave}>
           Leave the table
         </button>

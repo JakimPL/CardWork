@@ -2,12 +2,12 @@ from collections.abc import Mapping
 from secrets import choice, compare_digest
 from typing import Final
 
+from cardserver.limits import CODE_LENGTH
 from cardwork.cards.orders import RANK_SEQUENCE
 from cardwork.cards.rank import Rank, Ranks
 
-CODE_LENGTH: Final[int] = 6
 SEPARATORS: Final[str] = " -_"
-APART: Final[str] = " "
+APART: Final[str] = ""
 ONE_CHARACTER: Final[int] = 1
 
 READ_AS: Final[Mapping[str, Rank]] = {rank.value: rank for rank in RANK_SEQUENCE}

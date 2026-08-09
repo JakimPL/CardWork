@@ -274,7 +274,7 @@ export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement
               key={lying.index}
               card={lying.card}
               selected={isSelected(playing.standing, slot.zone, lying.index)}
-              dimmed={leadsNowhere(playing.standing, slot.zone, lying.index)}
+              dimmed={playing.cues && leadsNowhere(playing.standing, slot.zone, lying.index)}
               arriving={lying.arriving}
               onPick={
                 picking

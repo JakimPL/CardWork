@@ -1,8 +1,5 @@
 import type { GatheringView, Guest, Tint } from "../api/gathering";
 
-/** What the button calling for the deal reads once nothing stands in the way of it. */
-const DEAL = "Deal the cards";
-
 /** What a guest standing at the gathering is told, since the players of the game are the ones who settle it. */
 const STANDING = "Take a seat to deal";
 
@@ -26,9 +23,59 @@ export function emptySeats(gathering: GatheringView): number[] {
   return seatsOf(gathering).filter((seat) => holderOf(gathering, seat) === null);
 }
 
+/** The guest reading the page, and nothing where the company reads nobody by that name. */
+export function me(gathering: GatheringView): Guest | null {
+  return gathering.company.find((guest) => guest.name === gathering.mine) ?? null;
+}
+
 /** The seat the guest reading the page holds, and nothing while they are standing. */
 export function mySeat(gathering: GatheringView): number | null {
-  return gathering.company.find((guest) => guest.name === gathering.mine)?.seat ?? null;
+  return me(gathering)?.seat ?? null;
+}
+
+/** The guests holding a seat, who are the players the deal is dealt to and the ones a commitment is asked of. */
+export function seatedGuests(gathering: GatheringView): Guest[] {
+  return gathering.company.filter((guest) => guest.seat !== null);
+}
+
+/** Whether the guest reading the page gathered the table, whose say governs it while it is settled host by host. */
+export function iAmHost(gathering: GatheringView): boolean {
+  return me(gathering)?.host ?? false;
+}
+
+/**
+ * The fewest players a table may be settled to while it keeps every seat its company sits in.
+ *
+ * A player who took the last seat holds a table that size open as surely as a full one does, so this reads the
+ * floor off where the company sits rather than off how many sit: one past the highest seat taken, and none at
+ * all where nobody is seated. It mirrors `cardserver.gathering.Gathering`, which stands only the host up under
+ * a seated player and holds every other guest to a table this size at the least.
+ */
+export function seatFloor(gathering: GatheringView): number {
+  const held = seatedGuests(gathering)
+    .map((guest) => guest.seat)
+    .filter((seat): seat is number => seat !== null);
+  return held.length === 0 ? 0 : Math.max(...held) + 1;
+}
+
+/** Whether the guest reading the page has committed to the settings as they stand. */
+export function iAmReady(gathering: GatheringView): boolean {
+  return me(gathering)?.ready ?? false;
+}
+
+/**
+ * Whether the guest reading the page may call the deal.
+ *
+ * A democratic table leaves the deal to every seat, as it leaves the settling; a host-governed one keeps it to
+ * the host alone, so a seated guest reads it as the wait it is until the host calls it.
+ */
+export function mayDeal(gathering: GatheringView): boolean {
+  return gathering.democratic || iAmHost(gathering);
+}
+
+/** Whether every seat is taken and every seated guest has committed, which is the whole of what the deal waits on. */
+export function everyoneReady(gathering: GatheringView): boolean {
+  return emptySeats(gathering).length === 0 && seatedGuests(gathering).every((guest) => guest.ready);
 }
 
 /** Whether this seat is the one the guest reading the page holds. */
@@ -60,8 +107,10 @@ export function hasSay(gathering: GatheringView): boolean {
 /**
  * What stands in the way of the deal, and nothing where the table may be dealt as it stands.
  *
- * A gathering is dealt once every seat is taken, and by a guest holding a seat at it. Both are what the server
- * refuses on, so what is read here is the sentence a person is shown before they meet the refusal.
+ * A gathering is dealt once every seat is taken and every seated guest has committed to the settings, and by a
+ * guest holding a seat at it. Each is what the server refuses on, so what is read here is the sentence a person
+ * is shown before they meet the refusal: a seat still to be taken first, and a commitment still to be given once
+ * the table is full.
  */
 export function holdingUpTheDeal(gathering: GatheringView): string | null {
   if (!hasSay(gathering)) {
@@ -73,15 +122,39 @@ export function holdingUpTheDeal(gathering: GatheringView): string | null {
     return empty.length === 1 ? "One seat still to be taken" : `${empty.length} seats still to be taken`;
   }
 
+  const waiting = seatedGuests(gathering).filter((guest) => !guest.ready).length;
+  if (waiting > 0) {
+    return waiting === 1 ? "One player still to ready" : `${waiting} players still to ready`;
+  }
+
   return null;
 }
 
-/** What the button calling for the deal reads, which is what holds the deal up while something does. */
-export function dealReading(gathering: GatheringView): string {
-  return holdingUpTheDeal(gathering) ?? DEAL;
-}
+/**
+ * The one press the room carries a seated guest through, from committing to the settings to calling the deal.
+ *
+ * `stand` is for the guest holding no seat, who neither commits nor deals. `ready` is for a seated guest while
+ * anything holds the deal up: they commit to the settings or take that commitment back, and `pending` reads what
+ * the table still waits on. `deal` stands once nothing does and the guest may call it. `wait` stands then for a
+ * seated guest a host-governed table leaves the deal to the host: they are ready and the table is, and the press
+ * is the host's to make.
+ */
+export type Commit =
+  | { readonly act: "stand" }
+  | { readonly act: "ready"; readonly ready: boolean; readonly pending: string }
+  | { readonly act: "deal" }
+  | { readonly act: "wait" };
 
-/** Whether the deal may be called for as the gathering stands. */
-export function dealReady(gathering: GatheringView): boolean {
-  return holdingUpTheDeal(gathering) === null;
+/** How the room's one press reads for the guest reading it, out of where the gathering and their seat stand. */
+export function commitOf(gathering: GatheringView): Commit {
+  if (!hasSay(gathering)) {
+    return { act: "stand" };
+  }
+
+  const pending = holdingUpTheDeal(gathering);
+  if (pending !== null) {
+    return { act: "ready", ready: iAmReady(gathering), pending };
+  }
+
+  return mayDeal(gathering) ? { act: "deal" } : { act: "wait" };
 }

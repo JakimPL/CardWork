@@ -21,6 +21,7 @@ from cardserver.schemas import (
     Dealing,
     GatheringView,
     MoveRequest,
+    Readying,
 )
 from cardtable.catalogue import opened
 from cardtable.games import GameName
@@ -31,7 +32,7 @@ from cardwork.presentation.scene import Scene
 from cardwork.rounds.conclusion import Conclusion
 from tests.cases import Case
 
-from .config import CODE, GLYPHS
+from .config import ADMIN, ADVANCED, CODE, GLYPHS
 
 TABLE: Final[str] = "green-baize"
 UNSERVED: Final[str] = "no-such-table"
@@ -66,6 +67,7 @@ GUESTS: Final[str] = f"/tables/{TABLE}/guests"
 GATHERING: Final[str] = f"/tables/{TABLE}/gathering"
 SEAT: Final[str] = f"/tables/{TABLE}/seat"
 DEALING: Final[str] = f"/tables/{TABLE}/deal"
+READY: Final[str] = f"/tables/{TABLE}/ready"
 
 
 @dataclass(frozen=True)
@@ -192,8 +194,24 @@ async def deals(client: AsyncClient, token: str, base_revision: int) -> Gatherin
     return GatheringView.model_validate(response.json())
 
 
+async def readies(client: AsyncClient, token: str, base_revision: int) -> GatheringView:
+    """One seated guest committing to the settings, answered with the gathering as they read it afterwards.
+
+    Raises:
+        HTTPStatusError: when the gathering refused the commitment.
+    """
+    readying = Readying(ready=True, base_revision=base_revision)
+    response = await client.put(
+        READY,
+        json=readying.model_dump(mode="json"),
+        headers={SEAT_HEADER: token},
+    )
+    response.raise_for_status()
+    return GatheringView.model_validate(response.json())
+
+
 async def a_dealt_table(client: AsyncClient, code: str, players: int) -> Mapping[int, str]:
-    """Gather a company that fills the table, seat each of them in turn, and deal what they settled on.
+    """Gather a company that fills the table, seat and commit each of them in turn, and deal what they settled on.
 
     Every command quotes the revision the one before it was answered with, which is how a client acts on what
     it has just heard from a gathering.
@@ -208,6 +226,9 @@ async def a_dealt_table(client: AsyncClient, code: str, players: int) -> Mapping
         tokens[seat] = admitted.token
         revision = (await sits(client, admitted.token, seat, admitted.gathering.revision)).revision
 
+    for seat in sorted(tokens):
+        revision = (await readies(client, tokens[seat], revision)).revision
+
     await deals(client, tokens[0], revision)
     return tokens
 
@@ -220,7 +241,7 @@ async def gathering(choice: Choice) -> AsyncIterator[tuple[AsyncClient, Hosted]]
     the way it ends its service under a server. The table draws with the glyphs its page carries, which
     leaves these reading the endpoints alone whether or not the checkout has fetched a pack.
     """
-    hosted = opened(SETTINGS, choice, GLYPHS)
+    hosted = opened(SETTINGS, choice, GLYPHS, ADVANCED, ADMIN)
     async with hosted.app.router.lifespan_context(hosted.app):
         async with AsyncClient(transport=ASGITransport(app=hosted.app), base_url=BASE_URL) as client:
             yield client, hosted

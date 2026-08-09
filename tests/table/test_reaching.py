@@ -23,6 +23,7 @@ def a_service(host: str, advertise: str | None) -> Service:
         port=PORT,
         advertise=advertise,
         log_level=LogLevel.INFO,
+        forwarded_allow_ips=None,
     )
 
 

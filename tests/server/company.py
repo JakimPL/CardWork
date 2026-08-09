@@ -6,9 +6,9 @@ from typing import Final
 from fastapi import FastAPI
 
 from cardserver.app import create_app
-from cardserver.gathering import Gathering, Gatherings, SeatedSay, Turnstile
+from cardserver.gathering import Gathering, Gatherings, GovernedSay, Turnstile
 from cardserver.naming import Named, Seated
-from cardserver.protocol import TableId
+from cardserver.protocols import TableId
 from cardserver.registry import TableRegistry
 from cardserver.schemas import Choice, Offering
 from cardwork.games.capacity import Capacity
@@ -29,6 +29,11 @@ TWO_DECKS: Final[int] = 2
 ROUNDS: Final[int] = 1
 NO_GRACE: Final[float] = 0.0
 DEALT_FROM: Final[int] = 20260806
+TURNSTILE_WINDOW: Final[float] = 60.0
+WRONG_CODES_ALLOWED: Final[int] = 10
+SWEEP_SECONDS: Final[float] = 60.0
+STREAM_PATIENCE: Final[float] = 0.5
+PRESENCE_STANDS: Final[float] = 60.0
 
 OFFERINGS: Final[tuple[Offering, ...]] = (
     Offering(
@@ -118,20 +123,37 @@ class Gathered:
 
 def gathered(table: TableId, players: int) -> Gathered:
     """One table gathering on its code, at a choice of the demo game seating that many."""
-    registry = TableRegistry(NO_GRACE)
     ticking = Ticking()
+    registry = TableRegistry(NO_GRACE, ticking)
     deals = Deals(registry)
     gatherings = Gatherings(
         deals,
-        OFFERINGS,
-        SeatedSay(),
-        Turnstile.watching(ticking),
+        offerings=OFFERINGS,
+        say=GovernedSay(),
+        turnstile=Turnstile.watching(
+            ticking,
+            window=TURNSTILE_WINDOW,
+            wrong_codes_allowed=WRONG_CODES_ALLOWED,
+        ),
+        clock=ticking,
+        presence_stands=PRESENCE_STANDS,
     )
     return Gathered(
         registry=registry,
         gatherings=gatherings,
-        gathering=gatherings.open(table, CODE, a_sealed_round(players)),
+        gathering=gatherings.open(
+            table,
+            CODE,
+            a_sealed_round(players),
+            democratic=True,
+        ),
         deals=deals,
         ticking=ticking,
-        app=create_app(registry, gatherings, gatherings),
+        app=create_app(
+            registry,
+            gatherings,
+            gatherings,
+            sweep_seconds=SWEEP_SECONDS,
+            stream_patience=STREAM_PATIENCE,
+        ),
     )

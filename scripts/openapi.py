@@ -6,7 +6,11 @@ from time import monotonic
 from typing import Final
 
 from cardserver.app import create_app
-from cardserver.gathering import Gatherings, SeatedSay, Turnstile
+from cardserver.creation import Creation
+from cardserver.gathering import Gatherings, GovernedSay, Turnstile
+from cardserver.oversight.lobby.setting import NO_LIMIT
+from cardserver.oversight.oversight import Oversight
+from cardserver.oversight.token_admin import TokenAdmin
 from cardserver.registry import TableRegistry
 from cardtable.catalogue import OFFERINGS, Deals
 from cardtable.paths import SPECIFICATION
@@ -14,6 +18,15 @@ from cardtable.paths import SPECIFICATION
 NO_GRACE: Final[float] = 0.0
 NO_SEED: Final[int] = 0
 INDENT: Final[int] = 2
+TURNSTILE_WINDOW: Final[float] = 60.0
+WRONG_CODES_ALLOWED: Final[int] = 10
+SWEEP_SECONDS: Final[float] = 60.0
+STREAM_PATIENCE: Final[float] = 20.0
+PRESENCE_STANDS: Final[float] = 60.0
+STALE_SECONDS: Final[float] = 900.0
+IDLE_SECONDS: Final[float] = 3600.0
+DEMOCRATIC: Final[bool] = True
+SPECIFYING_TOKEN: Final[str] = "specification"
 
 Document = Mapping[str, object]
 
@@ -24,16 +37,36 @@ def document() -> Document:
     A schema follows from the endpoints rather than from any position, so this builds the application with an
     empty registry and a lobby nobody has arrived at: what a client sends and what it is answered stands the
     same whichever game is in service. The lobby is the host's own, since the endpoints a table is gathered at
-    answer only where one is held.
+    answer only where one is held. An oversight stands over it so the panel and the founding a company reaches
+    itself land in the document a client generates from, under a token that opens nothing a run answers on.
     """
     registry = TableRegistry(NO_GRACE)
     gatherings = Gatherings(
         Deals(registry, NO_SEED),
-        OFFERINGS,
-        SeatedSay(),
-        Turnstile.watching(monotonic),
+        offerings=OFFERINGS,
+        say=GovernedSay(),
+        turnstile=Turnstile.watching(
+            monotonic,
+            window=TURNSTILE_WINDOW,
+            wrong_codes_allowed=WRONG_CODES_ALLOWED,
+        ),
+        clock=monotonic,
+        presence_stands=PRESENCE_STANDS,
     )
-    return create_app(registry, gatherings, gatherings).openapi()
+    oversight = Oversight(
+        gatherings,
+        registry,
+        TokenAdmin(SPECIFYING_TOKEN),
+        monotonic,
+        democratic=DEMOCRATIC,
+        creation=Creation.SELF_SERVE,
+        stale_seconds=STALE_SECONDS,
+        idle_seconds=IDLE_SECONDS,
+        capacity=NO_LIMIT,
+    )
+    return create_app(
+        registry, gatherings, gatherings, oversight, sweep_seconds=SWEEP_SECONDS, stream_patience=STREAM_PATIENCE
+    ).openapi()
 
 
 def write(specification: Document, into: Path) -> int:

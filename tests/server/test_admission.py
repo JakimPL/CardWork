@@ -3,10 +3,11 @@ from typing import Final
 
 from httpx import AsyncClient
 
-from cardserver.gathering import COMPANY_MOST, TINTS, TURNSTILE_WINDOW, WRONG_CODES_ALLOWED
-from cardserver.schemas import NAME_LONGEST, Arriving
+from cardserver.gathering import COMPANY_MOST, TINTS
+from cardserver.limits import NAME_LONGEST
+from cardserver.schemas import Arriving
 
-from .company import CODE, WRONG_CODE, Gathered
+from .company import CODE, TURNSTILE_WINDOW, WRONG_CODE, WRONG_CODES_ALLOWED, Gathered
 from .conftest import GATHERING, GUESTS, TABLE, arriving, holding
 
 A_MOMENT: Final[float] = 1.0
@@ -33,7 +34,7 @@ async def test_a_guest_arrives_standing_at_no_seat(visitor: AsyncClient) -> None
     admitted = (await arriving(visitor, NAMED)).json()
 
     assert admitted["gathering"]["company"] == [
-        {"name": NAMED, "tint": FIRST_TINT, "seat": None, "present": False},
+        {"name": NAMED, "tint": FIRST_TINT, "seat": None, "present": False, "ready": False, "host": False},
     ]
 
 

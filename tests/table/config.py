@@ -3,7 +3,10 @@ from typing import Final
 
 from yaml import safe_dump
 
+from cardserver.advanced import Advanced
+from cardserver.creation import Creation
 from cardserver.schemas import Choice
+from cardtable.admin import Admin
 from cardtable.artwork import Artwork
 from cardtable.config import Configuration
 from cardtable.games import GameName
@@ -14,8 +17,22 @@ from cardwork.rounds.conclusion import Conclusion
 FILE: Final[str] = "config.yaml"
 BACK: Final[str] = "crosshatch"
 CODE: Final[str] = "KQAJ72"
+SECRET: Final[str] = "overseer"
 
 GLYPHS: Final[Artwork] = Artwork(pack=None, back=BACK)
+ADVANCED: Final[Advanced] = Advanced(
+    turnstile_window=60.0,
+    wrong_codes_allowed=10,
+    sweep_seconds=60.0,
+    democratic=True,
+    creation=Creation.SELF_SERVE,
+    capacity=None,
+    stale_seconds=900.0,
+    idle_seconds=3600.0,
+    stream_patience=20.0,
+    presence_stands=60.0,
+)
+ADMIN: Final[Admin] = Admin(secret=SECRET)
 
 CONFIGURED: Final[Configuration] = Configuration(
     table=Settings(name="baize", code=CODE, seed=7, grace_seconds=0.5),
@@ -26,7 +43,15 @@ CONFIGURED: Final[Configuration] = Configuration(
         conclusion=Conclusion(rounds=2),
     ),
     artwork=GLYPHS,
-    service=Service(host="127.0.0.1", port=9000, advertise=None, log_level=LogLevel.WARNING),
+    service=Service(
+        host="127.0.0.1",
+        port=9000,
+        advertise=None,
+        log_level=LogLevel.WARNING,
+        forwarded_allow_ips=None,
+    ),
+    advanced=ADVANCED,
+    admin=ADMIN,
 )
 
 

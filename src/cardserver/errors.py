@@ -1,14 +1,16 @@
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from http import HTTPStatus
-from typing import Final
+from logging import INFO, WARNING, Logger, getLogger
+from typing import Any, Final
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
 from starlette.responses import Response
 
-from cardserver.protocol import TableId
-from cardserver.schemas import ErrorBody
+from cardserver.protocols.table import TableId
+from cardserver.schemas.error import ErrorBody
 from cardwork.exceptions import (
     ArrangementRefused,
     GameValidationError,
@@ -16,6 +18,9 @@ from cardwork.exceptions import (
     NotYourTurn,
     StalePosition,
 )
+
+LOGGER: Final[Logger] = getLogger("cardserver")
+MISSTATED: Final[HTTPStatus] = HTTPStatus.UNPROCESSABLE_ENTITY
 
 
 class CardserverError(Exception):
@@ -46,6 +51,17 @@ class WrongSeat(CardserverError):
         self.reason = reason
 
 
+class Unauthorized(CardserverError):
+    """Raised when the overseeing routes are reached without the token this host was started under.
+
+    The token is handed to whoever runs the server and to nobody else, so a request offering none or another
+    is turned away before it is read for what it asks: overseeing is the one thing here no code admits anyone to.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("These routes answer only to the token this host prints as it starts")
+
+
 class JournalSealed(CardserverError):
     """Raised when the full record of a table is asked for while the game it belongs to is still on."""
 
@@ -68,6 +84,14 @@ class NameTaken(CardserverError):
     def __init__(self, name: str) -> None:
         super().__init__(f"The name {name!r} is already read at this table")
         self.name = name
+
+
+class TableTaken(CardserverError):
+    """Raised when a table is gathered, or put into service, under a name another table already answers to."""
+
+    def __init__(self, table: TableId) -> None:
+        super().__init__(f"A table named {table!r} already stands here, so gather yours under another name")
+        self.table = table
 
 
 class SeatTaken(CardserverError):
@@ -95,6 +119,22 @@ class NoSuchSeat(CardserverError):
         super().__init__(f"Seat {seat} stands outside the {players} seats this table was settled on")
         self.seat = seat
         self.players = players
+
+
+class SeatsHeld(CardserverError):
+    """Raised when a guest other than the host settles a table too small for the seats its company already holds.
+
+    A smaller table stands up whoever sat past it, so shrinking one out from under a seated player is the host's
+    to do alone: any other guest is held to a table that keeps every seat its company sits in.
+    """
+
+    def __init__(self, players: int, held: tuple[int, ...]) -> None:
+        super().__init__(
+            f"A table of {players} seats would stand up the company holding seats {sorted(held)}, "
+            f"so only its host may settle it that small"
+        )
+        self.players = players
+        self.held = held
 
 
 class NoSay(CardserverError):
@@ -130,8 +170,48 @@ class StaleGathering(CardserverError):
         self.revision = revision
 
 
+class NotReady(CardserverError):
+    """Raised when the deal is called for while a seated guest has yet to commit to the settings."""
+
+    def __init__(self, waiting: tuple[str, ...]) -> None:
+        super().__init__(f"A table is dealt once every seat has committed, and these have not: {sorted(waiting)}")
+        self.waiting = waiting
+
+
+class NotTheHost(CardserverError):
+    """Raised when a guest governs a table, or breaks it up, holding the host's say over neither."""
+
+    def __init__(self, guest: str) -> None:
+        super().__init__(f"{guest!r} is not the host of this table")
+        self.guest = guest
+
+
+class NoCreation(CardserverError):
+    """Raised when a guest gathers a table where this host lets only its overseer open one."""
+
+    def __init__(self) -> None:
+        super().__init__("This host opens tables from its own panel just now, so ask whoever runs it for one")
+
+
+class TablesFull(CardserverError):
+    """Raised when a table is gathered while this host already holds as many as it opens at once."""
+
+    def __init__(self, most: int) -> None:
+        super().__init__(f"This host gathers {most} tables at once, and that many already stand")
+        self.most = most
+
+
+class TableClosed(CardserverError):
+    """Raised when a table that has been broken up is asked for anything further."""
+
+    def __init__(self, table: TableId) -> None:
+        super().__init__(f"Table {table!r} has been closed")
+        self.table = table
+
+
 REFUSALS: Final[tuple[tuple[type[Exception], HTTPStatus], ...]] = (
     (Unauthenticated, HTTPStatus.UNAUTHORIZED),
+    (Unauthorized, HTTPStatus.UNAUTHORIZED),
     (UnknownTable, HTTPStatus.NOT_FOUND),
     (WrongSeat, HTTPStatus.FORBIDDEN),
     (JournalSealed, HTTPStatus.FORBIDDEN),
@@ -142,14 +222,35 @@ REFUSALS: Final[tuple[tuple[type[Exception], HTTPStatus], ...]] = (
     (Unadmitted, HTTPStatus.FORBIDDEN),
     (NoSay, HTTPStatus.FORBIDDEN),
     (NameTaken, HTTPStatus.CONFLICT),
+    (TableTaken, HTTPStatus.CONFLICT),
+    (SeatsHeld, HTTPStatus.CONFLICT),
     (SeatTaken, HTTPStatus.CONFLICT),
     (TintTaken, HTTPStatus.CONFLICT),
     (GatheringOver, HTTPStatus.CONFLICT),
     (SeatsEmpty, HTTPStatus.CONFLICT),
+    (NotReady, HTTPStatus.CONFLICT),
     (StaleGathering, HTTPStatus.CONFLICT),
+    (NotTheHost, HTTPStatus.FORBIDDEN),
+    (NoCreation, HTTPStatus.FORBIDDEN),
+    (TablesFull, HTTPStatus.SERVICE_UNAVAILABLE),
+    (TableClosed, HTTPStatus.GONE),
     (NoSuchSeat, HTTPStatus.UNPROCESSABLE_ENTITY),
     (GameValidationError, HTTPStatus.UNPROCESSABLE_ENTITY),
 )
+
+
+def a_misstatement(error: Exception) -> str:
+    """What a request the schemas turned away got wrong: each field named, and what was wanted there.
+
+    The framework states those fields in a list of its own, which this reads into one sentence. A refusal
+    carrying no such list stands as the sentence it states for itself.
+    """
+    if isinstance(error, RequestValidationError):
+        misstated = "; ".join(_a_field_misstated(field) for field in error.errors())
+        if misstated:
+            return misstated
+
+    return str(error)
 
 
 def install_error_handlers(app: FastAPI) -> None:
@@ -158,16 +259,62 @@ def install_error_handlers(app: FastAPI) -> None:
     Registering one handler per kind is what keeps the mapping total over the refusals listed and open
     at the edges: a game that raises its own subclass of one of them is answered the same way, and an
     error outside the list reaches the server as the defect it is.
+
+    A request the schemas could make nothing of is answered here as well, since the framework states that one
+    in a shape of its own: every refusal the server writes therefore carries the kind and the sentence a client
+    reads, so a page has something to put in front of a person whatever it asked for.
     """
     for kind, status in REFUSALS:
         app.add_exception_handler(kind, _answer_with(status))
+
+    app.add_exception_handler(RequestValidationError, _answer_a_misstatement)
+
+
+def _a_field_misstated(stated: Mapping[str, Any]) -> str:
+    """One field a request got wrong, named where the schemas locate it and said as they state it.
+
+    The framework hands these over as bare mappings, so the two fields a person reads are taken by name and
+    the rest — the kind of the check and the value it was handed — stay where they were.
+    """
+    located = ".".join(str(part) for part in stated["loc"])
+    return f"{located}: {stated['msg']}"
 
 
 def _answer_with(status: HTTPStatus) -> Callable[[Request, Exception], Response]:
     """A handler naming the refusal and the sentence behind it, under the status that kind is owed."""
 
-    def handle(_request: Request, error: Exception) -> Response:
+    def handle(request: Request, error: Exception) -> Response:
         body = ErrorBody(error=type(error).__name__, detail=str(error))
-        return JSONResponse(status_code=status, content=body.model_dump())
+        return _refused(request, status, body, INFO)
 
     return handle
+
+
+def _answer_a_misstatement(request: Request, error: Exception) -> Response:
+    """A request the schemas could make nothing of, answered in the shape every refusal here takes."""
+    body = ErrorBody(error=type(error).__name__, detail=a_misstatement(error))
+    return _refused(request, MISSTATED, body, WARNING)
+
+
+def _refused(
+    request: Request,
+    status: HTTPStatus,
+    body: ErrorBody,
+    level: int,
+) -> Response:
+    """The answer one refusal goes out as, written to the log on its way.
+
+    A refusal is the ordinary answer to a client asking for what the rules withhold, so it is reported at the
+    level a run states its own doings at. A request the schemas could make nothing of is reported louder, since
+    it says the client, or whatever carried the request here, is putting one together wrongly.
+    """
+    LOGGER.log(
+        level,
+        "%s %s — %d %s: %s",
+        request.method,
+        request.url.path,
+        status,
+        body.error,
+        body.detail,
+    )
+    return JSONResponse(status_code=status, content=body.model_dump())

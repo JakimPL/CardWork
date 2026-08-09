@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Annotated
@@ -6,11 +7,18 @@ from fastapi import Depends, FastAPI, Header, Query
 from fastapi.responses import StreamingResponse
 
 from cardserver.errors import install_error_handlers
-from cardserver.gathering import Gatherings
-from cardserver.identity import SEAT_HEADER, SeatPolicy, confirm_actor, seated
+from cardserver.gathering.gatherings import Gatherings
+from cardserver.identity.headers import SEAT_HEADER
+from cardserver.identity.identity import confirm_actor, seated
+from cardserver.identity.seat_policy import SeatPolicy
+from cardserver.keeping import UNKEPT, Keeping
 from cardserver.lobby import gathering_routes
+from cardserver.oversight.admin_route import admin_routes
+from cardserver.oversight.oversight import Oversight
 from cardserver.registry import TableRegistry
-from cardserver.schemas import ArrangementRequest, CommandAccepted, MoveRequest
+from cardserver.schemas.arrangement import ArrangementRequest
+from cardserver.schemas.command import CommandAccepted
+from cardserver.schemas.move import MoveRequest
 from cardserver.streams import (
     EVENT_STREAM,
     STREAM_HEADERS,
@@ -22,10 +30,25 @@ from cardwork.models.base import BaseFrozen
 from cardwork.presentation.layout import Layout
 
 
+async def sweeping(oversight: Oversight, period: float) -> None:
+    """Clear the lobby of the tables nobody is at every so often, for as long as the application answers.
+
+    A reap costs nothing where nothing is stale, so a run keeps one on a slow tick rather than reaching for a
+    clock on every request: the room a company walks out of is cleared a minute later, not the moment it empties.
+    """
+    while True:
+        await asyncio.sleep(period)
+        await oversight.reap()
+
+
 def create_app(
     registry: TableRegistry,
     seats: SeatPolicy,
     gatherings: Gatherings | None,
+    oversight: Oversight | None = None,
+    *,
+    sweep_seconds: float,
+    stream_patience: float,
 ) -> FastAPI:
     """An application serving the tables of one registry to the clients one seat policy admits.
 
@@ -40,18 +63,33 @@ def create_app(
     routes ask only for a seat, which is why the two arrive as two arguments: a host gathering its tables hands
     the same object over twice, and one serving a table already seated hands over a policy and no lobby at all.
 
+    Every answer states that it is to be kept nowhere, since what a table answers is how it stands at the
+    moment it was asked. The interface served over the top of these endpoints states a policy of its own and
+    keeps it.
+
     Args:
         registry: the tables in service, which the host opens before or during service.
         seats: how a credential becomes a seat at a table.
         gatherings: the tables gathering here, and None where this deployment gathers nobody.
+        oversight: the overseer's view of the lobby, and None where this deployment holds no panel over it.
+        sweep_seconds: how long the lobby waits between one clearing of the tables nobody is at and the next.
+        stream_patience: how long a stream waits for something to carry before it ends and is asked for afresh.
     """
 
     @asynccontextmanager
     async def lifespan(_application: FastAPI) -> AsyncGenerator[None, None]:
-        yield
-        await registry.close()
+        reaper = None if oversight is None else asyncio.create_task(sweeping(oversight, sweep_seconds))
+        try:
+            yield
+        finally:
+            if reaper is not None:
+                reaper.cancel()
+                await asyncio.wait((reaper,))
+
+            await registry.close()
 
     app = FastAPI(title="CardWork", lifespan=lifespan)
+    app.add_middleware(Keeping, policy=UNKEPT)
     install_error_handlers(app)
 
     def observer_of(
@@ -111,7 +149,6 @@ def create_app(
         """
         return registry.session(table_id).layout(observer)
 
-    # The answer carries the cursor a game declares, which is one shape per game and so no schema at all.
     @app.get("/tables/{table_id}/view", response_model=None)
     async def read_view(
         table_id: str,
@@ -127,16 +164,15 @@ def create_app(
         since: Annotated[int, Query(ge=0)] = STREAM_START,
         last_event_id: Annotated[int | None, Header(alias="Last-Event-ID")] = None,
     ) -> StreamingResponse:
-        """Every commit this client is entitled to, from where it left off and onward as they land."""
+        """Every commit this client is entitled to, from where it left off, asked for again from there."""
         session = registry.session(table_id)
-        stream = commits(session, observer, resume_point(last_event_id, since))
+        stream = commits(session, observer, resume_point(last_event_id, since), stream_patience)
         return StreamingResponse(
             stream,
             media_type=EVENT_STREAM,
             headers=STREAM_HEADERS,
         )
 
-    # The answer carries the cursor a game declares, which is one shape per game and so no schema at all.
     @app.get("/tables/{table_id}/journal", response_model=None)
     async def read_journal(table_id: str) -> BaseFrozen:
         """The table's full record, which opens to everyone once the host has called the game over.
@@ -146,6 +182,9 @@ def create_app(
         return registry.session(table_id).record
 
     if gatherings is not None:
-        app.include_router(gathering_routes(gatherings))
+        app.include_router(gathering_routes(gatherings, oversight, stream_patience=stream_patience))
+
+    if oversight is not None:
+        app.include_router(admin_routes(oversight))
 
     return app

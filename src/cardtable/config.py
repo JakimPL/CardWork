@@ -4,7 +4,9 @@ from typing import Self
 from pydantic import field_validator
 from yaml import safe_load
 
+from cardserver.advanced import Advanced
 from cardserver.schemas import Choice
+from cardtable.admin import Admin
 from cardtable.artwork import Artwork
 from cardtable.games import GAMES_HELD
 from cardtable.service import Service
@@ -14,6 +16,10 @@ from cardwork.models.base import BaseFrozen
 
 class Configuration(BaseFrozen):
     """The whole of one run: the table a company gathers at, what it opens on, how it is drawn, and where it answers.
+
+    The tuning stands beside these as its own section, holding the values a public deployment hardens: how a code
+    is guarded, who governs a table, and how often an empty lobby is cleared. The admin section stands apart
+    again, holding the one credential the overseer's panel answers behind.
 
     A file states this and a run reads it, which leaves every value a person turns in one place they can read,
     and leaves a command line stating only where a particular run departs from it. Each field is asked for
@@ -32,6 +38,8 @@ class Configuration(BaseFrozen):
     choice: Choice
     artwork: Artwork
     service: Service
+    advanced: Advanced
+    admin: Admin
 
     @field_validator("choice")
     @classmethod

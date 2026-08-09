@@ -1,9 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { Choice, GatheringView, Offering, Tint } from "../api/gathering";
-import { chooseTint, claimSeat, deal, followGathering, readGathering, readOfferings, settleChoice } from "../api/lobby";
+import {
+  chooseTint,
+  claimSeat,
+  commitReady,
+  deal,
+  followGathering,
+  readGathering,
+  readOfferings,
+  settleChoice,
+  settleGovernance,
+} from "../api/lobby";
 import { reasonOf } from "../api/refusal";
 import type { Seat } from "../api/seat";
+import type { Closed } from "../api/streaming";
 import type { Connection } from "./connection";
 import { whileInView } from "./viewing";
 
@@ -16,9 +27,12 @@ export interface Gathered {
   offerings: Offering[] | null;
   connection: Connection;
   trouble: string | null;
+  closed: Closed | null;
   claim: (seat: number | null) => void;
   tint: (chosen: Tint) => void;
   settle: (choice: Choice) => void;
+  ready: (committed: boolean) => void;
+  govern: (democratic: boolean) => void;
   callTheDeal: () => void;
 }
 
@@ -32,8 +46,15 @@ export interface Gathered {
  * The stream is held while the page is in view, which is also what reads this guest as present, so the company
  * on screen is the company watching the room. A tab that looks away leaves it and rejoins where it left off.
  *
+ * The deal is the last thing a gathering has to say, so the reading that carries it is where the stream is let
+ * go and the table takes the page from there, whether that reading arrived on the stream, as the answer to the
+ * call for the deal, or as the room a tab found already dealt.
+ *
  * Every command quotes the revision it was built on, so two guests settling the choice at once leaves the
  * second told rather than overruled, and the answer to a command is a reading of the room like any other.
+ *
+ * A gathering broken up before it is dealt ends the stream on a closing frame, which `closed` holds along with
+ * the word the host or overseer left, so the page reads the room as gone rather than as a connection lost.
  *
  * @param seat - the table gathered and the token it is attended as.
  */
@@ -42,10 +63,13 @@ export function useGathering(seat: Seat): Gathered {
   const [offerings, setOfferings] = useState<Offering[] | null>(null);
   const [connection, setConnection] = useState<Connection>("joining");
   const [trouble, setTrouble] = useState<string | null>(null);
+  const [closed, setClosed] = useState<Closed | null>(null);
   const reached = useRef(UNREAD);
+  const dealt = useRef(false);
 
   const hold = useCallback((view: GatheringView) => {
     reached.current = Math.max(reached.current, view.revision);
+    dealt.current ||= view.dealt;
     setGathering((held) => (held !== null && held.revision > view.revision ? held : view));
   }, []);
 
@@ -82,6 +106,20 @@ export function useGathering(seat: Seat): Gathered {
     [seat, commanded],
   );
 
+  const ready = useCallback(
+    (committed: boolean) => {
+      commanded((revision) => commitReady(seat, { ready: committed, base_revision: revision }));
+    },
+    [seat, commanded],
+  );
+
+  const govern = useCallback(
+    (democratic: boolean) => {
+      commanded((revision) => settleGovernance(seat, { democratic, base_revision: revision }));
+    },
+    [seat, commanded],
+  );
+
   const callTheDeal = useCallback(() => {
     commanded((revision) => deal(seat, { base_revision: revision }));
   }, [seat, commanded]);
@@ -89,27 +127,41 @@ export function useGathering(seat: Seat): Gathered {
   useEffect(() => {
     const attending = { held: true };
     let release: (() => void) | null = null;
+    let stop: (() => void) | null = null;
+
+    const letGo = (): void => {
+      stop?.();
+      stop = null;
+    };
 
     const following = (): (() => void) => {
-      const stop = followGathering(seat, reached.current + 1, {
-        onOpen: () => {
-          setConnection("following");
-          setTrouble(null);
-        },
-        onFrame: hold,
-        onDropped: (reason) => {
-          setConnection("resuming");
-          setTrouble(reason);
-        },
-        onRefused: (reason) => {
-          setConnection("refused");
-          setTrouble(reason);
-        },
-      });
+      if (!dealt.current) {
+        stop = followGathering(seat, reached.current + 1, {
+          onOpen: () => {
+            setConnection("following");
+            setTrouble(null);
+          },
+          onFrame: (view) => {
+            hold(view);
+            if (dealt.current) {
+              letGo();
+            }
+          },
+          onClosed: setClosed,
+          onDropped: (reason) => {
+            setConnection("resuming");
+            setTrouble(reason);
+          },
+          onRefused: (reason) => {
+            setConnection("refused");
+            setTrouble(reason);
+          },
+        });
+      }
 
       return () => {
         setConnection("joining");
-        stop();
+        letGo();
       };
     };
 
@@ -138,5 +190,5 @@ export function useGathering(seat: Seat): Gathered {
     };
   }, [seat, hold]);
 
-  return { gathering, offerings, connection, trouble, claim, tint, settle, callTheDeal };
+  return { gathering, offerings, connection, trouble, closed, claim, tint, settle, ready, govern, callTheDeal };
 }

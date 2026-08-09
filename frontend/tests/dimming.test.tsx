@@ -156,6 +156,16 @@ describe("the cards a player may press", () => {
 
     expect(faded(table)).toBe(0);
   });
+
+  it("fades no card where the table keeps its move hints out, and leaves every move it would name standing", () => {
+    const playing = aPlaying(prospect(offersOf(LAYOUT, A_TURN), null), false);
+    const hand = renderToStaticMarkup(
+      <Zones place="own" slots={own(LAYOUT)} view={A_TURN} arrivals={NOTHING_LANDED} playing={playing} />,
+    );
+
+    expect(faded(hand)).toBe(0);
+    expect(pressable(hand)).toBe(3);
+  });
 });
 
 describe("the panel a player plays from", () => {

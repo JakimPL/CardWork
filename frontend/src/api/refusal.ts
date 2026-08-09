@@ -3,6 +3,9 @@ import { bodyOf } from "./parsing";
 /** The status a position moved on is refused under, which mirrors `cardserver.errors.REFUSALS`. */
 const CONFLICTED = 409;
 
+/** What a failure is read as where whatever it arrived as says nothing in words. */
+const UNSAID = "The server said nothing of what went wrong";
+
 /**
  * A refusal in the shape a client can act on: what kind it was, and what the server made of it.
  *
@@ -29,14 +32,20 @@ export class Refused extends Error {
 }
 
 /**
- * The refusal one answer states, read from its body where it holds one.
+ * The refusal one answer states, read out of its body whatever shape that arrived in.
  *
- * An answer whose body says nothing a client can read still refused the request, so the status it carries
- * stands in for the sentence and the caller has something to show either way.
+ * The server states every refusal of its own as a kind and a sentence, and this reads that straight through.
+ * A body of another shape is read for as much as it holds and written out as it arrived for the rest, so a
+ * refusal that came from somewhere else — a proxy in front of the table, a framework answering for itself —
+ * reaches a person as the words it was made of. An answer whose body says nothing still refused the request,
+ * so the status stands in for the sentence and the caller has something to show either way.
  */
 export async function refusalOf(response: Response): Promise<Refused> {
-  const body = await bodyOf<ErrorBody | null>(response).catch(() => null);
-  return new Refused(response.status, body ?? { error: String(response.status), detail: response.statusText });
+  const body = await bodyOf<unknown>(response).catch(() => null);
+  return new Refused(response.status, {
+    error: sentenceOf(fieldOf(body, "error"), String(response.status)),
+    detail: sentenceOf(fieldOf(body, "detail"), sentenceOf(response.statusText, UNSAID)),
+  });
 }
 
 /**
@@ -49,7 +58,40 @@ export function movedOn(refusal: Refused): boolean {
   return refusal.status === CONFLICTED;
 }
 
-/** What went wrong, in words, out of whatever a failure arrived as. */
+/**
+ * What went wrong, in words, out of whatever a failure arrived as.
+ *
+ * A failure states itself in a sentence wherever it can, and one that states none is written out as it
+ * stands, so what reaches a person is always something said about the trouble they are looking at.
+ */
 export function reasonOf(trouble: unknown): string {
-  return trouble instanceof Error ? trouble.message : String(trouble);
+  if (trouble instanceof Error) {
+    return sentenceOf(trouble.message, trouble.name);
+  }
+
+  return sentenceOf(trouble, UNSAID);
+}
+
+/**
+ * One thing a server said, as a sentence, and the words this client falls back on where it said none.
+ *
+ * Text arrives as itself. Anything else — the list of misstated fields a framework answers with, a number, a
+ * shape stated somewhere upstream — is written out as it came, which keeps whatever was said in front of
+ * whoever has to act on it.
+ */
+function sentenceOf(stated: unknown, otherwise: string): string {
+  if (typeof stated === "string") {
+    return stated === "" ? otherwise : stated;
+  }
+
+  return stated === undefined || stated === null ? otherwise : JSON.stringify(stated);
+}
+
+/** One field of whatever a body arrived as, and nothing where the body holds no such field. */
+function fieldOf(body: unknown, field: string): unknown {
+  if (typeof body !== "object" || body === null) {
+    return undefined;
+  }
+
+  return (body as Record<string, unknown>)[field];
 }

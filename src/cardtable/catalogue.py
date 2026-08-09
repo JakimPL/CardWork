@@ -11,11 +11,18 @@ from cardgames.frontend.climbing.layout import CLIMBING_SCENE
 from cardgames.frontend.passing.layout import PASSING_SCENE
 from cardgames.frontend.shedding.layout import SHEDDING_SCENE
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
-from cardserver.gathering import Gatherings, SeatedSay, Turnstile
-from cardserver.naming import Named, Seated
-from cardserver.protocol import Presentation, Table, TableId
+from cardserver.advanced import Advanced
+from cardserver.gathering.gatherings import Gatherings
+from cardserver.gathering.governed_say import GovernedSay
+from cardserver.gathering.turnstile import Turnstile
+from cardserver.naming.named import Named
+from cardserver.naming.seated import Seated
+from cardserver.protocols.presentation import Presentation
+from cardserver.protocols.table import Table, TableId
 from cardserver.registry import TableRegistry
-from cardserver.schemas import Choice, Offering
+from cardserver.schemas.choice import Choice
+from cardserver.schemas.offering import Offering
+from cardtable.admin import Admin
 from cardtable.artwork import Artwork
 from cardtable.games import GameName
 from cardtable.hosting import Hosted, serve
@@ -148,6 +155,7 @@ class Deals:
                     a_climbing_match(choice, self._seed),
                     CLIMBING_SCENE,
                     seated,
+                    cues=choice.cues,
                 )
 
             case GameName.PASSING:
@@ -156,6 +164,7 @@ class Deals:
                     a_passing_match(choice, self._seed),
                     PASSING_SCENE,
                     seated,
+                    cues=choice.cues,
                 )
 
             case GameName.SHOWDOWN:
@@ -164,6 +173,7 @@ class Deals:
                     a_showdown_match(choice, self._seed),
                     SHOWDOWN_SCENE,
                     seated,
+                    cues=choice.cues,
                 )
 
             case GameName.SHEDDING:
@@ -172,6 +182,7 @@ class Deals:
                     a_shedding_match(choice, self._seed),
                     SHEDDING_SCENE,
                     seated,
+                    cues=choice.cues,
                 )
 
     def _put_into_service[StateT: GameState](
@@ -180,12 +191,28 @@ class Deals:
         game: Table[StateT],
         presentation: Presentation,
         seated: Mapping[int, Seated],
+        *,
+        cues: bool = True,
     ) -> None:
-        """Open one dealt game under a name, read through its arrangement as its seats were taken."""
-        self._registry.open(table, game, Named(presentation, seated))
+        """Open one dealt game under a name, read through its arrangement as its seats were taken and lit."""
+        self._registry.open(
+            table,
+            game,
+            Named(
+                presentation,
+                seated,
+                cues=cues,
+            ),
+        )
 
 
-def opened(settings: Settings, choice: Choice, artwork: Artwork) -> Hosted:
+def opened(
+    settings: Settings,
+    choice: Choice,
+    artwork: Artwork,
+    advanced: Advanced,
+    admin: Admin,
+) -> Hosted:
     """The table this run gathers: what it offers, the choice it stands at, and the service carrying both.
 
     This is the one place a game and a transport meet, and the one module of the whole repository naming
@@ -195,7 +222,8 @@ def opened(settings: Settings, choice: Choice, artwork: Artwork) -> Hosted:
     whichever game it plays.
 
     Every guest holding a seat holds a say, which is the whole of what a table among friends asks, and a code
-    guessed at costs the address it came from its allowance off the machine's own clock.
+    guessed at costs the address it came from its allowance off the machine's own clock, at the window and the
+    count the run is tuned to.
 
     Raises:
         GameValidationError: when the choice the run opens at names a game offered nowhere, a table that game
@@ -204,8 +232,22 @@ def opened(settings: Settings, choice: Choice, artwork: Artwork) -> Hosted:
     registry = TableRegistry(settings.grace_seconds)
     gatherings = Gatherings(
         Deals(registry, settings.seed),
-        OFFERINGS,
-        SeatedSay(),
-        Turnstile.watching(monotonic),
+        offerings=OFFERINGS,
+        say=GovernedSay(),
+        turnstile=Turnstile.watching(
+            monotonic,
+            window=advanced.turnstile_window,
+            wrong_codes_allowed=advanced.wrong_codes_allowed,
+        ),
+        clock=monotonic,
+        presence_stands=advanced.presence_stands,
     )
-    return serve(registry, gatherings, settings, choice, artwork)
+    return serve(
+        registry,
+        gatherings,
+        settings,
+        choice,
+        artwork,
+        advanced=advanced,
+        admin=admin,
+    )

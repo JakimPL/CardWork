@@ -25,6 +25,8 @@ function drawn(gathering: GatheringView): string {
       claim={IDLE}
       tint={IDLE}
       settle={IDLE}
+      ready={IDLE}
+      govern={IDLE}
       callTheDeal={IDLE}
     />,
   );
@@ -163,20 +165,115 @@ describe("what the room offers to play", () => {
     expect(room).toContain("Take a seat to settle what is played");
     expect([...room.matchAll(/<select disabled=""/g)].length).toBeGreaterThan(0);
   });
-});
 
-describe("the press that deals the table", () => {
-  it("stands ready once a seated guest reads every place taken", () => {
-    const room = drawn(aSeatedGathering(3));
+  it("holds a guest other than the host back from a table too small for the last seat taken", () => {
+    const company = [aGuest(MINE, 0), aGuest("Grace", 2)];
+    const room = drawn(aGathering(company, { choice: aChoice({ game: "climbing", players: 4 }) }));
 
-    expect(room).toContain("Deal the cards");
-    expect(room).not.toContain('<button type="button" disabled="">Deal');
+    expect(room).toContain('value="2" disabled=""');
+    expect(room).not.toContain('value="3" disabled=""');
   });
 
-  it("says what holds it up while something does", () => {
+  it("reads the host the whole range, since standing a seated player up is theirs to do", () => {
+    const company = [aGuest(MINE, 0, true, "rose", false, true), aGuest("Grace", 2)];
+    const room = drawn(aGathering(company, { choice: aChoice({ game: "climbing", players: 4 }) }));
+
+    expect(room).not.toContain('value="2" disabled=""');
+  });
+});
+
+describe("the move hints the table may put out", () => {
+  it("offers a seated guest the toggle, lit where the choice settled the hints on", () => {
+    const room = drawn(aGathering([aGuest(MINE, 0)], { choice: aChoice({ cues: true }) }));
+
+    expect(room).toContain("Light the cards a seat may play");
+    expect(room).toMatch(/class="cues"><input type="checkbox" checked=""/);
+  });
+
+  it("reads the toggle out unlit where the choice turned the hints off", () => {
+    const room = drawn(aGathering([aGuest(MINE, 0)], { choice: aChoice({ cues: false }) }));
+
+    expect(room).toMatch(/class="cues"><input type="checkbox"\/>/);
+  });
+
+  it("leaves the toggle to the guests holding a seat, so a guest standing by reads it fixed", () => {
+    const room = drawn(aGathering([aGuest(MINE, null)]));
+
+    expect(room).toMatch(/class="cues"><input type="checkbox"[^>]*disabled=""/);
+  });
+});
+
+describe("the one press the room carries a seated guest through", () => {
+  it("asks a seated guest to commit, and says what the table still waits on", () => {
     const room = drawn(aGathering([aGuest(MINE, 0)]));
 
+    expect(room).toContain(">Ready</button>");
     expect(room).toContain("2 seats still to be taken");
+    expect(room).not.toContain("Deal the cards");
+  });
+
+  it("reads the guest's own commitment back once it is given, so the press takes it back", () => {
+    const room = drawn(aGathering([aGuest(MINE, 0, true, "rose", true)], { choice: aChoice({ players: 2 }) }));
+
+    expect(room).toContain('aria-pressed="true"');
+    expect(room).toContain("Ready ✓");
+    expect(room).toContain("One seat still to be taken");
+  });
+
+  it("becomes the deal itself once every seat is taken and every seated guest has committed", () => {
+    const room = drawn(aSeatedGathering(3, true));
+
+    expect(room).toContain("Deal the cards");
+    expect(room).not.toContain(">Ready</button>");
+  });
+
+  it("waits on the host where a host-governed table keeps the deal to them", () => {
+    const company = [
+      aGuest(MINE, 0, true, "rose", true, false),
+      aGuest("Grace", 1, true, "teal", true, true),
+      aGuest("Alan", 2, true, "amber", true, false),
+    ];
+    const room = drawn(aGathering(company, { democratic: false }));
+
+    expect(room).toContain("Waiting for the host to deal");
+    expect(room).not.toContain("Deal the cards");
+  });
+
+  it("stands a guest holding no seat up, since a player is who commits and deals", () => {
+    const room = drawn(aGathering([aGuest(MINE, null)]));
+
+    expect(room).toContain("Take a seat to deal");
+  });
+});
+
+describe("the commitment the company reads of one another", () => {
+  it("marks each seated guest ready or not, so the company reads who is waiting on whom", () => {
+    const company = [aGuest(MINE, 0, true, "rose", true), aGuest("Grace", 1, true, "teal", false)];
+    const room = drawn(aGathering(company, { choice: aChoice({ players: 2 }) }));
+
+    expect([...room.matchAll(/class="standing ready">Ready</g)]).toHaveLength(1);
+    expect([...room.matchAll(/class="standing unready">Not ready</g)]).toHaveLength(1);
+  });
+
+  it("names the guest who gathered the table, whose say governs it host by host", () => {
+    const room = drawn(aGathering([aGuest("Grace", 0, true, "teal", true, true)], { choice: aChoice({ players: 1 }) }));
+
+    expect(room).toContain('class="badge host">host</span>');
+  });
+});
+
+describe("the say over how the table is governed", () => {
+  it("offers the host the toggle that hands the say to the table or keeps it to themselves", () => {
+    const room = drawn(aGathering([aGuest(MINE, 0, true, "rose", false, true)], { choice: aChoice({ players: 1 }) }));
+
+    expect(room).toContain("Everyone at the table may change the settings");
+    expect(room).toContain('type="checkbox"');
+  });
+
+  it("shows a seated guest who is not the host no such toggle", () => {
+    const room = drawn(aGathering([aGuest(MINE, 0, true, "rose", false, false)], { choice: aChoice({ players: 1 }) }));
+
+    expect(room).not.toContain("Everyone at the table may change the settings");
   });
 });
 

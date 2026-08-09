@@ -5,6 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from cardserver.codes import code_in
+from cardserver.creation import Creation
 from cardtable.config import Configuration
 from cardtable.games import GAMES_HELD, GameName
 from cardtable.paths import CONFIGURATION
@@ -21,7 +22,20 @@ SPARE: Final[dict[str, object]] = {
     "table": {"name": "baize", "grace_seconds": 0.0},
     "choice": {"game": GameName.SHOWDOWN.value, "players": 2, "decks": 1, "conclusion": {"rounds": 1}},
     "artwork": {"pack": None, "back": "crosshatch"},
-    "service": {"host": "0.0.0.0", "advertise": None, "log_level": LogLevel.DEBUG.value},
+    "service": {"host": "0.0.0.0", "advertise": None, "log_level": LogLevel.DEBUG.value, "forwarded_allow_ips": None},
+    "advanced": {
+        "turnstile_window": 60.0,
+        "wrong_codes_allowed": 10,
+        "sweep_seconds": 60.0,
+        "democratic": True,
+        "creation": Creation.SELF_SERVE.value,
+        "capacity": None,
+        "stale_seconds": 900.0,
+        "idle_seconds": 3600.0,
+        "stream_patience": 20.0,
+        "presence_stands": 60.0,
+    },
+    "admin": {"secret": None},
 }
 
 
@@ -81,6 +95,13 @@ def test_a_field_a_choice_is_settled_by_is_asked_for_outright(tmp_path: Path) ->
         Configuration.read(a_file_stating(tmp_path, lacking))
 
 
+def test_a_field_the_tuning_is_held_under_is_asked_for_outright(tmp_path: Path) -> None:
+    lacking = {**SPARE, "advanced": {"turnstile_window": 60.0, "wrong_codes_allowed": 10}}
+
+    with pytest.raises(ValidationError):
+        Configuration.read(a_file_stating(tmp_path, lacking))
+
+
 def test_a_name_the_configuration_holds_no_field_for_is_turned_away(tmp_path: Path) -> None:
     mistaken = {**SPARE, "grace": 2.0}
 
@@ -129,7 +150,10 @@ def test_a_pack_no_fetch_writes_is_turned_away_as_the_file_is_read(tmp_path: Pat
 
 
 def test_a_log_level_no_server_answers_to_is_turned_away(tmp_path: Path) -> None:
-    unheard = {**SPARE, "service": {"host": "127.0.0.1", "advertise": None, "log_level": "whisper"}}
+    unheard = {
+        **SPARE,
+        "service": {"host": "127.0.0.1", "advertise": None, "log_level": "whisper", "forwarded_allow_ips": None},
+    }
 
     with pytest.raises(ValidationError):
         Configuration.read(a_file_stating(tmp_path, unheard))
@@ -138,7 +162,13 @@ def test_a_log_level_no_server_answers_to_is_turned_away(tmp_path: Path) -> None
 def test_a_port_no_machine_listens_on_is_turned_away(tmp_path: Path) -> None:
     unreachable = {
         **SPARE,
-        "service": {"host": "127.0.0.1", "port": 70000, "advertise": None, "log_level": "info"},
+        "service": {
+            "host": "127.0.0.1",
+            "port": 70000,
+            "advertise": None,
+            "log_level": "info",
+            "forwarded_allow_ips": None,
+        },
     }
 
     with pytest.raises(ValidationError):

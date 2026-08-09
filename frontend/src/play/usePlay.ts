@@ -26,6 +26,7 @@ import { commandFor, deliver, lay, named, orderFor } from "./sending";
 export interface Playing {
   standing: Prospect;
   hint: string;
+  cues: boolean;
   sending: boolean;
   pick: (zone: ZoneId, index: number) => void;
   commit: (target: Target) => void;
@@ -145,6 +146,7 @@ export function usePlay(seat: Seat, layout: Layout, view: PositionView, refresh:
   return {
     standing,
     hint: guidance(layout, view, standing, notice),
+    cues: layout.cues,
     sending,
     pick,
     commit,
