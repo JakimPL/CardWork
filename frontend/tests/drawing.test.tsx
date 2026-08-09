@@ -55,7 +55,7 @@ const DEALT: PositionView = aView(
 );
 
 /** The same table as it stands once a gathering dealt it, every seat playing under a tint of its own. */
-const COLOURED: Layout = aLayout({ ...LAYOUT, plaques: TINTED });
+const COLORED: Layout = aLayout({ ...LAYOUT, plaques: TINTED });
 
 /** The same table on a turn a word could give up as well as a card play out. */
 const SPEAKING: Layout = aLayout({
@@ -197,14 +197,14 @@ describe("the standing across the top", () => {
   });
 
   it("carries the tint each seat plays under, which is what tells one player from the next", () => {
-    const standing = drawn(<Header layout={COLOURED} view={DEALT} playing={RESTING} />);
+    const standing = drawn(<Header layout={COLORED} view={DEALT} playing={RESTING} />);
 
     expect(standing).toContain('data-tint="rose"');
     expect(standing).toContain('data-tint="coral"');
     expect(standing).toContain('data-tint="amber"');
   });
 
-  it("carries none at a table served with no gathering behind it, where no host held a colour for anybody", () => {
+  it("carries none at a table served with no gathering behind it, where no host held a color for anybody", () => {
     const standing = drawn(<Header layout={LAYOUT} view={DEALT} playing={RESTING} />);
 
     expect(standing).not.toContain("data-tint");

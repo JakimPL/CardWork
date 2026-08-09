@@ -22,7 +22,7 @@ export function ownTint(layout: Layout): Tint | null {
  * How far round the table one seat sits from the seat reading the page, counting the way play runs.
  *
  * The seat reading the page sits at nought and the seat it plays into at one, so a table reads the same to
- * everybody at it: each player has the same neighbour to their left whichever seat they hold. A spectator reads
+ * everybody at it: each player has the same neighbor to their left whichever seat they hold. A spectator reads
  * the table from the first seat, which is the one arrangement a table with nobody at its near edge admits.
  */
 export function turnOf(layout: Layout, seat: number): number {

@@ -46,14 +46,14 @@ describe("a round read out as it closes", () => {
   });
 
   it("reads each seat under the tint it played in, which is how the standing is read at a glance", () => {
-    const coloured = aLayout({ plaques: TINTED, readouts: [POINTS] });
-    const panel = drawn(CLOSED, coloured);
+    const colored = aLayout({ plaques: TINTED, readouts: [POINTS] });
+    const panel = drawn(CLOSED, colored);
 
     expect(panel).toContain('class="result" data-tint="rose"');
     expect([...panel.matchAll(/class="result" data-tint/g)]).toHaveLength(TINTED.length);
   });
 
-  it("reads them under none where no host held a colour for anybody", () => {
+  it("reads them under none where no host held a color for anybody", () => {
     expect(drawn(CLOSED)).not.toContain("data-tint");
   });
 

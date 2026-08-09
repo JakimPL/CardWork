@@ -89,20 +89,20 @@ body {
 }
 
 /*
- * The eight colours a company is told apart by, which is the one place a tint becomes a colour.
+ * The eight colors a company is told apart by, which is the one place a tint becomes a color.
  *
  * A tint reaches the page as a name the room handed out — `cardwork.presentation.tint.Tint` — and what any of
  * them looks like is settled here and nowhere else: every rule below reads the one triplet `--tint`, which the
  * element carrying the tint sets and everything inside it inherits.
  *
- * Hue says who and strength says whose turn. A seat at rest carries its colour on its edge with a wash of it
- * behind, and the seat to act stands in the same colour at full strength with the ring around it, so a glance
+ * Hue says who and strength says whose turn. A seat at rest carries its color on its edge with a wash of it
+ * behind, and the seat to act stands in the same color at full strength with the ring around it, so a glance
  * finds both the player and the turn. Seven hues round the wheel and no green, since the felt is green and a
  * drop target is mint.
  *
  * The five strengths a tint is drawn at stand at the root beside the triplet — the edge, the wash behind a seat
  * at rest, the wash behind the seat to act, the wash behind the reader's own, and the ring — so every surface
- * that carries a colour reads it at the one depth. A place in the room a table gathers in draws by the same five,
+ * that carries a color reads it at the one depth. A place in the room a table gathers in draws by the same five,
  * which is what makes the seat a guest takes there the seat they find on the felt once the deal is on.
  *
  * The gold stands at the root as the reading for a table served with no gathering behind it, where no seat
@@ -191,7 +191,7 @@ body {
  * A share too narrow to carry the whole of a seat's reading gives way in the order the readings are wanted. The
  * counts of a seat's zones go first, since those stand over the cards themselves round the table and beside the
  * player's own; the figures a game scopes to a seat go after them. What a plaque keeps to the last is the name
- * and the colour, which is who is there and whose turn it is.
+ * and the color, which is who is there and whose turn it is.
  */
 
 .plaques {
@@ -274,10 +274,10 @@ body {
 }
 
 /*
- * The table: the zones every seat shares at the centre of it, and the other players sitting round three sides.
+ * The table: the zones every seat shares at the center of it, and the other players sitting round three sides.
  *
  * Each side is a run of its own and the middle a column between them, so the room a seat takes is room its
- * neighbours give way by rather than room they are drawn over. A table of any size lies inside the felt, and
+ * neighbors give way by rather than room they are drawn over. A table of any size lies inside the felt, and
  * every name on it stays legible.
  *
  * The felt divides the height it was given by the lines of cards standing one above another in it: the middle
@@ -730,7 +730,7 @@ button.card {
  * The place under a hand carrying cards, which is the one about to take them.
  *
  * Every place the cards in hand may go to is already ringed, so the one the hand has reached says so more brightly
- * and takes a wash of the same colour: a player carrying cards across the table reads where they are about to land
+ * and takes a wash of the same color: a player carrying cards across the table reads where they are about to land
  * before they let go of them.
  */
 
@@ -751,7 +751,7 @@ button.card {
  * What a player reads instead is the cards that have gone quiet: at rest the ones no move names, and once cards
  * are in hand the ones no move holding those could name beside them.
  *
- * A quiet card is drained of its colour and its light, and stays as solid as any other. A card is paper, so a
+ * A quiet card is drained of its color and its light, and stays as solid as any other. A card is paper, so a
  * card lying over another covers it: the cards of a fan read as a fan whichever of them have gone quiet.
  */
 
@@ -763,8 +763,8 @@ button.card {
  * Every card of a panel the table is asking nothing of, which is a turn standing elsewhere read among a player's
  * own cards.
  *
- * A hand waiting on another seat is lowered as a whole and keeps its colour, so what it reads as is a turn that is
- * somebody else's — where a card lowered among its neighbours reads as one this turn has no use for. So a player
+ * A hand waiting on another seat is lowered as a whole and keeps its color, so what it reads as is a turn that is
+ * somebody else's — where a card lowered among its neighbors reads as one this turn has no use for. So a player
  * glancing down at their cards is told which of the two they are looking at.
  */
 
@@ -874,7 +874,7 @@ button.card {
  * The place beside a hand where a turn is said rather than played, drawn at the size of a card.
  *
  * A move that names no card is made nowhere among them, so what a player presses for one stands at the end of the
- * panel as a place of its own: card-shaped, lettered in chalk, and labelled as the zones beside it are. It lies
+ * panel as a place of its own: card-shaped, lettered in chalk, and labeled as the zones beside it are. It lies
  * where the cards lie and takes the room of one, which leaves a move made instead of playing a card reading as
  * somewhere on the table rather than as furniture along the edge of it.
  *
@@ -999,7 +999,7 @@ button.card {
  *
  * It lies over the whole page, so the cards underneath stay in view and out of reach: what closed the round is
  * still lying where it closed it, and the panel names what that came to. The panel sits above the middle of the
- * page rather than at the centre of it, which leaves the player's own cards showing beneath.
+ * page rather than at the center of it, which leaves the player's own cards showing beneath.
  */
 
 .curtain {
@@ -1212,13 +1212,13 @@ button.card {
 
 /*
  * One place at the table, drawn as the plaque that place becomes: the same edge, the same wash behind it, and
- * the reader's own carried at the same depth. A guest choosing a colour in the room is choosing the colour they
+ * the reader's own carried at the same depth. A guest choosing a color in the room is choosing the color they
  * will be found by on the felt, so the choice reads here as the answer to it, and a place standing empty lies
  * quiet behind the ones that are taken.
  *
  * The full edge round the reader's own place is the room's own mark, standing where the felt marks the turn.
  *
- * A place carries its guest's commitment as the depth its colour is drawn at: half of every strength while the
+ * A place carries its guest's commitment as the depth its color is drawn at: half of every strength while the
  * table waits on them, and the whole of it once they have committed. One local property says which of the two a
  * place stands at, so the five root strengths remain the one statement of what a tint looks like, and the room
  * reads at a glance as the felt does — a seat drawn full is a seat there is nothing left to wait for.
@@ -1300,7 +1300,7 @@ button.card {
   color: var(--chalk-dim);
 }
 
-/* The colours the company is told apart by, each of them a guest's own to take while the room stands. */
+/* The colors the company is told apart by, each of them a guest's own to take while the room stands. */
 
 .tints {
   display: flex;
@@ -1310,7 +1310,7 @@ button.card {
   width: 100%;
 }
 
-.tints .colour {
+.tints .color {
   min-width: 5rem;
   color: var(--chalk-dim);
 }

@@ -30,7 +30,7 @@ function sameCard(one: ProjectedCard, other: ProjectedCard | undefined): boolean
   return one.face_down === other.face_down && sameFace(one.card, other.card);
 }
 
-/** Whether two cards are the one card, which a rank and a suit name and a joker names by the colour it was dealt in. */
+/** Whether two cards are the one card, which a rank and a suit name and a joker names by the color it was dealt in. */
 function sameFace(one: CardOrJoker, other: CardOrJoker): boolean {
   if ("rank" in one) {
     return "rank" in other && one.rank === other.rank && one.suit === other.suit;

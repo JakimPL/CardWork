@@ -18,13 +18,13 @@ interface CompanyProps {
 }
 
 /**
- * Who is at the table: one place per seat the choice settled, the guests standing by, and the colours they play in.
+ * Who is at the table: one place per seat the choice settled, the guests standing by, and the colors they play in.
  *
  * A seat is taken by pressing it and given up the same way, which is the whole of the seating: nobody assigns
  * a place and nobody may take one another guest holds. Presence follows the page each guest has open, so the
  * company reads as the room does.
  *
- * Each place carries the tint of the guest holding it, and the swatches stand under all of them: a colour is
+ * Each place carries the tint of the guest holding it, and the swatches stand under all of them: a color is
  * held by a guest rather than by a seat, so it is the whole company that is being told apart there.
  */
 export function Company({ gathering, claim, tint }: CompanyProps): ReactElement {
@@ -53,7 +53,7 @@ interface PlaceProps {
  *
  * A held place reads whether its guest gathered the table and whether they have committed to the settings, so
  * the company on screen carries who governs the table and who is waiting on whom before the deal. A committed
- * place stands at the full depth of its colour with the mark beside its press, and one still to commit lies at
+ * place stands at the full depth of its color with the mark beside its press, and one still to commit lies at
  * half of it, which is the same reading the felt gives a seat whose turn it is against one at rest.
  */
 function Place({ gathering, seat, claim }: PlaceProps): ReactElement {

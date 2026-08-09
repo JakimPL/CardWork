@@ -33,7 +33,7 @@ const SVG: Artwork = {
   back: "atlas",
 };
 
-/** The card standing for any other, which the pack draws in the colour it was dealt in. */
+/** The card standing for any other, which the pack draws in the color it was dealt in. */
 const joker = (red: boolean): ProjectedCard => ({ card: { red }, face_down: false });
 
 /** One place of a zone as a page holding that pack draws it. */
@@ -55,7 +55,7 @@ describe("the picture a pack holds for one card", () => {
     expect(drawnAt(KARE, card("2", "♣"))).toBe("/artwork/2_of_clubs.png");
   });
 
-  it("names each joker by the colour it was dealt in", () => {
+  it("names each joker by the color it was dealt in", () => {
     expect(drawnAt(KARE, joker(true))).toBe("/artwork/red_joker.png");
     expect(drawnAt(KARE, joker(false))).toBe("/artwork/black_joker.png");
   });

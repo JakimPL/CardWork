@@ -156,7 +156,7 @@ export function grasped(place: number, inHand: readonly number[], places: Places
  * from the places they came out of, which is a hand taking them somewhere else on the table. A run whose order
  * the table keeps is carried out of that way wherever the hand goes.
  *
- * A hand that has yet to travel holds the cards where the run draws them, and a hand that has travelled carries
+ * A hand that has yet to travel holds the cards where the run draws them, and a hand that has traveled carries
  * them for the rest of the press, so an unsteady hand leaves a click a click and a carry stays a carry.
  *
  * Nothing is carried where nothing was taken hold of.
@@ -166,7 +166,7 @@ export function carriedTo(carrying: Carry | null, places: Places, at: Point): Ca
     return null;
   }
 
-  if (carrying.by === null && !travelled(carrying, at)) {
+  if (carrying.by === null && !traveled(carrying, at)) {
     return carrying;
   }
 
@@ -215,7 +215,7 @@ export function sending(carrying: Carry): boolean {
  * A hand that has gone as good as nowhere has pressed the card, which leaves a run a player also plays out of
  * answering a press and a carry both.
  */
-export function travelled(carrying: Carry, at: Point): boolean {
+export function traveled(carrying: Carry, at: Point): boolean {
   return Math.hypot(at.across - carrying.began.across, at.down - carrying.began.down) > A_PRESS;
 }
 

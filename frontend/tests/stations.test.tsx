@@ -48,7 +48,7 @@ const LAYOUT: Layout = aLayout({
 });
 
 /** The same table as a gathering dealt it, every seat playing under a tint of its own. */
-const COLOURED: Layout = aLayout({ ...LAYOUT, plaques: TINTED });
+const COLORED: Layout = aLayout({ ...LAYOUT, plaques: TINTED });
 
 /** The same table with nobody at it, which every seat is read across from. */
 const WATCHING: Layout = aLayout({
@@ -136,14 +136,14 @@ describe("the seats round the table", () => {
   });
 
   it("draws each of them in the tint that seat plays under, as its plaque across the top is drawn", () => {
-    const table = drawn(COLOURED, POSITION, null);
+    const table = drawn(COLORED, POSITION, null);
 
     expect(table).toContain('data-tint="rose"');
     expect(table).toContain('data-tint="amber"');
     expect(table).not.toContain('data-tint="coral"');
   });
 
-  it("draws them in none where no host held a colour for anybody", () => {
+  it("draws them in none where no host held a color for anybody", () => {
     expect(drawn(LAYOUT, POSITION, null)).not.toContain("data-tint");
   });
 

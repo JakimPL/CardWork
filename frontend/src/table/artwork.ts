@@ -8,7 +8,7 @@ const SPELLED_RANKS: Record<string, string> = { A: "ace", J: "jack", Q: "queen",
 /** How a pack spells each suit, read off the glyph a card carries as `cardwork.cards.Suit` states it. */
 const SPELLED_SUITS: Record<string, string> = { "♠": "spades", "♥": "hearts", "♦": "diamonds", "♣": "clubs" };
 
-/** The names the two jokers are written under, which is the colour each of them was dealt in. */
+/** The names the two jokers are written under, which is the color each of them was dealt in. */
 const RED_JOKER = "red_joker";
 const BLACK_JOKER = "black_joker";
 
