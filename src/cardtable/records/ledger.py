@@ -2,6 +2,8 @@ from pathlib import Path
 from shutil import rmtree
 from typing import TextIO
 
+from pydantic import Field
+
 from cardserver.protocols import TableId
 from cardserver.remembering import FORGETFUL, Kept, Remembering, RoomRecord
 from cardtable.paths import RECORDS
@@ -28,10 +30,16 @@ class Records(BaseFrozen):
 
     Where they go is a directory named outright, and the records directory of the checkout where a file names
     none. A deployment that has changed the rules under its company starts clean by clearing that directory.
+
+    How long a record is kept is what a run collects the store by as it starts: a record nothing has written to
+    for longer than that is one whose company is not coming back for it. That is the one moment a store is
+    collected, since a run reads it once and a restart counts nothing idle, and it is what keeps a host started
+    and stopped around its own traffic to the size of the tables being played at it.
     """
 
     kept: bool
     directory: Path | None
+    retain_hours: float = Field(gt=0.0)
 
 
 class Ledger:

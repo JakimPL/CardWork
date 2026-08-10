@@ -119,15 +119,19 @@ class Deals:
 
         The rules are handed the record and stand where its last commit left them, and the keys the lines
         carry go to the session, so a retry crossing the restart is answered with the sequence it reached.
+        Whatever the window a run was cut off inside would have committed is settled here and written down as
+        the table opens, since a window belongs to the process that opened it.
         """
         game = self._match(room.choice)
         game.resume(a_journal(record))
+        settled = game.settle()
         self.resumed.append(room.table)
         self._registry.reopen(
             room.table,
             game,
             Named(SEALED_SCENE, room.seated),
             applied=applied_of(record),
+            settled=settled,
         )
 
     def _match(self, choice: Choice) -> SealedRoundGame:

@@ -6,6 +6,7 @@ from cardserver.creation import Creation
 from cardserver.errors import NoCreation, TablesFull
 from cardserver.gathering.gathering import Gathering
 from cardserver.gathering.gatherings import Gatherings
+from cardserver.oversight.abiding import Abiding
 from cardserver.oversight.lobby.setting import NO_LIMIT, LobbySetting
 from cardserver.oversight.lobby.view import LobbyView
 from cardserver.oversight.policy import AdminPolicy
@@ -35,7 +36,10 @@ class Oversight:
     is the single place a run says whether its tables start democratic; a host toggles their own from there.
 
     A run that gathers a table of its own names it here as the one that abides: it is the address the run
-    announced, so it stands for as long as the run does while every room a company opens falls due on the clock.
+    announced, so a room standing empty under it is left where it stands while every room a company opens falls
+    due on the clock, and a table played out under it is cleared away and its room gathered again at once. What
+    it takes to gather that room is handed in rather than invented here, since a code and a choice are the run's
+    own business.
     """
 
     def __init__(
@@ -50,7 +54,7 @@ class Oversight:
         stale_seconds: float,
         idle_seconds: float,
         capacity: int = NO_LIMIT,
-        abiding: TableId | None = NOTHING_ABIDES,
+        abiding: Abiding | None = NOTHING_ABIDES,
     ) -> None:
         self._gatherings = gatherings
         self._registry = registry
@@ -147,11 +151,13 @@ class Oversight:
 
         The table this run gathers under its own name is left where it stands, since its address is the one the
         run handed out and a lobby that stands empty for an afternoon is still the lobby that address names.
+        Once a company has played that table out and walked away from it, it is cleared like any other and
+        gathered again in the same breath, so the address names a room throughout.
         """
         now = self._clock()
         cleared: list[TableId] = []
         for table in self._gatherings.stale(self._stale_seconds, now):
-            if table == self._abiding:
+            if self._abides(table):
                 continue
 
             self._gatherings.drop(table)
@@ -172,6 +178,29 @@ class Oversight:
         """
         await self._registry.dismiss(table, reason)
         self._gatherings.drop(table)
+        self._regather(table)
+
+    def _abides(self, table: TableId) -> bool:
+        """Whether this is the table the run gathers under its own name, which is the address it announced."""
+        return self._abiding is not None and table == self._abiding.table
+
+    def _regather(self, table: TableId) -> None:
+        """Gather the run's own room again where the table played through it has just been cleared away.
+
+        The address a run announced names a room for as long as the run answers, so the room behind it is
+        gathered afresh the moment the table it became is retired: somebody opening the line they were handed
+        an hour ago arrives at a room to gather in rather than at a name this host holds nothing under.
+        """
+        abiding = self._abiding
+        if abiding is None or not self._abides(table):
+            return
+
+        self._gatherings.open(
+            abiding.table,
+            abiding.code,
+            abiding.choice,
+            democratic=self._democratic,
+        )
 
     def _confirm_room(self) -> None:
         """Confirm this host holds room for another table.

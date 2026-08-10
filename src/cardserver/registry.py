@@ -8,6 +8,7 @@ from cardserver.remembering import Remembering
 from cardserver.sessions.in_service import InService
 from cardserver.sessions.table import TableSession
 from cardwork.states.state import GameState
+from cardwork.transactions.transaction import Transactions
 
 
 class TableRegistry:
@@ -65,19 +66,20 @@ class TableRegistry:
         presentation: Presentation,
         *,
         applied: Mapping[str, int],
+        settled: Transactions[StateT],
     ) -> TableSession[StateT]:
         """Put a table read back from its own record into service, holding the attempts it already answered.
 
         A table opened this way stands where its last commit left it, so the company reaches the game they
         were playing rather than a fresh deal of it. What is written down stands as it was written: the record
-        already holds this table, and the next commit to land is the next line of it.
+        already holds this table, and the commits it opens owing are the next lines of it.
 
         Raises:
             TableTaken: when a table of that name is already in service, which reading one record twice
                 would otherwise leave replaced under the company playing it.
         """
         session = self._served(table_id, table, presentation)
-        session.restore(applied)
+        session.restore(applied, settled)
         return session
 
     def session(self, table_id: TableId) -> InService:

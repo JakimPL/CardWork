@@ -32,8 +32,9 @@ A_COMMIT: Final[str] = '{"key": "seal-0"}'
 ANOTHER_COMMIT: Final[str] = '{"key": "seal-1"}'
 A_TORN_COMMIT: Final[str] = '{"key": "seal-2"'
 NOT_A_ROOM: Final[str] = "this is no record of anything"
-KEPT: Final[Records] = Records(kept=True, directory=None)
-NOTHING_KEPT: Final[Records] = Records(kept=False, directory=None)
+RETAIN_HOURS: Final[float] = 24.0
+KEPT: Final[Records] = Records(kept=True, directory=None, retain_hours=RETAIN_HOURS)
+NOTHING_KEPT: Final[Records] = Records(kept=False, directory=None, retain_hours=RETAIN_HOURS)
 
 CHOICE: Final[Choice] = Choice(
     game=GameName.PASSING.value,

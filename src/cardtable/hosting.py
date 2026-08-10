@@ -8,12 +8,15 @@ from fastapi import FastAPI
 
 from cardserver.advanced import Advanced
 from cardserver.app import create_app
+from cardserver.gathering.gathering import Gathering
 from cardserver.gathering.gatherings import Gatherings
+from cardserver.oversight.abiding import Abiding
 from cardserver.oversight.lobby.setting import NO_LIMIT
 from cardserver.oversight.oversight import Oversight
 from cardserver.oversight.token_admin import TokenAdmin
 from cardserver.protocols.table import TableId
 from cardserver.registry import TableRegistry
+from cardserver.remembering import Remembering
 from cardserver.schemas.choice import Choice
 from cardtable.admin import Admin
 from cardtable.artwork import Artwork, serve_artwork
@@ -29,10 +32,14 @@ class Hosted:
     """One table gathering: the application answering for it, and what a person needs to reach it.
 
     The code is the whole of what a guest is handed, since a person names themselves on arrival and is minted the
-    token they play through there. The admin token stands apart from it, since the panel answers to whoever runs
-    the host rather than to anyone the host admits, and is read out where the host alone reads it. The state type
-    of the game is settled as the table is dealt and stays inside, which is what lets one host put games whose
-    cursors are of different shapes into service.
+    token they play through there. It is the standing room's own code rather than the one a file states, so a run
+    that read its room back from a record announces the code that room admits on. The admin token stands apart
+    from it, since the panel answers to whoever runs the host rather than to anyone the host admits, and is read
+    out where the host alone reads it. The state type of the game is settled as the table is dealt and stays
+    inside, which is what lets one host put games whose cursors are of different shapes into service.
+
+    The store travels along so a run lets go of it as it ends service, which is what leaves the run started
+    after this one free to take it up.
     """
 
     app: FastAPI
@@ -41,6 +48,7 @@ class Hosted:
     admin_token: str
     artwork: Path | None
     interface: Path | None
+    keeping: Remembering
 
 
 def an_admin_token(secret: str | None) -> str:
@@ -52,12 +60,41 @@ def an_admin_token(secret: str | None) -> str:
     return secret if secret is not None else token_urlsafe(ADMIN_TOKEN_BYTES)
 
 
+def a_standing_room(
+    gatherings: Gatherings,
+    settings: Settings,
+    choice: Choice,
+    *,
+    democratic: bool,
+) -> Gathering:
+    """The room this run answers under: the one already standing at its name, or one gathered in its place.
+
+    A run reads its rooms back from what an earlier one wrote down, so the name it announces may already name a
+    room a company is at. That room is the one it goes on to announce and the code it hands out is that room's
+    own: gathering a second room under the name would raise where the name is taken, and taking the name would
+    replace the company's room with an empty one and turn away every token they hold.
+
+    A room broken up is a room nobody arrives at, so the run gathers its own in place of it and what was
+    written down of it goes with it. The address a run announces names a room a company reaches, throughout.
+    """
+    if gatherings.stands(settings.name) and not gatherings.at(settings.name).closed:
+        return gatherings.at(settings.name)
+
+    gatherings.drop(settings.name)
+    return gatherings.open(
+        settings.name,
+        settings.code,
+        choice,
+        democratic=democratic,
+    )
+
+
 def an_oversight(
     gatherings: Gatherings,
     registry: TableRegistry,
     token: str,
     advanced: Advanced,
-    abiding: TableId,
+    abiding: Abiding,
 ) -> Oversight:
     """The overseer's view of this host's lobby, held under the terms the run is tuned to and the token it minted.
 
@@ -65,7 +102,9 @@ def an_oversight(
     reap here and the ages a card reads are told against one clock.
 
     The table this run gathers under its own name is named as the one that abides, since the announcement handed
-    its address out and a sweep is for the rooms a company opened and walked away from.
+    its address out and a sweep is for the rooms a company opened and walked away from. It is named with the
+    code and the choice it is gathered back on, so the address answers for a room again the moment the table
+    played through it is cleared away.
     """
     return Oversight(
         gatherings,
@@ -88,6 +127,7 @@ def serve(
     choice: Choice,
     artwork: Artwork,
     *,
+    keeping: Remembering,
     advanced: Advanced,
     admin: Admin,
 ) -> Hosted:
@@ -104,6 +144,9 @@ def serve(
     a credential holds, and the endpoints a table is gathered at ask it for the room itself. That is what makes
     an arrival the whole of identity here, since the token minted at one is the token that goes on to play.
 
+    The room the run announces is the one standing under its name, which is what lets a run be started over a
+    lobby an earlier one wrote down: the company at that room keep the room and the code they were handed.
+
     The oversight is handed alongside them, which is what opens the panel under `/admin` and lets a company
     gather its own tables: it holds the terms the lobby is governed by, clears the tables nobody is at on the
     sweep the run is tuned to, and answers only to the admin token this host mints or is pinned to.
@@ -114,6 +157,7 @@ def serve(
         settings: the name the table gathers under, the code it gathers behind, and how it runs.
         choice: what the gathering opens at, which its company settles from there.
         artwork: which cards the table is drawn with.
+        keeping: where this run writes its tables down, which travels on so the run lets go of it as it ends.
         advanced: how a code is guarded, how the lobby is governed and capped, and how often it is cleared.
         admin: the secret the panel answers behind, or none to mint a token fresh for this run.
 
@@ -121,13 +165,18 @@ def serve(
         GameValidationError: when the opening choice names a game offered nowhere, a table that game seats
             nowhere, or a count of decks it is dealt from nowhere.
     """
+    standing = a_standing_room(gatherings, settings, choice, democratic=advanced.democratic)
     token = an_admin_token(admin.secret)
-    oversight = an_oversight(gatherings, registry, token, advanced, settings.name)
-    gatherings.open(
-        settings.name,
-        settings.code,
-        choice,
-        democratic=advanced.democratic,
+    oversight = an_oversight(
+        gatherings,
+        registry,
+        token,
+        advanced,
+        Abiding(
+            table=settings.name,
+            code=standing.code,
+            choice=choice,
+        ),
     )
     app = create_app(
         registry,
@@ -140,8 +189,9 @@ def serve(
     return Hosted(
         app=app,
         table=settings.name,
-        code=settings.code,
+        code=standing.code,
         admin_token=token,
         artwork=serve_artwork(app, ASSETS, artwork),
         interface=serve_interface(app, INTERFACE),
+        keeping=keeping,
     )

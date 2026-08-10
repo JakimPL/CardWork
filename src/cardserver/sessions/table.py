@@ -11,7 +11,7 @@ from cardwork.moves.move import Move
 from cardwork.presentation.layout import Layout
 from cardwork.states.state import StateT
 from cardwork.transactions.journal import Journal
-from cardwork.transactions.transaction import Transaction
+from cardwork.transactions.transaction import Transaction, Transactions
 from cardwork.views.event import EventView
 from cardwork.views.position import PositionView
 from cardwork.zones.zone import ZoneId
@@ -128,17 +128,26 @@ class TableSession(Generic[StateT]):
         for transaction in journal.transactions:
             self._append(transaction, UNKEYED)
 
-    def restore(self, applied: Mapping[str, int]) -> None:
-        """Take back the attempts this table has already answered, which a table read back from a record does.
+    def restore(self, applied: Mapping[str, int], settled: Transactions[StateT]) -> None:
+        """Take back the attempts this table has already answered and lay down what it opened owing.
 
         The record holds every commit the table stands on, and each line of it holds the key a client landed
         that commit under. Reading those back is what leaves a request a flaky network prompted twice answered
         the second time with the sequence it reached the first, across a restart as within a run.
 
-        Nothing is written down here. The record already holds the table this opens at, so what a store next
-        hears of it is the commit that lands after it.
+        The window a move opens is the adapter's own and lasts as long as the process holding it, so a table
+        cut off inside one opens owing whatever that window would have committed. Those commits arrive settled
+        and are written down here, before a client has read a word of the table, which leaves the record and
+        the table in service standing at the one sequence.
+
+        Everything the table holds is closed to undo as it opens: the record was served by the run that wrote
+        it, and what it opened owing is written down here.
         """
         self._applied = dict(applied)
+        for transaction in settled:
+            self._append(transaction, UNKEYED)
+
+        self._table.mark_published()
 
     def layout(self, observer: int | None) -> Layout:
         """How this table is laid out for one observer, which is what an interface draws it from.

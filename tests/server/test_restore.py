@@ -32,6 +32,7 @@ A_SORT: Final[str] = "sort-0"
 ANOTHER_NAME: Final[str] = "Barbara"
 ANOTHER_TABLE: Final[str] = "no-such-table"
 FROM_THE_FUTURE: Final[int] = 500
+SCORED: Final[str] = "score"
 RESUME_HEADER: Final[str] = "Last-Event-ID"
 ONE_CHANGE: Final[int] = 1
 
@@ -233,6 +234,31 @@ async def test_a_commit_landing_after_a_restart_is_laid_into_the_record_that_was
     assert len(record.commits) == written + ONE_CHANGE
     assert a_journal(record).head == table.head
     assert applied_of(record)[A_KEY] == table.head - ONE_CHANGE
+
+
+async def test_a_table_cut_off_inside_its_window_settles_what_it_owed_as_it_is_taken_up(
+    gathered: Gathered,
+) -> None:
+    """A window belongs to the process that opened it, so nothing was ever going to wake this one.
+
+    Every seat has acted and the rules owe the round its reveal and its score, held back for the moment a
+    seat has to take a commitment back. The run ends there, before that moment has passed, dropping the
+    window with everything else it was holding. The run started after it opens the table owing exactly that,
+    settles it, and lays what it settled into the record before a client has read a word of the table.
+    """
+    a_dealt_table(gathered)
+    session: InService = gathered.registry.session(TABLE)
+    for seat in range(SEATS):
+        await session.submit(a_sealing(seat), session.head, f"{A_KEY}-{seat}")
+
+    await gathered.registry.close()
+    held = session.head
+
+    table = table_of(restarted(gathered))
+
+    assert table.view(0).state.phase == SCORED
+    assert table.head > held
+    assert a_journal(gathered.keeping.written(TABLE)).head == table.head
 
 
 def test_a_restored_table_carries_the_plaques_the_company_settled(gathered: Gathered) -> None:

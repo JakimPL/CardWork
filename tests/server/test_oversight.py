@@ -8,11 +8,11 @@ from httpx import ASGITransport, AsyncClient
 from cardserver.app import create_app
 from cardserver.errors import NoCreation, TablesFull, Unauthorized
 from cardserver.identity import ADMIN_HEADER
-from cardserver.oversight import Creation, LobbySetting, Oversight, Posting, TokenAdmin
+from cardserver.oversight import Abiding, Creation, LobbySetting, Oversight, Posting, TokenAdmin
 from cardserver.schemas import Founding
 
 from ..games.demo import SEATS
-from .company import STREAM_PATIENCE, SWEEP_SECONDS, Gathered, a_sealed_round
+from .company import CODE, STREAM_PATIENCE, SWEEP_SECONDS, Gathered, a_sealed_round
 from .conftest import BASE_URL, TABLE
 
 COMPANY: Final[tuple[str, ...]] = ("Ada", "Grace", "Alan")
@@ -31,6 +31,11 @@ OPENING: Final[dict[str, object]] = {
 def a_founding(table: str) -> Founding:
     """A guest founding a table of the demo game seating a small company."""
     return Founding(table=table, name="Ada", choice=a_sealed_round(A_SMALLER_TABLE))
+
+
+def an_abiding() -> Abiding:
+    """The room the run under test gathers under its own name, and what it takes to gather it again."""
+    return Abiding(table=TABLE, code=CODE, choice=a_sealed_round(SEATS))
 
 
 def oversight_of(gathered: Gathered, **terms: object) -> Oversight:
@@ -202,13 +207,33 @@ async def test_the_overseer_breaking_a_table_up_clears_the_room_it_was_played_th
 
 async def test_the_table_this_run_gathers_under_is_left_standing(gathered: Gathered) -> None:
     """The address the run announced, which a lobby standing empty all afternoon is still the lobby of."""
-    oversight = oversight_of(gathered, stale_seconds=LONG_ENOUGH, abiding=TABLE)
+    oversight = oversight_of(gathered, stale_seconds=LONG_ENOUGH, abiding=an_abiding())
     gathered.ticking.on(LONG_ENOUGH + 1.0)
 
     cleared = await oversight.reap()
 
     assert cleared == ()
     assert gathered.gatherings.gathering() == (TABLE,)
+
+
+async def test_the_room_a_played_out_table_leaves_is_gathered_again_under_the_run_s_own_name(
+    gathered: Gathered,
+) -> None:
+    """The one path that frees the announced address: a table dealt under it, played out and walked away from.
+
+    A room the run gathered is exempt from the sweep, and the table it became is not — so the pair of them go
+    when the table falls idle, and the address a person was handed an hour ago would name nothing at all.
+    """
+    a_dealt_table(gathered)
+    oversight = oversight_of(gathered, idle_seconds=LONG_ENOUGH, abiding=an_abiding())
+    gathered.ticking.on(LONG_ENOUGH + 1.0)
+
+    cleared = await oversight.reap()
+
+    assert cleared == (TABLE,)
+    assert gathered.gatherings.gathering() == (TABLE,)
+    assert gathered.gatherings.at(TABLE).admits(CODE)
+    assert TABLE not in dict(gathered.registry.sessions())
 
 
 @pytest.fixture(name="overseen")

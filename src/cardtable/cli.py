@@ -227,6 +227,7 @@ def configured(arguments: Namespace) -> Configuration:
         artwork=an_artwork(stated.artwork, arguments),
         service=a_service(stated.service, arguments),
         advanced=stated.advanced,
+        records=stated.records,
         admin=stated.admin,
     )
 
@@ -296,9 +297,10 @@ def report_at(level: LogLevel) -> None:
 def main(argv: Sequence[str] | None = None) -> None:
     """Gather the table a run is configured for and answer for it until the process is stopped.
 
-    The gathering and the table it becomes live as long as the process does, which is why a match runs under no
-    reloader: the company at a table and the position it stands at are held in memory, and a restart gathers a
-    fresh one.
+    A run writing its tables down hands its company back the room they were in and the table they were at, so
+    what a restart gathers is what the last run wrote rather than an empty lobby. It still runs under no
+    reloader: a store is one run's to write, and the run started over a store another still holds waits for it
+    and then gives up rather than writing a second word into it.
 
     The log opens at the level the run states before the table is gathered, so what the host says of itself and
     what the server says of the requests it answers reach one place from the first line onward.
@@ -319,6 +321,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         configuration.artwork,
         configuration.advanced,
         configuration.admin,
+        records=configuration.records,
     )
     print(
         announcement(
@@ -338,3 +341,4 @@ def main(argv: Sequence[str] | None = None) -> None:
         proxy_headers=forwarded_allow_ips is not None,
         forwarded_allow_ips=forwarded_allow_ips,
     )
+    hosted.keeping.close()

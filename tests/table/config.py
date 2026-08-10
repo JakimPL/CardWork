@@ -10,6 +10,7 @@ from cardtable.admin import Admin
 from cardtable.artwork import Artwork
 from cardtable.config import Configuration
 from cardtable.games import GameName
+from cardtable.records import Records
 from cardtable.service import LogLevel, Service
 from cardtable.settings import Settings
 from cardwork.rounds.conclusion import Conclusion
@@ -18,6 +19,9 @@ FILE: Final[str] = "config.yaml"
 BACK: Final[str] = "crosshatch"
 CODE: Final[str] = "KQAJ72"
 SECRET: Final[str] = "overseer"
+RETAIN_HOURS: Final[float] = 24.0
+
+NOTHING_KEPT: Final[Records] = Records(kept=False, directory=None, retain_hours=RETAIN_HOURS)
 
 GLYPHS: Final[Artwork] = Artwork(pack=None, back=BACK)
 ADVANCED: Final[Advanced] = Advanced(
@@ -51,8 +55,14 @@ CONFIGURED: Final[Configuration] = Configuration(
         forwarded_allow_ips=None,
     ),
     advanced=ADVANCED,
+    records=NOTHING_KEPT,
     admin=ADMIN,
 )
+
+
+def kept_at(store: Path) -> Records:
+    """A run writing its tables to that directory, which is what a test restarts a host over."""
+    return Records(kept=True, directory=store, retain_hours=RETAIN_HOURS)
 
 
 def a_config_file(root: Path, configuration: Configuration) -> Path:

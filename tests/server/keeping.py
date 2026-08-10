@@ -12,6 +12,7 @@ JOURNAL: Final[str] = "journal"
 COMMIT: Final[str] = "commit"
 FORGOTTEN: Final[str] = "forgotten"
 ASIDE: Final[str] = "aside"
+CLOSED: Final[str] = "closed"
 
 
 def read_back(record: TableRecord) -> tuple[Written[GameState], ...]:
@@ -105,6 +106,10 @@ class Keeping:
             )
             for table, room in self.rooms.items()
         )
+
+    def close(self) -> None:
+        """Let go of a store held in memory, which is a word a test hears and a record of nothing."""
+        self.order.append(CLOSED)
 
     def _table_of(self, table: TableId) -> TableRecord | None:
         """The record kept of one table in service, and none for a room still gathering."""

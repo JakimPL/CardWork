@@ -130,6 +130,13 @@ class Remembering(Protocol):
     def kept(self) -> tuple[Kept, ...]:
         """Everything written down here, which is what a run gathers its lobby from as it starts."""
 
+    def close(self) -> None:
+        """Let go of wherever the words go, which a run does as it ends service.
+
+        A store may be one run's to write, so saying this outright is what lets the run started after this
+        one take it up rather than wait for a hold nobody is using.
+        """
+
 
 class Forgetful:
     """A host that writes nothing down, which is what a run keeping its tables for its own lifetime holds.
@@ -156,6 +163,9 @@ class Forgetful:
     def kept(self) -> tuple[Kept, ...]:
         """The tables a run of this kind starts with, which is none of them."""
         return ()
+
+    def close(self) -> None:
+        """Let go of nothing, which is the whole of what a run keeping nothing holds."""
 
 
 FORGETFUL: Final[Forgetful] = Forgetful()

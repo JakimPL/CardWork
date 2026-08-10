@@ -35,6 +35,7 @@ SPARE: Final[dict[str, object]] = {
         "stream_patience": 20.0,
         "presence_stands": 60.0,
     },
+    "records": {"kept": False, "directory": None, "retain_hours": 24.0},
     "admin": {"secret": None},
 }
 
@@ -97,6 +98,14 @@ def test_a_field_a_choice_is_settled_by_is_asked_for_outright(tmp_path: Path) ->
 
 def test_a_field_the_tuning_is_held_under_is_asked_for_outright(tmp_path: Path) -> None:
     lacking = {**SPARE, "advanced": {"turnstile_window": 60.0, "wrong_codes_allowed": 10}}
+
+    with pytest.raises(ValidationError):
+        Configuration.read(a_file_stating(tmp_path, lacking))
+
+
+def test_what_a_run_does_with_the_tables_it_holds_is_asked_for_outright(tmp_path: Path) -> None:
+    """Whether a company is handed their table back after a restart is stated rather than assumed."""
+    lacking = {key: value for key, value in SPARE.items() if key != "records"}
 
     with pytest.raises(ValidationError):
         Configuration.read(a_file_stating(tmp_path, lacking))

@@ -1,4 +1,5 @@
 from cardserver.creation import Creation
+from cardserver.oversight.abiding import Abiding
 from cardserver.oversight.admin_route import admin_routes
 from cardserver.oversight.lobby.setting import LobbySetting
 from cardserver.oversight.lobby.view import LobbyView
@@ -9,6 +10,7 @@ from cardserver.oversight.table_card import TableCard
 from cardserver.oversight.token_admin import TokenAdmin
 
 __all__ = [
+    "Abiding",
     "AdminPolicy",
     "Creation",
     "LobbySetting",
