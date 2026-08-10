@@ -1,13 +1,38 @@
 from typing import Final
 
 from cardserver.protocols import TableId
-from cardserver.remembering import Kept, RoomRecord, TableRecord
+from cardserver.remembering import Kept, RoomRecord, TableRecord, Written
+from cardwork.positions.position import Position
+from cardwork.states.state import GameState
+from cardwork.transactions.journal import Journal
 
 WRITTEN_AT: Final[float] = 0.0
 ROOM: Final[str] = "room"
 JOURNAL: Final[str] = "journal"
 COMMIT: Final[str] = "commit"
 FORGOTTEN: Final[str] = "forgotten"
+
+
+def read_back(record: TableRecord) -> tuple[Written[GameState], ...]:
+    """Every line of a table's record as the commit it holds and the key a client landed that commit under.
+
+    The lines cross the seam as text and are read here by the state the demo game declares, which is the whole
+    of what a host holding the rules does with them.
+    """
+    return tuple(Written[GameState].model_validate_json(line) for line in record.commits)
+
+
+def a_journal(record: TableRecord) -> Journal[GameState]:
+    """The record kept of one table read back as a journal, which is what a run resuming it hands the rules."""
+    return Journal[GameState](
+        initial=Position[GameState].model_validate_json(record.origin),
+        transactions=tuple(written.transaction for written in read_back(record)),
+    )
+
+
+def applied_of(record: TableRecord) -> dict[str, int]:
+    """The sequence each client's attempt reached, which is what a table read back answers a retry from."""
+    return {written.key: written.transaction.seq for written in read_back(record) if written.key is not None}
 
 
 class Keeping:
@@ -54,6 +79,14 @@ class Keeping:
         self.commits.pop(table, None)
         self.forgotten.append(table)
         self.order.append(FORGOTTEN)
+
+    def written(self, table: TableId) -> TableRecord:
+        """The record kept of one table in service, which a test reads back the way a run resuming it does.
+
+        Raises:
+            KeyError: when no table of that name has been written down.
+        """
+        return TableRecord(origin=self.origins[table], commits=tuple(self.commits[table]))
 
     def kept(self) -> tuple[Kept, ...]:
         """Everything written down here, in the shape a run gathers its lobby back from."""

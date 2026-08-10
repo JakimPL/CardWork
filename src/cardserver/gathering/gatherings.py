@@ -13,7 +13,7 @@ from cardserver.gathering.opening import Opening
 from cardserver.gathering.say_policy import SayPolicy
 from cardserver.gathering.turnstile import Turnstile
 from cardserver.protocols.table import TableId
-from cardserver.remembering import Remembering
+from cardserver.remembering import Remembering, RoomRecord
 from cardserver.schemas.admitted import Admitted
 from cardserver.schemas.arriving import Arriving
 from cardserver.schemas.choice import Choice
@@ -82,23 +82,40 @@ class Gatherings:
                 was at it holding tokens for a room that had been replaced under them.
             GameValidationError: when the opening choice names a game the host offers nowhere.
         """
-        if table in self._gatherings:
-            raise TableTaken(table)
-
-        gathering = Gathering(
+        gathering = self._gathered(
             table,
             code,
             choice,
-            self._offerings,
-            self._opening,
-            keeping=self._keeping,
-            clock=self._clock,
-            presence_stands=self._presence_stands,
             democratic=democratic,
             host=host,
         )
-        self._gatherings[table] = gathering
         gathering.keep()
+        return gathering
+
+    def restore(self, record: RoomRecord, *, dealt: bool) -> Gathering:
+        """Gather one room back from the record kept of it, so a company reaches the room they left.
+
+        The room comes back holding the company that was at it and the marks their tokens are read by, which
+        is what carries a guest through a restart: the address in a page's own bar names the seat it held, and
+        the room it names is this one again.
+
+        What is written down stands as it was written. A room read back is a room a run found rather than one
+        it gathered, so the next change the company makes is what writes it down afresh.
+
+        Raises:
+            TableTaken: when a table of that name is already gathering, which a record read twice would
+                otherwise leave replaced under the company at it.
+            GameValidationError: when the record settled on a game this host offers nowhere, or on a table
+                that game seats nowhere, which is what a run whose offerings have moved on finds.
+        """
+        gathering = self._gathered(
+            record.table,
+            record.code,
+            record.choice,
+            democratic=record.democratic,
+            host=record.host,
+        )
+        gathering.restore(record, dealt=dealt)
         return gathering
 
     def create(self, founding: Founding, *, democratic: bool) -> Admitted:
@@ -166,6 +183,14 @@ class Gatherings:
         """
         self._gatherings.pop(table, None)
         self._keeping.forget(table)
+
+    def stands(self, table: TableId) -> bool:
+        """Whether a room of that name is held here, dealt or closed or still gathering.
+
+        A run asks this of the name it is configured to announce: the room may have been read back from what
+        an earlier run wrote down, and gathering it a second time would replace it under the company at it.
+        """
+        return table in self._gatherings
 
     def at(self, table: TableId) -> Gathering:
         """The gathering of one table.
@@ -374,6 +399,43 @@ class Gatherings:
             UnknownTable: when this host gathers no table of that name.
         """
         self.at(table).close(reason)
+
+    def _gathered(
+        self,
+        table: TableId,
+        code: str,
+        choice: Choice,
+        *,
+        democratic: bool,
+        host: str | None,
+    ) -> Gathering:
+        """Hold one room under a name, on a code, at a choice, however the run came to have it.
+
+        A room gathered afresh and a room read back from a record are the same room to everything that holds
+        it, so they are built the same way and told apart by one thing alone: a room gathered here is written
+        down as it is made, and a room read back is already written down.
+
+        Raises:
+            TableTaken: when a table of that name is already gathering.
+            GameValidationError: when the choice names a game the host offers nowhere.
+        """
+        if table in self._gatherings:
+            raise TableTaken(table)
+
+        gathering = Gathering(
+            table,
+            code,
+            choice,
+            self._offerings,
+            self._opening,
+            keeping=self._keeping,
+            clock=self._clock,
+            presence_stands=self._presence_stands,
+            democratic=democratic,
+            host=host,
+        )
+        self._gatherings[table] = gathering
+        return gathering
 
     def _confirm_host(self, gathering: Gathering, guest: str) -> None:
         """Confirm the guest is the host of the table, whose say the governing of it answers to.

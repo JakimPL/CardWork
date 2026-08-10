@@ -87,16 +87,21 @@ async def commits(
     Taking the stream up is what reads the table as one somebody is at, which is what a reaper counts it alive
     by: a company thinking over a turn commits nothing for as long as the thinking takes, and a page following
     them says they are there throughout.
+
+    A client asking from beyond where the record goes is served from the end of the record instead, so a page
+    holding the sequence of a table that once stood under this name is carried back to the table that stands
+    there now by the next commit landing on it.
     """
     session.attends()
-    events = session.events(observer, since)
+    cursor = min(since, session.head)
+    events = session.events(observer, cursor)
     if not events and not session.closed:
         try:
-            await asyncio.wait_for(session.watch(since), patience)
+            await asyncio.wait_for(session.watch(cursor), patience)
         except TimeoutError:
             return
 
-        events = session.events(observer, since)
+        events = session.events(observer, cursor)
 
     for event in events:
         yield frame(event)

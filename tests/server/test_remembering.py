@@ -10,64 +10,21 @@ from cardserver.remembering import (
     digest_of,
 )
 from cardserver.sessions import InService
-from cardwork.moves.actions import Play
-from cardwork.moves.move import Move
-from cardwork.positions.position import Position
 from cardwork.states.state import GameState
-from cardwork.transactions.journal import Journal
 from cardwork.zones.zones import hand_of
 
 from ..games.demo import SEATS
-from .company import CODE, Gathered, a_sealed_round
+from .company import CODE, COMPANY, Gathered, a_dealt_table, a_sealed_round, a_sealing, a_seated_company
 from .conftest import BACKWARDS, TABLE
-from .keeping import JOURNAL, ROOM, Keeping
+from .keeping import JOURNAL, ROOM, Keeping, a_journal, read_back
 
-COMPANY: Final[tuple[str, ...]] = ("Ada", "Grace", "Alan")
-FIRST_CARD: Final[frozenset[int]] = frozenset({0})
 A_REASON: Final[str] = "closing up"
 NOTHING_YET: Final[str] = "{}"
 
 
-def a_seated_company(gathered: Gathered) -> dict[str, str]:
-    """The whole company arrived, seated in order and committed, and the token each of them speaks through."""
-    gathering = gathered.gathering
-    tokens = {name: gathering.admit(name) for name in COMPANY}
-    for seat, name in enumerate(COMPANY):
-        gathering.claim(name, seat, gathering.revision)
-
-    for name in COMPANY:
-        gathering.ready(name, True, gathering.revision)
-
-    return tokens
-
-
-def a_dealt_table(gathered: Gathered) -> dict[str, str]:
-    """The table under test dealt into service, and the token each of the company plays through."""
-    tokens = a_seated_company(gathered)
-    gathered.gathering.deal(gathered.gathering.revision)
-    return tokens
-
-
-def a_sealing(seat: int) -> Move:
-    """One seat sealing the first card of its hand in its own tray, which is the move this game is played by."""
-    return Move(player=seat, action=Play(group="sealed", indices=FIRST_CARD))
-
-
-def a_journal(keeping: Keeping, table: str) -> Journal[GameState]:
-    """The record kept of one table read back as a journal, which is what a run resuming it is handed.
-
-    The lines cross the seam as text and are read here by the state the demo game declares, which is the whole
-    of what a host holding the rules does with them.
-    """
-    return Journal[GameState](
-        initial=Position[GameState].model_validate_json(keeping.origins[table]),
-        transactions=tuple(Written[GameState].model_validate_json(line).transaction for line in keeping.commits[table]),
-    )
-
-
 def keys_of(keeping: Keeping, table: str) -> tuple[str | None, ...]:
     """The key each commit of a table was landed under, in commit order."""
-    return tuple(Written[GameState].model_validate_json(line).key for line in keeping.commits[table])
+    return tuple(written.key for written in read_back(keeping.written(table)))
 
 
 def test_a_room_is_written_down_as_it_is_gathered(gathered: Gathered) -> None:
@@ -167,7 +124,7 @@ def test_the_record_a_deal_opens_reads_back_as_the_journal_the_table_holds(gathe
     session = gathered.registry.session(TABLE)
     session.reveal()
 
-    assert a_journal(gathered.keeping, TABLE) == session.record
+    assert a_journal(gathered.keeping.written(TABLE)) == session.record
 
 
 def test_the_table_is_written_down_before_the_room_that_names_it_dealt(gathered: Gathered) -> None:

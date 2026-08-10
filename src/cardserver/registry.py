@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from time import monotonic
 
 from cardserver.errors import TableTaken, UnknownTable
@@ -54,19 +54,30 @@ class TableRegistry:
             TableTaken: when a table of that name is already in service, which would leave the record
                 a client was reading replaced under it.
         """
-        if table_id in self._sessions:
-            raise TableTaken(table_id)
-
-        session = TableSession(
-            table_id,
-            table,
-            presentation,
-            keeping=self._keeping,
-            grace_seconds=self._grace_seconds,
-            clock=self._clock,
-        )
-        self._sessions[table_id] = session
+        session = self._served(table_id, table, presentation)
         session.keep()
+        return session
+
+    def reopen[StateT: GameState](
+        self,
+        table_id: TableId,
+        table: Table[StateT],
+        presentation: Presentation,
+        *,
+        applied: Mapping[str, int],
+    ) -> TableSession[StateT]:
+        """Put a table read back from its own record into service, holding the attempts it already answered.
+
+        A table opened this way stands where its last commit left it, so the company reaches the game they
+        were playing rather than a fresh deal of it. What is written down stands as it was written: the record
+        already holds this table, and the next commit to land is the next line of it.
+
+        Raises:
+            TableTaken: when a table of that name is already in service, which reading one record twice
+                would otherwise leave replaced under the company playing it.
+        """
+        session = self._served(table_id, table, presentation)
+        session.restore(applied)
         return session
 
     def session(self, table_id: TableId) -> InService:
@@ -117,3 +128,32 @@ class TableRegistry:
         """Drop every timer still in hand, which is what ends service cleanly."""
         for session in self._sessions.values():
             await session.close()
+
+    def _served[StateT: GameState](
+        self,
+        table_id: TableId,
+        table: Table[StateT],
+        presentation: Presentation,
+    ) -> TableSession[StateT]:
+        """Hold one game under a name with the writer that will serve it, however the run came to have it.
+
+        A table dealt here and a table read back from a record are the same table to everything that serves
+        it, so they are built the same way and told apart by what each says to the store: a deal writes the
+        record it opens, and a table read back is already written down.
+
+        Raises:
+            TableTaken: when a table of that name is already in service.
+        """
+        if table_id in self._sessions:
+            raise TableTaken(table_id)
+
+        session = TableSession(
+            table_id,
+            table,
+            presentation,
+            keeping=self._keeping,
+            grace_seconds=self._grace_seconds,
+            clock=self._clock,
+        )
+        self._sessions[table_id] = session
+        return session

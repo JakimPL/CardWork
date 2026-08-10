@@ -1,5 +1,5 @@
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Generic
 
 from cardserver.errors import JournalSealed
@@ -128,6 +128,18 @@ class TableSession(Generic[StateT]):
         for transaction in journal.transactions:
             self._append(transaction, UNKEYED)
 
+    def restore(self, applied: Mapping[str, int]) -> None:
+        """Take back the attempts this table has already answered, which a table read back from a record does.
+
+        The record holds every commit the table stands on, and each line of it holds the key a client landed
+        that commit under. Reading those back is what leaves a request a flaky network prompted twice answered
+        the second time with the sequence it reached the first, across a restart as within a run.
+
+        Nothing is written down here. The record already holds the table this opens at, so what a store next
+        hears of it is the commit that lands after it.
+        """
+        self._applied = dict(applied)
+
     def layout(self, observer: int | None) -> Layout:
         """How this table is laid out for one observer, which is what an interface draws it from.
 
@@ -213,9 +225,14 @@ class TableSession(Generic[StateT]):
             return transaction.seq
 
     async def watch(self, cursor: int) -> None:
-        """Wait until the table holds a commit past `cursor`, or is broken up, which wakes a stream either way."""
+        """Wait until the table holds a commit past `cursor`, or is broken up, which wakes a stream either way.
+
+        Waiting is for a table standing exactly where the stream does. A cursor naming a sequence beyond the
+        table's own is a cursor from a table this one has never been, so it is answered at once and the stream
+        reads how far the record really goes.
+        """
         async with self._commits:
-            await self._commits.wait_for(lambda: self._table.head > cursor or self._closed)
+            await self._commits.wait_for(lambda: self._table.head != cursor or self._closed)
 
     async def dismiss(self, reason: str | None) -> None:
         """Break the table up, waking every stream on it so its seats learn the game is over rather than gone quiet.
