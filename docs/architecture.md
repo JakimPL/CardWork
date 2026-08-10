@@ -1692,11 +1692,126 @@ reaches `/tables/...` with no cross-origin arrangement, and the seat token stays
 a query string a log would keep. The mount goes on last, which leaves every endpoint matching ahead of it,
 and a checkout holding no build serves the endpoints alone.
 
-**A table lives as long as the process.** A position is held in memory and a restart deals a fresh one, so
-the host runs under no reloader and `uv run cardtable` is the whole of starting one. Ending the process ends
-the service through the application's own lifespan, which drops every timer still in hand. That one claim is
-what a public deployment is arranged around, since a host offering a worker per request load offers no place
-for a table to live: `docs/deployment.md` states the arrangement that answers it.
+**A table is held in the memory of one process, and a run writes down what it holds.** A position stands in
+that memory, so the host runs under no reloader and `uv run cardtable` is the whole of starting one. Ending
+the process ends the service through the application's own lifespan, which drops every timer still in hand.
+A run that keeps nothing deals a fresh lobby at every start, which is what a checkout being played with
+wants; a run that writes its tables down hands its company back the game they were at, which is what a
+deployment started and stopped around its own traffic asks for. One process holds one lobby either way, and
+that is what a public deployment is arranged around, since a host offering a worker per request load offers
+no place for a table to live: `docs/deployment.md` states the arrangement that answers it.
+
+### A table outlives its process
+
+A record is what a company is handed back by. `records/` holds a directory per table, and a run reads the
+whole of it once as it starts:
+
+```
+records/
+  <slug>-<digest>/
+    room.json        the gathering, laid down whole at every revision it reaches
+    origin.json      the position before transaction 0, written once at the deal
+    journal.ndjson   one line per commit, appended
+```
+
+**The origin is the components, so a record needs no key.** The position before transaction 0 follows from
+the seating, the deck and the cursor a game states (§9), and consults no randomness — so a table built the
+way it was built the first time opens at exactly the origin its record opens at, and that one comparison is
+the whole of what `Game.resume` asks before it takes a record up. A record of another seating, another deck
+or another ending opens elsewhere and is refused; a record of another game fails validation outright, since
+`extra="forbid"` meets the foreign state fields. Nothing is written down to say which record belongs to
+which table, because the record says it.
+
+**Where the words go is a `Protocol` in `cardserver` satisfied in `cardtable`** — the same shape and for the
+same reason as `Opening`. A lobby knows when a room changes and a table knows when a commit lands, and each
+says so through `Remembering`; the adapter states what it needs written and nothing about a disk. The
+journal crosses that seam as **text**, since `Journal` is generic and the adapter may name no concrete
+`GameState`. `cardtable` is by contract the module that knows game names, so reading a line back as
+`Journal[PassingState]` is its work and nowhere else's. `Forgetful` keeps nothing and is shipped as a
+constant beside the port, which leaves every writer free of a branch on whether anyone is listening.
+
+**The room is snapshotted and the table is appended, because that is what each of them is.** A room is a
+state a company settles and settles again — small, and reached perhaps forty times in its life — so it is
+laid down whole and lands under its own name in one step, leaving a reader the room it was or the room it
+became. A table *is* a log, and P5 makes it append-only above the publication mark, which on a served table
+is the head; so a commit is one line more and the lines already down stand as they were. The costs part
+by two orders of magnitude — a showdown match rewritten per commit writes 95 MB where appending writes
+309 KB — but the deciding argument is a kill rather than a throughput: a torn snapshot loses the table,
+while a torn append loses the last line and leaves a prefix that is still a journal, since `replay` folds a
+prefix by construction.
+
+**The write lands before anyone is woken.** The store write precedes `notify_all()` and the room's
+`changed.set()`, so a sequence a client has been told about is on disk by construction and a head can never
+regress below a `Last-Event-ID`. Written the other way round, a restart serves a table shorter than the one
+a page already read: `events` slices `transactions[since:]`, answers empty when `since` is past the head,
+and the stream then waits for a commit that has already happened — a page holding a table that never moves
+and never learns otherwise.
+
+**A room outlives its deal, so a dealt table keeps both.** A room is the whole of identity at a table: a
+token holds its seat through the room it was minted at, and the plaques carry the names that room settled.
+So the gathering is written down as it stands and stays written for as long as the table it became, and a
+table restored without its room would turn away every seat and every spectator alike. The journal is opened
+before the room is written down dealt, which makes the journal the mark the deal leaves: **a record holding
+a journal is a dealt table, whatever the room says of itself.**
+
+**The idempotency map falls out of the log.** Each line carries the key a client landed that commit under,
+so the keys already applied are rebuilt as the record is read. It needs no structure of its own and no
+pruning, and it is what leaves a request a flaky network prompted twice answered the second time with the
+sequence it reached the first — across a restart as within a run.
+
+**The generator is derived rather than kept.** A table draws from the run's seed, its own name and how far
+it has got, read as one word. The seed alone would deal a resumed table a shuffle it had already used, and
+would deal two tables of one run identical cards — which with self-serve creation and a pinned seed is a
+guest who played one match knowing the next table's hands. What the state of a generator would buy beyond
+this is bit-exactness for draws nobody has seen.
+
+**A window is a timer rather than a fact of the table, so what it owed is settled as the table is taken
+up.** A process killed inside the grace window leaves a settlement nobody will ever commit and nothing to
+wake it. Settling at the `Game` level as the record is read needs no running loop and no word added to
+`InService`, and the grace has by definition expired — starting a process outlasts it. Those commits are
+then written down before a client has read a word of the table, which leaves the record and the table in
+service standing at the one sequence; settling without writing would leave the record short by exactly what
+it settled, and the restart after that one would replay into a position nobody stands at.
+
+**Written down nowhere, deliberately:** presence, which is a stream saying so and no stream outlives its
+process; the monotonic readings a reaper counts by, which are boot-relative on Linux and would measure the
+time a process spent dead — every restored table reaped a minute after boot; the turnstile's refusals; and
+a session's closed flag, since the one path that sets it forgets the record immediately after. Each is
+rebased through the constructors, and one wall-clock reading is kept for the single purpose of collecting a
+store at startup.
+
+**The record holds everything, so the modes matter.** A journal names every card every seat is hiding —
+which is why the journal endpoint is sealed until the game is over (*The sealed record*) — so files land at
+`0o600` inside a directory explicitly `chmod`ed `0o700`, and tokens are written as digests of themselves. A
+room reads its guest back by lookup, so a digest answers every question a room asks of a token while what
+lies on disk admits nobody.
+
+**A table's name is never a path component.** The directory is `<slug>-<digest of the name>`, and the name
+itself travels inside `room.json`, which is where restore reads it from. A shared `TableId` holds a name to
+what reads at a table besides — the two separators and the two dotted names are the whole of what steps
+through a directory, so `../public_html/leak` is refused at the door. Both guards stand because either
+alone is a single point of failure, and the second earns its keep anyway: a name holding a slash can be
+founded but reached at no route, since a path stands between two slashes.
+
+**A store is one run's to write.** An exclusive lock over the store is taken before a record is read and
+held for the run, so a host started over a store another still holds waits and then refuses rather than
+writing a second word into it. A run lets go as it ends. What is *unavailable* — unwritable, unlockable, of
+a layout version this build does not read — stops the run, since a host silently not writing is worse than
+one not running. What is merely **unreadable stops at the table it belongs to**: a record naming a game
+this host offers nowhere is logged, renamed aside and passed over, because serving the other tables beats
+502-ing the domain over one stale record.
+
+**A restart reaps nothing, and a start collects the store.** Restored rooms are read as rooms nobody is at
+and tables nobody is watching, so the ordinary reaper counts from the run rather than through it; a record
+nothing has written to for longer than the run keeps one is cleared away as the store is read, which is the
+one moment a store is weighed against a calendar and what keeps a host restarted all day to the size of the
+tables being played at it.
+
+**A run answers under the room it read back.** The host gathers its own room only where none of that name
+stands, and announces that room's own code — a run drawing a fresh code over a restored room would announce
+one admitting nobody, silently. A room broken up is a room nobody arrives at, so the run gathers its own in
+its place. And when a table played through the run's own room is retired, the room is gathered again behind
+it, so the address a run announced names a room a company can arrive at throughout.
 
 ### The page
 
@@ -2148,6 +2263,12 @@ play was good **given what the player knew**.
 | A room vs. a table | `gathering.py` holds the company and reaches the registry through `Opening`; the six playing endpoints are unchanged | a gathering opens a game itself, or a table endpoint reads the company |
 | Who someone is vs. what they may do | a token minted at arrival holds a seat through `SeatPolicy`; a say over the choice stands behind `SayPolicy` | a name authorises anything, or a handler decides who may deal |
 | One table in service vs. the state its game declares | `InService` erases the cursor at the storage boundary; `registry.open` stays generic per call | the registry names a state type, so one process serves one rule set |
+| A room vs. a record of one | `Remembering` is a `Protocol` in `cardserver` satisfied in `cardtable`; the journal crosses it as text | the adapter names a path, a file or a concrete `GameState`, so a store is one game's |
+| What a client has read vs. what is on disk | the store write precedes `notify_all()` and `changed.set()` | a restart serves a head below a client's `Last-Event-ID`, and its stream waits for a commit that has already happened |
+| A record of a table vs. a reading of the process that held it | presence, the monotonic marks and the refusals are written down nowhere, and each is rebased through the constructors | a restored table is reaped for the time its process spent dead |
+| A table's name vs. a place on disk | the directory is `<slug>-<digest>` and the name travels inside `room.json`; `TableId` carries a pattern besides | a name reaches the file system, so `../public_html/leak` names a file outside the store |
+| A credential vs. the mark it is written down under | `RoomRecord.tokens` holds `sha256(token)`, which a room reads its guest back by | a bearer token lands on disk, where a backup carries it off the machine |
+| A record this host cannot read vs. a store it cannot hold | an unreadable record is renamed aside and passed over; an unavailable store stops the run | one stale record 502s the domain, or a host runs while silently writing nothing |
 | What a host offers vs. what the rules admit | an `Offering` is built from `Game.capacity`, `Scene.title` and the deck counts `_validate_initial_deck` accepts, and every one of them is dealt in a test | a company settles a table the rules refuse, and meets it at the deal |
 | Where a run listens vs. where it is reached | `reaching.py` answers the second; `Service.advertise` states it outright | an announcement prints the bind address, so a wildcard is handed out as an address to open |
 | Cards in hand vs. a move sent | a selection resolves through the gestures; a press at an armed place or on the words of an armed move is what submits | a card click sends a move, or a selection is read as a command |
@@ -2160,7 +2281,7 @@ play was good **given what the player knew**.
 
 ## 13. Invariants under test
 
-Most of the suite is ordinary unit coverage. Ten properties are the ones worth naming, because each
+Most of the suite is ordinary unit coverage. Eleven properties are the ones worth naming, because each
 stands in for a class of bug rather than a case:
 
 | Property | Guards |
@@ -2175,6 +2296,7 @@ stands in for a class of bug rather than a case:
 | Card conservation over `starting_deck` on every dealt table | a zone layout that loses or duplicates a card |
 | Every move a game offers an observer is made by exactly one gesture of the layout that observer is served, picking in a zone its projection holds and committing onto one it reads | a scene and the rules drifting apart, so a move the rules admit reaches a player as a card that arms nothing |
 | A stream resumed from `Last-Event-ID` delivers exactly what a client missed | the resumption path, which a dropped stream and a tab coming back into view both travel |
+| A table taken up from its record stands where the record stood for every observer, offers the move a table that never stopped would, and holds `history[n] == journal.replay(n)` at every `n` after it | a restore that reads back a position no run ever served, which every later commit is then built on |
 
 The adapter's suite drives the real routes in-process — through an HTTP transport for the
 request/response endpoints and through a direct-ASGI harness for the streams (§10, *Why FastAPI*) — and
@@ -2193,3 +2315,15 @@ The host is held to the same standard from the other end, over each of the four 
 opened through `cardtable.catalogue` is served the layout the game's own module states, a token speaks for the
 seat it was issued for and for no other, and a move read out of a seat's own `legal` lands through the
 endpoints — so the wiring of rules, scene and transport is a test rather than a first run in a browser.
+
+A restart is played the same way, whole: one run gathers a company over HTTP, deals and plays; a second run
+opens over the same store, drawing a code and a seed of its own so that everything asserted comes off the
+record. Every seat plays on through the token it arrived under, the table stands at the sequence it stood
+at, a move built before the restart lands after it, the layout carries the names the company settled, and
+the run announces the code the room it read back admits on. Beside them stand the paths a deployment meets
+rather than a player: a company still settling comes back to the room they were in, a table written down
+without its room is left alone, a record naming a game this host offers nowhere is set aside, a record
+nobody came back to is cleared away, and a run that keeps nothing gathers a lobby of its own. One more
+holds the trap the deployment is arranged around: the lobby is read back inside the loop that goes on to
+serve it, since a table restored under a loop of its own leaves every stream waiting on a loop that has
+ended (`docs/deployment.md` §1).
