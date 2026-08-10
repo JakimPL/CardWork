@@ -2041,7 +2041,8 @@ as all of them, a fan at the closest its cards may lie — and the sheet turns i
 player plays from draws a hand of three as large as the page has room for and a holding beside a row of five as
 large as the two of them fit, at any size of window and without a scrollbar anywhere. Every card on the table is
 drawn at one height, a holding read from across it at the height of the card on the pile, since both of them are
-cards lying on the same table; and how many seats stand one above another at a side of it is the figure that
+cards lying on the same table; the felt hands every group on it one width for a card, so the seats round a table
+draw alike wherever they sit; and how many seats stand one above another at a side of it is the figure that
 height gives way to, so a table of eight draws its cards smaller than a table of four does and all of them alike.
 
 **A fan closes to the room it has, and the cards give way only once it has closed as far as it closes.** A card is
@@ -2053,18 +2054,25 @@ carrying the index as the line fills. So a hand of four and a hand of seventeen 
 each has room for, and only a hand asking for more room than the line has at its closest shrinks the cards. The
 closest is three-tenths of a card's width, which is what the widest rank asks for at every size a card is drawn
 at; a run standing for cards nobody at that seat reads says only that cards lie there, so it closes to half of
-that and a seat's holding read from across the table takes half the width it would take read card by card.
+that and a seat's holding read from across the table takes half the width it would take read card by card. A fan
+opens to two-fifths of a card and no further, however much room it is handed, so the room a hand does not need is
+left as felt rather than spent spreading a few cards across the page.
 
 **The felt divides its own height between the middle of the table and the seats round it.** How much room the felt
 has is a fact about the page as it stands, so the felt is what states it: `container-type: size` makes it the
 container its own contents are measured against, and the height it holds is shared out among the lines of cards
 standing one above another once the lettering over each of them is written. The zones at the centre take the lines
 they lie in at that height, and the seats round the edge take the rest and divide that again by however many of
-them stand one above another at a side and by however many lines each of them stands in. The width goes the same way — a quarter of it to each side that
-holds seats, and what is left down the middle to the seats facing the near edge and to the cards they share. So the
-two shares add to the felt's own room at every seating: the table stays inside it, the panel below keeps the room it
-was given, and a card at another seat is drawn at the height of the card on the pile or at the height that seat's
-own share affords, whichever is the lesser.
+them stand one above another at a side and by however many lines the deepest of them stands in, so two seats
+standing in different numbers of lines still draw alike. **The width it divides by what the seats hold.** The
+script counts the widest cut across the felt in cards — the widest seat up either side, and the seats facing the
+near edge weighed against the zones they share, since those lie beneath them — and states the boxes and the
+partings standing along that cut beside it, so what is left over belongs to the cards and comes to one width for
+a card. Every group on the felt is measured from that one figure, which is what makes a seat holding more cards
+wider rather than larger, and the seats of a table equal to one another wherever they sit. So the shares add to
+the felt's own room at every seating: the table stays inside it, the panel below keeps the room it was given, and
+a card at another seat is drawn at the height of the card on the pile or at the height the room at a seat affords,
+whichever is the lesser.
 
 **Every player sits somewhere, and the page works out where.** `table/placing.ts` reads a layout's slots by the
 seat each one belongs to and yields the groups the page draws: the shared zones in the middle, the observer's own
@@ -2082,10 +2090,10 @@ station: its holding is a figure on its plaque, which is how a game keeps a zone
 table is deeper than it is wide, so `linesOf` reads a station off the spreads the layout already states: the
 holdings the table reads of that seat lie side by side under its name, and the single places it seals a card in lie
 beneath them. The panel a player plays from and the shared middle each have the width of the page to lie along, so
-they lie in one line. The sheet is handed the widest line and how many there are, which is what shares the group's
-height out among them, one line of lettering to a line of cards. So a station is drawn half as wide, reads in two
-glances, and draws its cards to the room its corner of the table has rather than to the width one line of them
-would want. The three placements carry three names of their own — the shared middle, the seat's own panel, another
+they lie in one line. The sheet is handed the widest line of a group and, for the felt as a whole, how many lines
+the deepest seat stands in, which is what shares the height out among them, one line of lettering to a line of
+cards. So a station is drawn half as wide, reads in two glances, and draws its cards to the room its corner of the
+table has rather than to the width one line of them would want. The three placements carry three names of their own — the shared middle, the seat's own panel, another
 seat's station — and the box a seat is drawn in carries a fourth, so a rule of the sheet reaches one of the two and
 a station is sized as a station rather than as a group of zones.
 

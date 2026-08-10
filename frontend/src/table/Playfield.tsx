@@ -112,7 +112,7 @@ export function Playfield({
         role="presentation"
       >
         <Header layout={layout} view={view} playing={playing} />
-        <main className="felt" style={crowding(ring, middle)}>
+        <main className="felt" style={crowding(ring, middle, view)}>
           {SIDES.map((side) => (
             <Sitting
               key={side}

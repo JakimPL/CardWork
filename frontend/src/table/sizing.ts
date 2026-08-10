@@ -4,7 +4,7 @@ import type { Artwork } from "../api/artwork";
 import type { Slot, Spread } from "../api/layout";
 import type { PositionView, ProjectedCard, ZoneView } from "../api/views";
 import type { Offered } from "../play/selection";
-import type { Placement, Ring } from "./placing";
+import type { Placement, Ring, Station } from "./placing";
 import { linesOf } from "./placing";
 
 /** The name the sheet reads the closest a run of cards may lie under, as a part of a card's width. */
@@ -17,15 +17,14 @@ const WIDTHS = "--widths";
 const FILLING = "--filling";
 const FANNED = "--fanned";
 
-/** The name the sheet reads how many lines a group of zones lies in under. */
-const LINES = "--lines";
-
 /** The names the sheet reads a line's partings under: between the zones along it, and between the cards inside them. */
 const PARTED = "--parted";
 const JOINTED = "--jointed";
 
-/** One line, which is the fewest a group of zones ever lies in. */
-const ONE_LINE = 1;
+/** The names the sheet reads the widest cut across the felt by: the cards standing along it, and their partings. */
+const CARDS_ACROSS = "--cards-across";
+const PARTED_ACROSS = "--parted-across";
+const JOINTED_ACROSS = "--jointed-across";
 
 /** One zone, which is the run a line has no parting to either side of. */
 const ONE_ZONE = 1;
@@ -37,10 +36,10 @@ const NOTHING = 0;
 const ASPECT_WIDTH = "--card-aspect-width";
 const ASPECT_HEIGHT = "--card-aspect-height";
 
-/** The names the sheet reads how the seats stand round the table under: up its sides, and across the near edge. */
+/** The names the sheet reads how the seats stand round the table under: up its sides, facing it, and in boxes. */
 const STACKED = "--stacked";
 const ABREAST = "--abreast";
-const FLANKED = "--flanked";
+const BOXES = "--boxes";
 
 /** The names the sheet reads how deep the table lies under: the lines in the middle, and the lines at a seat. */
 const LAID = "--laid";
@@ -53,9 +52,11 @@ const SEATED: Placement = "theirs";
 /** One seat, which is the fewest a side of the table ever stands. */
 const ONE_SEAT = 1;
 
-/** Whether seats sit up the sides of the table, which is what the seats facing the near edge share the width with. */
-const FLANKING = 1;
-const CLEAR = 0;
+/** Both sides of the table, which is how many seats stand across it in a box of their own where the sides hold any. */
+const BOTH_SIDES = 2;
+
+/** The words a turn is said in, which no group on the felt holds: those stand in the panel a player plays from. */
+const SAID_NOWHERE: Offered[] = [];
 
 /**
  * The least of a card a fan leaves showing, as a part of a card's width.
@@ -108,33 +109,29 @@ export function fanning(zone: ZoneView | undefined): Measured {
 }
 
 /**
- * How wide a group of zones lies and how many lines it lies in, counted in cards and in lines.
+ * How wide a group of zones lies, counted in cards.
  *
  * A card is as tall as the room its group has for it: the panel a player plays from draws a hand of three at the
  * full height the window affords, and a hand of seventeen beside a row of five at the height their width leaves,
  * both read off one figure saying how many cards wide the group lies. A group standing in two lines is as wide as
- * the wider of them and divides the height it has between them, so every card of it is drawn at one size. What
- * either figure comes to in pixels is the sheet's, since the proportions of a card belong to the drawing of one.
+ * the wider of them, so every card of it is drawn at one size. What that figure comes to in pixels is the sheet's,
+ * since the proportions of a card belong to the drawing of one.
  *
  * A fan is counted at the closest its cards may lie, which is the tightest it will ever be drawn, so a group asks
  * for the width it takes at its tightest and the cards give way only once even that overflows. What the room left
  * over comes to is the sheet's, which spends it opening the fans back up.
  *
- * A line carries its partings as well — the ones between the zones lying along it, and the ones between the cards
- * a zone lays side by side — since a group measured to the width it was handed keeps the room those take out of
- * the width its cards are drawn to, and neither of them is a width the cards themselves can be counted in.
+ * A group carries its partings as well — the ones between the zones lying along a line, and the ones between the
+ * cards a zone lays side by side — since a group measured to the width it was handed keeps the room those take out
+ * of the width its cards are drawn to, and neither of them is a width the cards themselves can be counted in.
  *
  * @param lines - the zones of the group, gathered into the lines they lie in.
  */
 export function spanning(lines: Run[][]): Measured {
-  const widths = lines.map((line) => line.reduce((room, run) => room + running(run), 0));
-  const partings = lines.map((line) => line.length - ONE_ZONE);
-  const joints = lines.map((line) => line.reduce((count, run) => count + jointing(run), NOTHING));
   return {
-    [WIDTHS]: rounded(Math.max(ONE_CARD, ...widths)),
-    [LINES]: Math.max(ONE_LINE, lines.length),
-    [PARTED]: Math.max(NOTHING, ...partings),
-    [JOINTED]: Math.max(NOTHING, ...joints),
+    [WIDTHS]: rounded(widthOf(lines)),
+    [PARTED]: partingIn(lines),
+    [JOINTED]: jointingIn(lines),
   };
 }
 
@@ -148,41 +145,49 @@ export function spanning(lines: Run[][]): Measured {
  * @param runs - the zones lying along the line, in the order they stand along it.
  */
 export function lining(runs: Run[]): Measured {
-  const filling = runs.reduce((room, run) => room + running(run), NOTHING);
   const laps = runs.reduce((count, run) => count + lapping(run), NOTHING);
   return {
-    [FILLING]: rounded(Math.max(ONE_CARD, filling)),
+    [FILLING]: rounded(Math.max(ONE_CARD, filling(runs))),
     [FANNED]: Math.max(ONE_LAP, laps),
   };
 }
 
 /**
- * How the seats stand round the table, handed to the sheet so every one of them fits inside it.
+ * How the seats crowd a table, handed to the sheet so every card on the felt is drawn at one size.
  *
- * The seats up one side share the height the table has for them and the seats facing the near edge share its
- * width, so a table of seven draws the cards of a seat smaller than a table of four does. What the seats facing
- * the near edge have the width of is the middle of the table, which is the whole of it where the sides stand
- * empty and half of it where they hold seats.
+ * The seats up one side share the height the table has for them, so a table of seven draws the cards of a seat
+ * smaller than a table of four does. The width goes by what the seats hold rather than by a share settled in
+ * advance: the felt is as many cards wide as the widest cut across it, and the width one card is drawn to follows
+ * from that. So a seat holding more cards is handed more of the felt rather than larger cards, and the seats round
+ * a table draw alike wherever they sit.
  *
  * Every card on the table is drawn at that one height, the heaps in the middle with them: what a player reads of
  * another seat is a card the size of the card on the pile, since both of them are cards lying on the same table.
- * That height is the height the felt has left over once every name and every count on it is written, divided by
- * the lines of cards standing one above another, so the seats and the middle are handed the figures they need to
- * work it out: how many lines the middle lies in, and how many the deepest seat stands in.
+ * The height the felt has left over once every name and every count on it is written is shared out among the lines
+ * of cards standing one above another, so the seats and the middle are handed the figures they need to work it
+ * out: how many lines the middle lies in, and how many the deepest seat stands in.
+ *
+ * The boxes the seats are drawn in and the partings inside them are counted beside the cards, since a cut across
+ * the felt holds all three and only the sheet knows what any of them comes to in pixels.
  *
  * @param ring - the seats round the table, gathered by the side of it they sit at.
  * @param middle - the zones every seat shares, which lie between them.
+ * @param view - the table as this seat is served it, which is where the cards of a zone are counted.
  */
-export function crowding(ring: Ring, middle: Slot[]): Measured {
+export function crowding(ring: Ring, middle: Slot[], view: PositionView): Measured {
   const flanked = ring.left.length > 0 || ring.right.length > 0;
   const seated = [...ring.left, ...ring.across, ...ring.right];
   const depths = seated.map((station) => linesOf(SEATED, station.slots).length);
+  const cut = cutting(ring, middle, view);
   return {
     [STACKED]: Math.max(ONE_SEAT, ring.left.length, ring.right.length),
     [ABREAST]: Math.max(ONE_SEAT, ring.across.length),
-    [FLANKED]: flanked ? FLANKING : CLEAR,
+    [BOXES]: (flanked ? BOTH_SIDES : NOTHING) + ring.across.length,
     [LAID]: middle.length === 0 ? NOTHING : linesOf(MIDDLE, middle).length,
     [DEEPEST]: Math.max(NOTHING, ...depths),
+    [CARDS_ACROSS]: rounded(Math.max(ONE_CARD, cut.cards)),
+    [PARTED_ACROSS]: cut.parted,
+    [JOINTED_ACROSS]: cut.jointed,
   };
 }
 
@@ -273,6 +278,94 @@ function lapping(run: Run): number {
 /** How many partings lie inside one zone: a row lays every card of itself apart, and the rest draw a single card. */
 function jointing(run: Run): number {
   return run.spread === "row" ? Math.max(NOTHING, run.held - ONE_CARD) : NOTHING;
+}
+
+/** How many cards wide one line lies, which is the room the runs standing along it take together. */
+function filling(runs: Run[]): number {
+  return runs.reduce((room, run) => room + running(run), NOTHING);
+}
+
+/** How many cards wide a group lies, which is the widest of the lines it lies in. */
+function widthOf(lines: Run[][]): number {
+  return Math.max(ONE_CARD, ...lines.map(filling));
+}
+
+/** How many partings lie between the zones of a group, counted along the line standing the most of them. */
+function partingIn(lines: Run[][]): number {
+  return Math.max(NOTHING, ...lines.map((line) => line.length - ONE_ZONE));
+}
+
+/** How many partings lie between the cards a group lays side by side, counted along the line standing the most. */
+function jointingIn(lines: Run[][]): number {
+  return Math.max(NOTHING, ...lines.map((line) => line.reduce((count, run) => count + jointing(run), NOTHING)));
+}
+
+/**
+ * What one group of zones takes out of a cut across the felt: the cards it lies as many wide as, and its partings.
+ *
+ * The three are counted apart because they are three different widths — a card, a parting between zones, and a
+ * parting between cards laid side by side — and what each comes to in pixels is the sheet's to say.
+ */
+interface Cut {
+  cards: number;
+  parted: number;
+  jointed: number;
+}
+
+/** A cut across nothing at all, which is what a side standing empty and a middle sharing nothing take. */
+const BARE: Cut = { cards: NOTHING, parted: NOTHING, jointed: NOTHING };
+
+/**
+ * The widest cut across the felt, which is what the width of one card is worked out from.
+ *
+ * A seat up a side of the table stands as wide as the widest seat at that side, since the seats there stand one
+ * above another. The seats facing the near edge stand side by side, and the zones every seat shares lie beneath
+ * them, so the middle of the felt is as wide as the greater of those two. The three columns stand alongside each
+ * other, which is the cut every card on the felt is measured by.
+ *
+ * @param ring - the seats round the table, gathered by the side of it they sit at.
+ * @param middle - the zones every seat shares, which lie between them.
+ * @param view - the table as this seat is served it, which is where the cards of a zone are counted.
+ */
+function cutting(ring: Ring, middle: Slot[], view: PositionView): Cut {
+  const facing = alongside(cutsOf(ring.across, view));
+  const shared = middle.length === 0 ? BARE : cutOf(MIDDLE, middle, view);
+  return alongside([widest(cutsOf(ring.left, view)), widest(cutsOf(ring.right, view)), widest([facing, shared])]);
+}
+
+/** The seats at one side of the table as a cut across the felt counts them, one cut apiece. */
+function cutsOf(seats: Station[], view: PositionView): Cut[] {
+  return seats.map((station) => cutOf(SEATED, station.slots, view));
+}
+
+/** One group of zones as a cut across the felt counts it, which is the group as the fitting already reads it. */
+function cutOf(place: Placement, slots: Slot[], view: PositionView): Cut {
+  const lines = measuring(linesOf(place, slots), view, SAID_NOWHERE);
+  return { cards: widthOf(lines), parted: partingIn(lines), jointed: jointingIn(lines) };
+}
+
+/** What groups standing side by side take, which is what all of them take together. */
+function alongside(cuts: Cut[]): Cut {
+  return cuts.reduce(
+    (along, cut) => ({
+      cards: along.cards + cut.cards,
+      parted: along.parted + cut.parted,
+      jointed: along.jointed + cut.jointed,
+    }),
+    BARE,
+  );
+}
+
+/** What groups standing one above another take, which is what the widest of them takes. */
+function widest(cuts: Cut[]): Cut {
+  return cuts.reduce(
+    (over, cut) => ({
+      cards: Math.max(over.cards, cut.cards),
+      parted: Math.max(over.parted, cut.parted),
+      jointed: Math.max(over.jointed, cut.jointed),
+    }),
+    BARE,
+  );
 }
 
 /** One figure at the fineness the sheet is handed, which is a hundredth of the area the cards lie in. */

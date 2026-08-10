@@ -27,13 +27,9 @@ import {
   SEATS,
 } from "./tables";
 
-/** How wide a group lies and how many lines it lies in, read off the figures the style sheet is handed. */
+/** How wide a group lies, read off the figures the style sheet is handed. */
 function width(lines: Run[][]): number {
   return spanning(lines)["--widths"] ?? 0;
-}
-
-function standing(lines: Run[][]): number {
-  return spanning(lines)["--lines"] ?? 0;
 }
 
 /** How many partings lie between the zones of the widest-parted line, which the sheet keeps out of its width. */
@@ -101,7 +97,6 @@ interface Span {
   description: string;
   lines: Run[][];
   wide: number;
-  deep: number;
   parted: number;
   jointed: number;
 }
@@ -111,7 +106,6 @@ const SPANS: Span[] = [
     description: "a heap of forty, which is read by the one card on top of it",
     lines: [[HEAP]],
     wide: 1,
-    deep: 1,
     parted: 0,
     jointed: 0,
   },
@@ -119,7 +113,6 @@ const SPANS: Span[] = [
     description: "a place holding the one card sealed in it",
     lines: [[TRAY]],
     wide: 1,
-    deep: 1,
     parted: 0,
     jointed: 0,
   },
@@ -127,7 +120,6 @@ const SPANS: Span[] = [
     description: "a row of five, which lies every card of itself side by side",
     lines: [[BLIND]],
     wide: 5,
-    deep: 1,
     parted: 0,
     jointed: 4,
   },
@@ -135,7 +127,6 @@ const SPANS: Span[] = [
     description: "a fan of five read card by card, which lies wider than one card and narrower than five",
     lines: [[HAND]],
     wide: 2.2,
-    deep: 1,
     parted: 0,
     jointed: 0,
   },
@@ -143,7 +134,6 @@ const SPANS: Span[] = [
     description: "the same five standing for cards nobody here reads, which asks for an edge apiece",
     lines: [[BACKS]],
     wide: 1.6,
-    deep: 1,
     parted: 0,
     jointed: 0,
   },
@@ -151,7 +141,6 @@ const SPANS: Span[] = [
     description: "a fan of seventeen read card by card, measured at the closest its cards may lie",
     lines: [[{ spread: "fan", held: 17, closest: A_CORNER }]],
     wide: 5.8,
-    deep: 1,
     parted: 0,
     jointed: 0,
   },
@@ -159,7 +148,6 @@ const SPANS: Span[] = [
     description: "a holding of seventeen read from across the table, which asks for half of that",
     lines: [[{ spread: "fan", held: 17, closest: AN_EDGE }]],
     wide: 3.4,
-    deep: 1,
     parted: 0,
     jointed: 0,
   },
@@ -167,7 +155,6 @@ const SPANS: Span[] = [
     description: "the panel a showdown seat plays from, which is the three of them along one line",
     lines: [[HAND, BLIND, TRAY]],
     wide: 8.2,
-    deep: 1,
     parted: 2,
     jointed: 4,
   },
@@ -175,7 +162,6 @@ const SPANS: Span[] = [
     description: "the same three in two lines, the holdings above and the place a card is sealed in below",
     lines: [[HAND, BLIND], [TRAY]],
     wide: 7.2,
-    deep: 2,
     parted: 1,
     jointed: 4,
   },
@@ -183,7 +169,6 @@ const SPANS: Span[] = [
     description: "a group whose second line is the wider of the two, which is the width its cards are drawn to",
     lines: [[TRAY], [HAND, BLIND]],
     wide: 7.2,
-    deep: 2,
     parted: 1,
     jointed: 4,
   },
@@ -191,7 +176,6 @@ const SPANS: Span[] = [
     description: "a zone standing empty, whose outline keeps the place of a card",
     lines: [[{ spread: "fan", held: 0, closest: A_CORNER }]],
     wide: 1,
-    deep: 1,
     parted: 0,
     jointed: 0,
   },
@@ -199,7 +183,6 @@ const SPANS: Span[] = [
     description: "a line holding no zone at all, which is what a spectator plays from",
     lines: [[]],
     wide: 1,
-    deep: 1,
     parted: 0,
     jointed: 0,
   },
@@ -207,16 +190,14 @@ const SPANS: Span[] = [
     description: "a group standing in no line at all, which lies as one line holding nothing",
     lines: [],
     wide: 1,
-    deep: 1,
     parted: 0,
     jointed: 0,
   },
 ];
 
 describe("how wide a group of zones lies", () => {
-  it.each(SPANS)("counts $description", ({ lines, wide, deep, parted, jointed }: Span) => {
+  it.each(SPANS)("counts $description", ({ lines, wide, parted, jointed }: Span) => {
     expect(width(lines)).toBeCloseTo(wide);
-    expect(standing(lines)).toBe(deep);
     expect(parting(lines)).toBe(parted);
     expect(jointing(lines)).toBe(jointed);
   });
@@ -277,12 +258,23 @@ describe("what one line of a group states for itself", () => {
   });
 });
 
+/** The table these tables are read at: four cards dealt to every seat, which the rest of them read the backs of. */
+const DEALT_FOUR = aView(
+  {
+    [handOf(0)]: [null, null, null, null],
+    [handOf(SEAT)]: [null, null, null, null],
+    [handOf(2)]: [null, null, null, null],
+    [handOf(3)]: [null, null, null, null],
+  },
+  1,
+);
+
 interface Crowd {
   description: string;
   players: number;
   stacked: number;
   abreast: number;
-  flanked: number;
+  boxes: number;
 }
 
 const CROWDS: Crowd[] = [
@@ -291,53 +283,53 @@ const CROWDS: Crowd[] = [
     players: 2,
     stacked: 1,
     abreast: 1,
-    flanked: 0,
+    boxes: 1,
   },
   {
     description: "a table of three, whose two other seats face it and share the whole width between them",
     players: 3,
     stacked: 1,
     abreast: 2,
-    flanked: 0,
+    boxes: 2,
   },
   {
     description: "a table of four, one seat up each side and one facing, which is where the sides fill",
     players: 4,
     stacked: 1,
     abreast: 1,
-    flanked: 1,
+    boxes: 3,
   },
   {
     description: "a table of five, one seat up each side and two facing",
     players: 5,
     stacked: 1,
     abreast: 2,
-    flanked: 1,
+    boxes: 4,
   },
   {
-    description: "a table of seven, two seats up each side and two facing",
+    description: "a table of seven, two seats up each side and two facing, where a side stands one box wide",
     players: 7,
     stacked: 2,
     abreast: 2,
-    flanked: 1,
+    boxes: 4,
   },
   {
-    description: "a table nobody else sits at, which stands one seat's room at every side of itself",
+    description: "a table nobody else sits at, which stands no seat's box across itself at all",
     players: 1,
     stacked: 1,
     abreast: 1,
-    flanked: 0,
+    boxes: 0,
   },
 ];
 
 describe("how the seats crowd a table", () => {
-  it.each(CROWDS)("reads $description", ({ players, stacked, abreast, flanked }: Crowd) => {
+  it.each(CROWDS)("reads $description", ({ players, stacked, abreast, boxes }: Crowd) => {
     const layout = aTableOf(players, 0);
-    const crowd = crowding(ringOf(layout), shared(layout));
+    const crowd = crowding(ringOf(layout), shared(layout), DEALT_FOUR);
 
     expect(crowd["--stacked"]).toBe(stacked);
     expect(crowd["--abreast"]).toBe(abreast);
-    expect(crowd["--flanked"]).toBe(flanked);
+    expect(crowd["--boxes"]).toBe(boxes);
   });
 });
 
@@ -384,10 +376,79 @@ const DEPTHS: Depth[] = [
 
 describe("how deep a table lies", () => {
   it.each(DEPTHS)("reads $description", ({ layout, laid, deepest }: Depth) => {
-    const crowd = crowding(ringOf(layout), shared(layout));
+    const crowd = crowding(ringOf(layout), shared(layout), DEALT_FOUR);
 
     expect(crowd["--laid"]).toBe(laid);
     expect(crowd["--deepest"]).toBe(deepest);
+  });
+});
+
+/** A seat whose cards the table lays side by side, which is what parts the cards of a zone rather than its zones. */
+function aSpread(seat: number): Slot {
+  return { zone: handOf(seat), label: "Hand", seat, spread: "row", place: 0, counted: true };
+}
+
+/** The two shapes the cut across a felt takes beside those above: cards laid side by side, and nobody else seated. */
+const LAYS_THEM_OUT: Layout = aLayout({
+  slots: [...SEATS.filter((seat) => seat !== SEAT).map(aSpread), HELD],
+  plaques: PLAQUES,
+});
+
+const SITS_ALONE: Layout = aTableOf(1, 0);
+
+interface Across {
+  description: string;
+  layout: Layout;
+  cards: number;
+  parted: number;
+  jointed: number;
+}
+
+const CUTS: Across[] = [
+  {
+    description: "a table of four sharing nothing, whose three seats each hold four cards read by their backs",
+    layout: aTableOf(4, 0),
+    cards: 4.35,
+    parted: 0,
+    jointed: 0,
+  },
+  {
+    description: "a table of three sharing two heaps, whose two seats facing lie wider than the heaps beneath them",
+    layout: SHARES_TWO_HEAPS,
+    cards: 2.9,
+    parted: 1,
+    jointed: 0,
+  },
+  {
+    description: "a table whose seats seal a card, each standing a holding beside the blind it picks in",
+    layout: SEALS_A_CARD,
+    cards: 4.9,
+    parted: 2,
+    jointed: 0,
+  },
+  {
+    description: "a table laying every card of a holding side by side, which parts the cards themselves",
+    layout: LAYS_THEM_OUT,
+    cards: 8,
+    parted: 0,
+    jointed: 6,
+  },
+  {
+    description: "a table nobody else sits at and nothing is shared on, which lies one card across",
+    layout: SITS_ALONE,
+    cards: 1,
+    parted: 0,
+    jointed: 0,
+  },
+];
+
+describe("how wide the felt lies across", () => {
+  it.each(CUTS)("counts $description", ({ layout, cards, parted, jointed }: Across) => {
+    const crowd = crowding(ringOf(layout), shared(layout), DEALT_FOUR);
+
+    expect(crowd["--cards-across"]).toBeCloseTo(cards);
+    expect(crowd["--parted-across"]).toBe(parted);
+    expect(crowd["--jointed-across"]).toBe(jointed);
   });
 });
 

@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import { turnOf } from "../src/play/seats";
 import { ringOf, shared } from "../src/table/placing";
 import { crowding } from "../src/table/sizing";
-import { aHolding, aLayout, aTableOf } from "./tables";
+import { aHolding, aLayout, aTableOf, aView } from "./tables";
+
+/** A table nobody has been dealt to, since how many seats stand at a side is a fact about the seating alone. */
+const UNDEALT = aView({}, 1);
 
 /** The seats at each side of one table, read out in the order play runs round it. */
 function seated(players: number, observer: number): Record<string, number[]> {
@@ -18,7 +21,7 @@ function seated(players: number, observer: number): Record<string, number[]> {
 /** How many seats one table stands one above another, which is what its cards are drawn to fit. */
 function stacked(players: number): number {
   const layout = aTableOf(players, 0);
-  return crowding(ringOf(layout), shared(layout))["--stacked"] ?? 0;
+  return crowding(ringOf(layout), shared(layout), UNDEALT)["--stacked"] ?? 0;
 }
 
 interface Case {
