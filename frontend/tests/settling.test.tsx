@@ -84,10 +84,10 @@ describe("a card just laid on a heap", () => {
 });
 
 describe("a holding of any size", () => {
-  it("tells the style sheet how far it overlaps itself, which follows the cards it fans out", () => {
+  it("tells the style sheet the closest its cards may lie, which is what the sheet fans them out to", () => {
     const hand = drawn(PLAYED, NOTHING_LANDED, "own");
 
-    expect(hand).toContain("--overlap:0.42");
+    expect(hand).toContain("--closest:0.3");
   });
 
   it("marks the card just dealt to it as having arrived, beside the cards already held", () => {

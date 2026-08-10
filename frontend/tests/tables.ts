@@ -1,6 +1,6 @@
 import type { Gesture, Interludes, Layout, Plaque, Slot } from "../src/api/layout";
 import type { Move } from "../src/api/moves";
-import type { Cursor, EventView, PositionView, ProjectedCard, ZoneChange, ZoneId } from "../src/api/views";
+import type { Cursor, EventView, PositionView, ProjectedCard, ZoneChange, ZoneId, ZoneView } from "../src/api/views";
 import type { Arrivals } from "../src/play/arrivals";
 import type { Prospect } from "../src/play/selection";
 import { TINTS } from "../src/play/tints";
@@ -155,13 +155,16 @@ export function card(rank: string, suit: string, face_down = false): ProjectedCa
   return { card: { rank, suit }, face_down };
 }
 
+/** One zone as an observer is served it: the cards standing in it, and whether the seat lays them out itself. */
+export function aZone(zone: ZoneId, cards: ProjectedCard[], arrangeable: boolean): ZoneView {
+  return { id: zone, owner: null, arrangeable, cards };
+}
+
 export function aView(zones: Record<string, ProjectedCard[]>, seq: number, state: Cursor = SEATED): PositionView {
   return {
     observer: SEAT,
     seq,
-    zones: Object.fromEntries(
-      Object.entries(zones).map(([zone, cards]) => [zone, { id: zone, owner: null, arrangeable: false, cards }]),
-    ),
+    zones: Object.fromEntries(Object.entries(zones).map(([zone, cards]) => [zone, aZone(zone, cards, false)])),
     state,
     legal: [],
   };
@@ -195,7 +198,7 @@ export function offering(view: PositionView, legal: Move[]): PositionView {
 
 /** The same position, with one zone the table says this seat lays out in whatever order it pleases. */
 export function sortable(view: PositionView, zone: ZoneId): PositionView {
-  const held = view.zones[zone] ?? { id: zone, owner: SEAT, arrangeable: false, cards: [] };
+  const held = view.zones[zone] ?? aZone(zone, [], false);
   return { ...view, zones: { ...view.zones, [zone]: { ...held, arrangeable: true } } };
 }
 

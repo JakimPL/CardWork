@@ -2,14 +2,20 @@ import type { CSSProperties } from "react";
 
 import type { Artwork } from "../api/artwork";
 import type { Slot, Spread } from "../api/layout";
-import type { PositionView } from "../api/views";
+import type { PositionView, ProjectedCard, ZoneView } from "../api/views";
 import type { Offered } from "../play/selection";
 import type { Placement, Ring } from "./placing";
 import { linesOf } from "./placing";
 
-/** The names the sheet reads a fan's overlap and a group's width under, each in cards rather than pixels. */
-const OVERLAP = "--overlap";
+/** The name the sheet reads the closest a run of cards may lie under, as a part of a card's width. */
+const CLOSEST = "--closest";
+
+/** The name the sheet reads a group's width under, in cards rather than pixels. */
 const WIDTHS = "--widths";
+
+/** The names the sheet reads one line by: how many cards wide it lies, and how many of them lie over another. */
+const FILLING = "--filling";
+const FANNED = "--fanned";
 
 /** The name the sheet reads how many lines a group of zones lies in under. */
 const LINES = "--lines";
@@ -52,21 +58,25 @@ const FLANKING = 1;
 const CLEAR = 0;
 
 /**
- * How much of a card the next one in a fan lies over, at its loosest and at its tightest.
+ * The least of a card a fan leaves showing, as a part of a card's width.
  *
- * The tightest is the closest a run of them lies while the corner of every card still carries its index, which is
- * what a hand of any size is read by. A closed fan leaves just under a third of a card showing, so the whole of a
- * hand of twenty-six reads by running an eye down the left edge of it.
+ * A card is read by its corner, which is the part of it the card lying over it leaves showing. The index drawn
+ * there stands at `0.17` of a card's height and is inset from the left edge of it, so the widest rank asks for
+ * three-tenths of a card's width — measured at every height the games draw a card at, the floor the index rests
+ * on at the smallest of them included. Both the index and the part left showing scale with the card, so a figure
+ * stated as a part of a card's width holds at any size.
+ *
+ * A run standing for cards nobody at this seat reads says that cards lie where it lies and nothing besides, so it
+ * closes to half of that and an edge apiece carries the whole of what there is to read.
  */
-const LOOSE = 0.42;
-const CLOSED = 0.68;
-
-/** The holding a fan lies open at, and how far each card past that closes the run of them up. */
-const OPEN = 7;
-const TIGHTENING = 0.04;
+const A_CORNER = 0.3;
+const AN_EDGE = 0.15;
 
 /** One card, which is the room a heap takes and the first card of any run. */
 const ONE_CARD = 1;
+
+/** One card lying over another, which is the fewest a line's spare room is divided among. */
+const ONE_LAP = 1;
 
 /** How fine a figure the sheet is handed, which is a hundredth of the area either way. */
 const FINENESS = 100;
@@ -74,32 +84,27 @@ const FINENESS = 100;
 /** A style carrying a figure the sheet works its geometry out from, beside the properties React names. */
 type Measured = CSSProperties & Record<string, number>;
 
-/** One zone as the fitting reads it: how its cards lie against each other, and how many lie there. */
+/**
+ * One zone as the fitting reads it: how its cards lie against each other, how many lie there, and the closest
+ * they may lie to one another.
+ */
 export interface Run {
   spread: Spread;
   held: number;
+  closest: number;
 }
 
 /**
- * How much of a card the one lying over it in a fan covers, as a part of a card's width.
+ * The closest a run of cards may lie, handed to the style sheet so a fan closes up rather than running off.
  *
- * A handful lies open enough to read every face, and a holding of a dozen and more closes up to the room it has,
- * so a hand of any size reads by running an eye down the corners of it. The figure is worked out where the cards
- * are counted, since the room a run of them needs is measured from that same overlap.
+ * The sheet works the rest out from there: a fan lies as open as a fan opens where its line has room to spare and
+ * closes towards this figure as the line fills, so how far a run lies open follows the room it has rather than the
+ * cards it holds.
  *
- * @param held - how many cards lie in the fan.
+ * @param zone - the zone as this seat is served it, which is what says how its cards are read.
  */
-export function overlapOf(held: number): number {
-  return Math.min(CLOSED, Math.max(LOOSE, LOOSE + (held - OPEN) * TIGHTENING));
-}
-
-/**
- * How a fan lies against itself, handed to the style sheet so a wide holding tightens rather than running off.
- *
- * @param held - how many cards the fan holds.
- */
-export function fanning(held: number): Measured {
-  return { [OVERLAP]: overlapOf(held) };
+export function fanning(zone: ZoneView | undefined): Measured {
+  return { [CLOSEST]: closestIn(zone) };
 }
 
 /**
@@ -110,6 +115,10 @@ export function fanning(held: number): Measured {
  * both read off one figure saying how many cards wide the group lies. A group standing in two lines is as wide as
  * the wider of them and divides the height it has between them, so every card of it is drawn at one size. What
  * either figure comes to in pixels is the sheet's, since the proportions of a card belong to the drawing of one.
+ *
+ * A fan is counted at the closest its cards may lie, which is the tightest it will ever be drawn, so a group asks
+ * for the width it takes at its tightest and the cards give way only once even that overflows. What the room left
+ * over comes to is the sheet's, which spends it opening the fans back up.
  *
  * A line carries its partings as well — the ones between the zones lying along it, and the ones between the cards
  * a zone lays side by side — since a group measured to the width it was handed keeps the room those take out of
@@ -126,6 +135,24 @@ export function spanning(lines: Run[][]): Measured {
     [LINES]: Math.max(ONE_LINE, lines.length),
     [PARTED]: Math.max(NOTHING, ...partings),
     [JOINTED]: Math.max(NOTHING, ...joints),
+  };
+}
+
+/**
+ * What one line of a group states for itself: how many cards wide it lies, and how many of them lie over another.
+ *
+ * The sheet spends the room a line has over the width its cards ask for on the cards that lie over another, so a
+ * fan opens into whatever that line was left. Both figures are the line's own rather than the group's, so a fan on
+ * the narrower of two lines opens into the room that line has rather than into the room the wider one left.
+ *
+ * @param runs - the zones lying along the line, in the order they stand along it.
+ */
+export function lining(runs: Run[]): Measured {
+  const filling = runs.reduce((room, run) => room + running(run), NOTHING);
+  const laps = runs.reduce((count, run) => count + lapping(run), NOTHING);
+  return {
+    [FILLING]: rounded(Math.max(ONE_CARD, filling)),
+    [FANNED]: Math.max(ONE_LAP, laps),
   };
 }
 
@@ -191,15 +218,41 @@ export function measuring(lines: Slot[][], view: PositionView, said: Offered[]):
 
 /** One zone as the fitting reads it, which is how its cards lie and how many of them the observer is served. */
 function reading(slot: Slot, view: PositionView): Run {
-  return { spread: slot.spread, held: view.zones[slot.zone]?.cards.length ?? 0 };
+  const zone = view.zones[slot.zone];
+  return { spread: slot.spread, held: zone?.cards.length ?? 0, closest: closestIn(zone) };
+}
+
+/**
+ * The least of a card one zone leaves showing, which is the corner its cards are read by or an edge apiece.
+ *
+ * A run whose order this seat lays out itself is the run it picks its cards out of, so every card of it keeps the
+ * corner carrying its index showing. A run holding a card lying face up is read by everybody at the table, so it
+ * keeps its corner too. A run of backs and a run held face down under an order the table keeps say that cards lie
+ * where they lie and nothing besides, so those close to an edge apiece. A zone standing nowhere on the table is
+ * read as a run of cards would be, since it stands for the place one is drawn at.
+ *
+ * The one place the reading is made, so the figure the sheet is handed and the figure a group's width was measured
+ * at cannot come apart.
+ */
+function closestIn(zone: ZoneView | undefined): number {
+  if (zone === undefined) {
+    return A_CORNER;
+  }
+
+  return zone.arrangeable || zone.cards.some(lyingFaceUp) ? A_CORNER : AN_EDGE;
+}
+
+/** Whether one place of a zone holds a card lying face up, which is a card everybody at the table reads. */
+function lyingFaceUp(card: ProjectedCard): boolean {
+  return card !== null && !card.face_down;
 }
 
 /** The room the words of a turn take, which is a card apiece and none at all where a turn is said in none. */
 function saying(said: Offered[]): Run[] {
-  return said.length === 0 ? [] : [{ spread: "row", held: said.length }];
+  return said.length === 0 ? [] : [{ spread: "row", held: said.length, closest: A_CORNER }];
 }
 
-/** How many cards wide one zone lies: a heap reads by one card, a row by all of them, a fan by its overlap. */
+/** How many cards wide one zone lies: a heap reads by one card, a row by all of them, a fan by its closest. */
 function running(run: Run): number {
   switch (run.spread) {
     case "stack":
@@ -208,8 +261,13 @@ function running(run: Run): number {
     case "row":
       return Math.max(ONE_CARD, run.held);
     case "fan":
-      return run.held <= ONE_CARD ? ONE_CARD : ONE_CARD + (run.held - ONE_CARD) * (1 - overlapOf(run.held));
+      return run.held <= ONE_CARD ? ONE_CARD : ONE_CARD + (run.held - ONE_CARD) * run.closest;
   }
+}
+
+/** How many cards of one zone lie over another, which is every card of a fan past the first and none elsewhere. */
+function lapping(run: Run): number {
+  return run.spread === "fan" ? Math.max(NOTHING, run.held - ONE_CARD) : NOTHING;
 }
 
 /** How many partings lie inside one zone: a row lays every card of itself apart, and the rest draw a single card. */

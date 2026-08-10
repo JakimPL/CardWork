@@ -2037,22 +2037,30 @@ standing of every seat across the top, the table in the middle, the seat's own h
 saying where play stands at the bottom. Every card is measured from one height at the proportions of a real one,
 and each group of zones takes the lesser of two heights: the one the window's own height affords it, and the one
 the width leaves the cards it lies as many wide as. The script counts that width in cards — a heap as one, a row
-as all of them, a fan as its overlap — and the sheet turns it into a height, so the panel a player plays from
-draws a hand of three as large as the page has room for and a holding beside a row of five as large as the two of
-them fit, at any size of window and without a scrollbar anywhere. Every card on the table is drawn at one height,
-a holding read from across it at the height of the card on the pile, since both of them are cards lying on the
-same table; and how many seats stand one above another at a side of it is the figure that height gives way to, so
-a table of eight draws its cards smaller than a table of four does and all of them alike. A card is read by its
-corner, which is the part
-of it the card lying over it leaves showing, and a fan closes up as it fills: a handful lies open enough to read
-every face and a holding of a dozen and more tightens to the room its zone has, so a hand of four and a hand of
-seventeen are the same drawing at two overlaps.
+as all of them, a fan at the closest its cards may lie — and the sheet turns it into a height, so the panel a
+player plays from draws a hand of three as large as the page has room for and a holding beside a row of five as
+large as the two of them fit, at any size of window and without a scrollbar anywhere. Every card on the table is
+drawn at one height, a holding read from across it at the height of the card on the pile, since both of them are
+cards lying on the same table; and how many seats stand one above another at a side of it is the figure that
+height gives way to, so a table of eight draws its cards smaller than a table of four does and all of them alike.
+
+**A fan closes to the room it has, and the cards give way only once it has closed as far as it closes.** A card is
+read by its corner, which is the part of it the card lying over it leaves showing, so a hand reads better drawn
+large and packed tight than drawn small and lying open. Each line of a group states how wide its cards lie at
+their closest and how many of them lie over another, and the sheet spends whatever room that leaves on opening the
+fans back up: a fan lies as open as a fan opens where the line has room to spare, and closes towards the corner
+carrying the index as the line fills. So a hand of four and a hand of seventeen are the same drawing at whatever
+each has room for, and only a hand asking for more room than the line has at its closest shrinks the cards. The
+closest is three-tenths of a card's width, which is what the widest rank asks for at every size a card is drawn
+at; a run standing for cards nobody at that seat reads says only that cards lie there, so it closes to half of
+that and a seat's holding read from across the table takes half the width it would take read card by card.
 
 **The felt divides its own height between the middle of the table and the seats round it.** How much room the felt
 has is a fact about the page as it stands, so the felt is what states it: `container-type: size` makes it the
-container its own contents are measured against, the zones at the centre take up to half of what it holds, and the
-seats round the edge take the rest and divide that again by however many of them stand one above another at a side
-and by however many lines each of them stands in. The width goes the same way — a quarter of it to each side that
+container its own contents are measured against, and the height it holds is shared out among the lines of cards
+standing one above another once the lettering over each of them is written. The zones at the centre take the lines
+they lie in at that height, and the seats round the edge take the rest and divide that again by however many of
+them stand one above another at a side and by however many lines each of them stands in. The width goes the same way — a quarter of it to each side that
 holds seats, and what is left down the middle to the seats facing the near edge and to the cards they share. So the
 two shares add to the felt's own room at every seating: the table stays inside it, the panel below keeps the room it
 was given, and a card at another seat is drawn at the height of the card on the pile or at the height that seat's

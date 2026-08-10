@@ -50,8 +50,11 @@
   --card-aspect-width: 71;
   --card-aspect-height: 96;
   --radius: calc(var(--dealt) * 0.07);
-  --overlap: 0.42;
+  --closest: 0.3;
+  --loosest: 0.58;
   --widths: 1;
+  --filling: 1;
+  --fanned: 1;
   --lines: 1;
   --caption: clamp(10px, 1.5vh, 14px);
   --lettering: calc(var(--caption) * 2);
@@ -835,12 +838,28 @@ button.card {
 }
 
 /*
- * How far a fan overlaps itself, which the script works out from the number of cards in it: a handful lies open
- * enough to read every face, and a holding of a dozen and more closes up to the room its zone has.
+ * How far a fan lies open, which is the room the line it lies along has to spare.
+ *
+ * A card is read by the part of it the card lying over it leaves showing, so a fan shows as much of every card as
+ * there is room for: the room the line was handed, less the width its cards take at the closest they may lie,
+ * shared out among the cards lying over another. So a fan lies as open as a fan opens where the line has room to
+ * spare, closes towards the corner carrying the index as the line fills, and the cards themselves give way only
+ * once even the closest of them asks for more room than the line has.
+ *
+ * The script says how many cards wide the line lies and how many of them lie over another, and the widths are
+ * worked out here, since how wide a card is drawn is the sheet's own answer.
  */
 
+.slot[data-spread="fan"] .cards {
+  --to-spare: max(0px, calc(var(--room) - var(--filling) * var(--card-width)));
+  --showing: min(
+    calc(var(--card-width) * var(--loosest)),
+    calc(var(--card-width) * var(--closest) + var(--to-spare) / var(--fanned))
+  );
+}
+
 .slot[data-spread="fan"] .card + .card {
-  margin-left: calc(var(--card-width) * var(--overlap) * -1);
+  margin-left: calc(var(--showing) - var(--card-width));
 }
 
 .slot[data-spread="fan"] button.card:hover {
