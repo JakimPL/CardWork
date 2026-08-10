@@ -8,11 +8,11 @@ from httpx import ASGITransport, AsyncClient
 from cardserver.app import create_app
 from cardserver.errors import NoCreation, TablesFull, Unauthorized
 from cardserver.identity import ADMIN_HEADER
-from cardserver.oversight import Creation, LobbySetting, Oversight, Posting, TokenAdmin
+from cardserver.oversight import Abiding, Creation, LobbySetting, Oversight, Posting, TokenAdmin
 from cardserver.schemas import Founding
 
 from ..games.demo import SEATS
-from .company import STREAM_PATIENCE, SWEEP_SECONDS, Gathered, a_sealed_round
+from .company import CODE, STREAM_PATIENCE, SWEEP_SECONDS, Gathered, a_sealed_round
 from .conftest import BASE_URL, TABLE
 
 COMPANY: Final[tuple[str, ...]] = ("Ada", "Grace", "Alan")
@@ -33,6 +33,11 @@ def a_founding(table: str) -> Founding:
     return Founding(table=table, name="Ada", choice=a_sealed_round(A_SMALLER_TABLE))
 
 
+def an_abiding() -> Abiding:
+    """The room the run under test gathers under its own name, and what it takes to gather it again."""
+    return Abiding(table=TABLE, code=CODE, choice=a_sealed_round(SEATS))
+
+
 def oversight_of(gathered: Gathered, **terms: object) -> Oversight:
     """An overseer over the gathering under test, reading the clock the rest of it reads."""
     return Oversight(
@@ -44,17 +49,22 @@ def oversight_of(gathered: Gathered, **terms: object) -> Oversight:
     )
 
 
-def a_dealt_table(gathered: Gathered) -> None:
-    """The table under test dealt into service, which leaves a session for the reaper and the panel to find."""
+def a_dealt_table(gathered: Gathered) -> dict[str, str]:
+    """The table under test dealt into service, and the token each of the company plays through.
+
+    The tokens are what a sweep is weighed against: they are minted at the room and go on to hold the seats of
+    the table it became, so a room cleared away is a company turned away from a game still in service.
+    """
     gathering = gathered.gathering
+    tokens = {name: gathering.admit(name) for name in COMPANY}
     for seat, name in enumerate(COMPANY):
-        gathering.admit(name)
         gathering.claim(name, seat, gathering.revision)
 
     for name in COMPANY:
         gathering.ready(name, True, gathering.revision)
 
     gathering.deal(gathering.revision)
+    return tokens
 
 
 def test_a_token_admits_only_the_overseer() -> None:
@@ -148,6 +158,81 @@ async def test_an_idle_table_in_play_is_cleared_away(gathered: Gathered) -> None
     cleared = await oversight.reap()
 
     assert TABLE in cleared
+    assert TABLE not in dict(gathered.registry.sessions())
+
+
+async def test_a_dealt_room_stands_for_as_long_as_the_table_it_became(gathered: Gathered) -> None:
+    """A room is read stale by two marks a dealt room always shows, so the deal is what takes it out of reach."""
+    a_dealt_table(gathered)
+    oversight = oversight_of(gathered, stale_seconds=LONG_ENOUGH, idle_seconds=LONG_ENOUGH * 2)
+    gathered.ticking.on(LONG_ENOUGH + 1.0)
+
+    cleared = await oversight.reap()
+
+    assert gathered.gathering.present == 0
+    assert TABLE not in cleared
+    assert TABLE in dict(gathered.gatherings.tables())
+
+
+async def test_a_token_minted_before_the_deal_holds_its_seat_through_a_sweep(gathered: Gathered) -> None:
+    """The whole of what the room being cleared cost: every seat of a game still in service turned away from it."""
+    tokens = a_dealt_table(gathered)
+    oversight = oversight_of(gathered, stale_seconds=LONG_ENOUGH, idle_seconds=LONG_ENOUGH * 2)
+    gathered.ticking.on(LONG_ENOUGH + 1.0)
+
+    await oversight.reap()
+
+    assert gathered.gatherings.seat(TABLE, tokens["Ada"]) == 0
+
+
+async def test_a_table_cleared_away_takes_the_room_it_was_played_through_with_it(gathered: Gathered) -> None:
+    a_dealt_table(gathered)
+    oversight = oversight_of(gathered, stale_seconds=LONG_ENOUGH, idle_seconds=LONG_ENOUGH)
+    gathered.ticking.on(LONG_ENOUGH + 1.0)
+
+    await oversight.reap()
+
+    assert TABLE not in dict(gathered.registry.sessions())
+    assert TABLE not in dict(gathered.gatherings.tables())
+
+
+async def test_the_overseer_breaking_a_table_up_clears_the_room_it_was_played_through(gathered: Gathered) -> None:
+    a_dealt_table(gathered)
+    oversight = oversight_of(gathered)
+
+    await oversight.close(TABLE, "closing up")
+
+    assert TABLE not in dict(gathered.gatherings.tables())
+
+
+async def test_the_table_this_run_gathers_under_is_left_standing(gathered: Gathered) -> None:
+    """The address the run announced, which a lobby standing empty all afternoon is still the lobby of."""
+    oversight = oversight_of(gathered, stale_seconds=LONG_ENOUGH, abiding=an_abiding())
+    gathered.ticking.on(LONG_ENOUGH + 1.0)
+
+    cleared = await oversight.reap()
+
+    assert cleared == ()
+    assert gathered.gatherings.gathering() == (TABLE,)
+
+
+async def test_the_room_a_played_out_table_leaves_is_gathered_again_under_the_run_s_own_name(
+    gathered: Gathered,
+) -> None:
+    """The one path that frees the announced address: a table dealt under it, played out and walked away from.
+
+    A room the run gathered is exempt from the sweep, and the table it became is not — so the pair of them go
+    when the table falls idle, and the address a person was handed an hour ago would name nothing at all.
+    """
+    a_dealt_table(gathered)
+    oversight = oversight_of(gathered, idle_seconds=LONG_ENOUGH, abiding=an_abiding())
+    gathered.ticking.on(LONG_ENOUGH + 1.0)
+
+    cleared = await oversight.reap()
+
+    assert cleared == (TABLE,)
+    assert gathered.gatherings.gathering() == (TABLE,)
+    assert gathered.gatherings.at(TABLE).admits(CODE)
     assert TABLE not in dict(gathered.registry.sessions())
 
 

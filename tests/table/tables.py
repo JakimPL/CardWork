@@ -32,7 +32,7 @@ from cardwork.presentation.scene import Scene
 from cardwork.rounds.conclusion import Conclusion
 from tests.cases import Case
 
-from .config import ADMIN, ADVANCED, CODE, GLYPHS
+from .config import ADMIN, ADVANCED, CODE, GLYPHS, NOTHING_KEPT
 
 TABLE: Final[str] = "green-baize"
 UNSERVED: Final[str] = "no-such-table"
@@ -234,17 +234,28 @@ async def a_dealt_table(client: AsyncClient, code: str, players: int) -> Mapping
 
 
 @asynccontextmanager
+async def serving(hosted: Hosted) -> AsyncIterator[AsyncClient]:
+    """One run answering, with a client reaching it for as long as it does.
+
+    The application's own lifespan runs around the client, so the table ends these tests holding no timer
+    the way it ends its service under a server.
+    """
+    async with hosted.app.router.lifespan_context(hosted.app):
+        async with AsyncClient(transport=ASGITransport(app=hosted.app), base_url=BASE_URL) as client:
+            yield client
+
+
+@asynccontextmanager
 async def gathering(choice: Choice) -> AsyncIterator[tuple[AsyncClient, Hosted]]:
     """One table gathering at that choice through the host, with nobody arrived at it yet.
 
-    The application's own lifespan runs around the client, so the table ends these tests holding no timer
-    the way it ends its service under a server. The table draws with the glyphs its page carries, which
-    leaves these reading the endpoints alone whether or not the checkout has fetched a pack.
+    The run keeps nothing, so what it gathers lives as long as the block it is opened in. The table draws
+    with the glyphs its page carries, which leaves these reading the endpoints alone whether or not the
+    checkout has fetched a pack.
     """
-    hosted = opened(SETTINGS, choice, GLYPHS, ADVANCED, ADMIN)
-    async with hosted.app.router.lifespan_context(hosted.app):
-        async with AsyncClient(transport=ASGITransport(app=hosted.app), base_url=BASE_URL) as client:
-            yield client, hosted
+    hosted = opened(SETTINGS, choice, GLYPHS, ADVANCED, ADMIN, records=NOTHING_KEPT)
+    async with serving(hosted) as client:
+        yield client, hosted
 
 
 @asynccontextmanager

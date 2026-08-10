@@ -32,5 +32,10 @@ advanced:
   stream_patience: 20.0
   presence_stands: 60.0
 
+records:
+  kept: true
+  directory: null
+  retain_hours: 24.0
+
 admin:
   secret: null

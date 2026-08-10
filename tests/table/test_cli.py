@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from pydantic import ValidationError
 
 from cardserver.codes import read_out
+from cardserver.remembering import FORGETFUL
 from cardserver.schemas import Choice
 from cardtable.artwork import Artwork, PackName
 from cardtable.cli import announcement, configured, main, parser
@@ -20,7 +21,7 @@ from cardtable.service import LogLevel, Service
 from cardtable.settings import Settings
 from cardwork.rounds.conclusion import Conclusion
 
-from .config import ADMIN, ADVANCED, CODE, CONFIGURED, GLYPHS, a_config_file
+from .config import ADMIN, ADVANCED, CODE, CONFIGURED, GLYPHS, NOTHING_KEPT, a_config_file
 
 TABLE: Final[str] = "green-baize"
 ADMIN_TOKEN: Final[str] = "overseer-token"
@@ -90,6 +91,7 @@ DEPARTED: Final[Configuration] = Configuration(
         forwarded_allow_ips=TRUSTED,
     ),
     advanced=ADVANCED,
+    records=NOTHING_KEPT,
     admin=ADMIN,
 )
 
@@ -103,6 +105,7 @@ def a_hosted_table(artwork: Path | None, interface: Path | None) -> Hosted:
         admin_token=ADMIN_TOKEN,
         artwork=artwork,
         interface=interface,
+        keeping=FORGETFUL,
     )
 
 

@@ -16,10 +16,13 @@ __pycache__/
 *.txt
 *.log
 
+*.env
+
 table.lock
 table.pid
 
 /assets/
+/records/
 
 node_modules/
 frontend/dist/

@@ -1,15 +1,17 @@
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Generic
 
 from cardserver.errors import JournalSealed
 from cardserver.protocols.presentation import Presentation
 from cardserver.protocols.table import Table, TableId
+from cardserver.remembering import UNKEYED, Remembering, Written
 from cardwork.decks.deck import Order
 from cardwork.moves.move import Move
 from cardwork.presentation.layout import Layout
 from cardwork.states.state import StateT
 from cardwork.transactions.journal import Journal
+from cardwork.transactions.transaction import Transaction, Transactions
 from cardwork.views.event import EventView
 from cardwork.views.position import PositionView
 from cardwork.zones.zone import ZoneId
@@ -36,12 +38,15 @@ class TableSession(Generic[StateT]):
         table_id: TableId,
         table: Table[StateT],
         presentation: Presentation,
+        *,
+        keeping: Remembering,
         grace_seconds: float,
         clock: Callable[[], float],
     ) -> None:
         self._table_id = table_id
         self._table = table
         self._presentation = presentation
+        self._keeping = keeping
         self._grace_seconds = grace_seconds
         self._clock = clock
         self._commits = asyncio.Condition()
@@ -84,8 +89,17 @@ class TableSession(Generic[StateT]):
 
     @property
     def touched(self) -> float:
-        """When the table last committed, read off its clock, which is what a reaper counts a game idle by."""
+        """When the table was last committed to or last taken up, which a reaper counts a game idle by."""
         return self._touched
+
+    def attends(self) -> None:
+        """Read the table as one somebody is at, which a stream taken up on it says.
+
+        A turn a company is still thinking about is a table nobody commits to for as long as the thinking
+        takes, so what says a game is alive is a page following it rather than a move landing on it. Every
+        stream says so as it is taken up, and a page picking its stream up again keeps saying it.
+        """
+        self._touched = self._clock()
 
     @property
     def record(self) -> Journal[StateT]:
@@ -102,6 +116,38 @@ class TableSession(Generic[StateT]):
     def reveal(self) -> None:
         """Open the table's full record for analysis, which the host does once the game it holds is over."""
         self._revealed = True
+
+    def keep(self) -> None:
+        """Write the table down as it opens: the origin its record stands on, and the commits it already holds.
+
+        A deal lands a table holding commits of its own, so opening the record and laying those into it is one
+        act. They carry no key, since a key names a client's own attempt and the deal is the table's.
+        """
+        journal = self._table.journal
+        self._keeping.open_journal(self._table_id, journal.initial.model_dump_json())
+        for transaction in journal.transactions:
+            self._append(transaction, UNKEYED)
+
+    def restore(self, applied: Mapping[str, int], settled: Transactions[StateT]) -> None:
+        """Take back the attempts this table has already answered and lay down what it opened owing.
+
+        The record holds every commit the table stands on, and each line of it holds the key a client landed
+        that commit under. Reading those back is what leaves a request a flaky network prompted twice answered
+        the second time with the sequence it reached the first, across a restart as within a run.
+
+        The window a move opens is the adapter's own and lasts as long as the process holding it, so a table
+        cut off inside one opens owing whatever that window would have committed. Those commits arrive settled
+        and are written down here, before a client has read a word of the table, which leaves the record and
+        the table in service standing at the one sequence.
+
+        Everything the table holds is closed to undo as it opens: the record was served by the run that wrote
+        it, and what it opened owing is written down here.
+        """
+        self._applied = dict(applied)
+        for transaction in settled:
+            self._append(transaction, UNKEYED)
+
+        self._table.mark_published()
 
     def layout(self, observer: int | None) -> Layout:
         """How this table is laid out for one observer, which is what an interface draws it from.
@@ -144,6 +190,7 @@ class TableSession(Generic[StateT]):
 
             transaction = self._table.submit(move, base_seq)
             self._applied[key] = transaction.seq
+            self._append(transaction, key)
             self._publish()
             self._restart_grace()
             return transaction.seq
@@ -182,13 +229,19 @@ class TableSession(Generic[StateT]):
 
             transaction = self._table.arrange(zone, order, seat, base_seq)
             self._applied[key] = transaction.seq
+            self._append(transaction, key)
             self._publish()
             return transaction.seq
 
     async def watch(self, cursor: int) -> None:
-        """Wait until the table holds a commit past `cursor`, or is broken up, which wakes a stream either way."""
+        """Wait until the table holds a commit past `cursor`, or is broken up, which wakes a stream either way.
+
+        Waiting is for a table standing exactly where the stream does. A cursor naming a sequence beyond the
+        table's own is a cursor from a table this one has never been, so it is answered at once and the stream
+        reads how far the record really goes.
+        """
         async with self._commits:
-            await self._commits.wait_for(lambda: self._table.head > cursor or self._closed)
+            await self._commits.wait_for(lambda: self._table.head != cursor or self._closed)
 
     async def dismiss(self, reason: str | None) -> None:
         """Break the table up, waking every stream on it so its seats learn the game is over rather than gone quiet.
@@ -220,6 +273,14 @@ class TableSession(Generic[StateT]):
             settlement.cancel()
             await asyncio.wait((settlement,))
 
+    def _append(self, transaction: Transaction[StateT], key: str | None) -> None:
+        """Lay one commit into the record kept of this table, under the key a client landed it by.
+
+        Every commit is written down before the stream that carries it is woken, so a sequence a client has
+        been told about is one the record already holds and a table read back stands where its seats left it.
+        """
+        self._keeping.append(self._table_id, Written(key=key, transaction=transaction).model_dump_json())
+
     def _publish(self) -> None:
         """Close the table's commits to undo and wake every stream watching, with the lock in hand."""
         self._table.mark_published()
@@ -242,5 +303,9 @@ class TableSession(Generic[StateT]):
         """
         await asyncio.sleep(self._grace_seconds)
         async with self._commits:
-            if self._table.settle():
+            settled = self._table.settle()
+            if settled:
+                for transaction in settled:
+                    self._append(transaction, UNKEYED)
+
                 self._publish()

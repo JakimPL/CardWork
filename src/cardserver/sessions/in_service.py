@@ -39,7 +39,10 @@ class InService(Protocol):
 
     @property
     def touched(self) -> float:
-        """When the table last committed, read off its clock, which is what a reaper counts a game idle by."""
+        """When the table was last committed to or last taken up, which a reaper counts a game idle by."""
+
+    def attends(self) -> None:
+        """Read the table as one somebody is at, which a stream taken up on it says."""
 
     @property
     def record(self) -> BaseFrozen:

@@ -1,12 +1,14 @@
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from time import monotonic
 
 from cardserver.errors import TableTaken, UnknownTable
 from cardserver.protocols.presentation import Presentation
 from cardserver.protocols.table import Table, TableId
+from cardserver.remembering import Remembering
 from cardserver.sessions.in_service import InService
 from cardserver.sessions.table import TableSession
 from cardwork.states.state import GameState
+from cardwork.transactions.transaction import Transactions
 
 
 class TableRegistry:
@@ -25,10 +27,13 @@ class TableRegistry:
     def __init__(
         self,
         grace_seconds: float,
+        *,
+        keeping: Remembering,
         clock: Callable[[], float] = monotonic,
     ) -> None:
         self._sessions: dict[TableId, InService] = {}
         self._grace_seconds = grace_seconds
+        self._keeping = keeping
         self._clock = clock
 
     def open[StateT: GameState](
@@ -43,21 +48,38 @@ class TableRegistry:
         once a seat has acted. It opens with the arrangement it is read through besides, since a client
         joining asks for both and the host holding the game holds the layout of it too.
 
+        The record of it is opened as the table is, so a table stands written down from its deal onward and
+        the whole of what a company has played survives whatever becomes of the process serving it.
+
         Raises:
             TableTaken: when a table of that name is already in service, which would leave the record
                 a client was reading replaced under it.
         """
-        if table_id in self._sessions:
-            raise TableTaken(table_id)
+        session = self._served(table_id, table, presentation)
+        session.keep()
+        return session
 
-        session = TableSession(
-            table_id,
-            table,
-            presentation,
-            self._grace_seconds,
-            self._clock,
-        )
-        self._sessions[table_id] = session
+    def reopen[StateT: GameState](
+        self,
+        table_id: TableId,
+        table: Table[StateT],
+        presentation: Presentation,
+        *,
+        applied: Mapping[str, int],
+        settled: Transactions[StateT],
+    ) -> TableSession[StateT]:
+        """Put a table read back from its own record into service, holding the attempts it already answered.
+
+        A table opened this way stands where its last commit left it, so the company reaches the game they
+        were playing rather than a fresh deal of it. What is written down stands as it was written: the record
+        already holds this table, and the commits it opens owing are the next lines of it.
+
+        Raises:
+            TableTaken: when a table of that name is already in service, which reading one record twice
+                would otherwise leave replaced under the company playing it.
+        """
+        session = self._served(table_id, table, presentation)
+        session.restore(applied, settled)
         return session
 
     def session(self, table_id: TableId) -> InService:
@@ -81,10 +103,11 @@ class TableRegistry:
         return len(self._sessions)
 
     def idle(self, idle: float, now: float) -> tuple[TableId, ...]:
-        """The tables no seat has committed to in too long, which is what a reaper comes to clear away.
+        """The tables nobody is at that have stood too long, which is what a reaper comes to clear away.
 
-        A table is idle once the clock has run past the allowance since its last commit, so a game a company
-        left mid-play and one broken up and left to be forgotten both fall due to be cleared.
+        A table is idle once the clock has run past the allowance since the last commit landed on it or the
+        last stream was taken up on it, so a game a company left mid-play and one broken up and left to be
+        forgotten both fall due to be cleared, while a company still turning a hand over keeps their table.
         """
         return tuple(table for table, session in self._sessions.items() if now - session.touched > idle)
 
@@ -93,15 +116,46 @@ class TableRegistry:
 
         The session is woken before it is dropped, since the streams still on it hold it themselves and read it
         closed to carry their last word; what forgetting it does is leave a client reconnecting to find the
-        table gone rather than the game going on without it.
+        table gone rather than the game going on without it. The record kept of it goes the same way, so a
+        table broken up stays broken up across a restart.
 
         Raises:
             UnknownTable: when no table of that name is in service.
         """
         await self.session(table_id).dismiss(reason)
         self._sessions.pop(table_id, None)
+        self._keeping.forget(table_id)
 
     async def close(self) -> None:
         """Drop every timer still in hand, which is what ends service cleanly."""
         for session in self._sessions.values():
             await session.close()
+
+    def _served[StateT: GameState](
+        self,
+        table_id: TableId,
+        table: Table[StateT],
+        presentation: Presentation,
+    ) -> TableSession[StateT]:
+        """Hold one game under a name with the writer that will serve it, however the run came to have it.
+
+        A table dealt here and a table read back from a record are the same table to everything that serves
+        it, so they are built the same way and told apart by what each says to the store: a deal writes the
+        record it opens, and a table read back is already written down.
+
+        Raises:
+            TableTaken: when a table of that name is already in service.
+        """
+        if table_id in self._sessions:
+            raise TableTaken(table_id)
+
+        session = TableSession(
+            table_id,
+            table,
+            presentation,
+            keeping=self._keeping,
+            grace_seconds=self._grace_seconds,
+            clock=self._clock,
+        )
+        self._sessions[table_id] = session
+        return session

@@ -325,6 +325,45 @@ class Game(ABC, Generic[StateT]):
         self._journal = self._journal.truncate()
         self._history.pop()
 
+    def resume(self, record: Journal[StateT]) -> None:
+        """Take up a record kept of this table, so a table stands again where its last commit left it.
+
+        A table is built the way it was built the first time — the same seating, the same deck, the same
+        ending — and this hands it the record of everything committed since, in place of the round the
+        building dealt. What makes that exact is the origin being the components rather than the deal: the
+        position before transaction 0 follows from the seating, the deck and the cursor the game states, and
+        stands whatever the generator went on to draw. So a record opening at this table's own origin is the
+        record of a table of exactly this shape, and that one comparison is the whole of what is asked.
+
+        Every position the record has stood at is folded as the record is read rather than as each is asked
+        for, since an event is the difference between two of them and a table taken up serves its stream from
+        the first commit like any other. Each folded from the one before costs the record once over; each
+        asked for apart would cost it once for every commit it holds.
+
+        The record arrives closed to undo up to its head, since everything it holds was served by the run
+        that wrote it, and a commit a client may have read is one a table keeps.
+
+        The generator keeps whatever the building drew, exactly as `undo` leaves it, so a table taken up
+        again draws from where a freshly dealt one stood. Replay stays exact throughout, since a transaction
+        records the outcome of every draw that went into it.
+
+        Raises:
+            GameValidationError: when the record opens at another origin, which is a record of a table of
+                another seating, another deck or another ending, and one no table of this shape continues.
+        """
+        if record.initial != self._journal.initial:
+            raise GameValidationError(
+                "The record opens at an origin other than this table's, which no table of this shape continues"
+            )
+
+        standing = [record.initial]
+        for transaction in record.transactions:
+            standing.append(fold(transaction.effects, standing[-1]))
+
+        self._journal = record
+        self._history = standing
+        self._published = record.head
+
     def mark_published(self) -> None:
         """Called by the adapter after step 10 of §6. Closes everything up to `head` to undo."""
         self._published = self._journal.head

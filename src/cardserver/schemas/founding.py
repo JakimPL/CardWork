@@ -15,11 +15,11 @@ class Founding(BaseFrozen):
     for them and handed back, and the token minted seats the host the way an arrival seats any guest.
     """
 
-    table: Annotated[TableId, Field(min_length=1, max_length=NAME_LONGEST)]
+    table: TableId
     name: Annotated[str, Field(min_length=1, max_length=NAME_LONGEST)]
     choice: Choice
 
-    @field_validator("table", "name")
+    @field_validator("name")
     @classmethod
     def _reads_at_a_table(cls, offered: str) -> str:
         """The name with the space around it trimmed, refused where it shows nothing, as a guest's name is.

@@ -106,7 +106,7 @@ layers = [
     "cardtable.catalogue",
     "cardtable.hosting",
     "cardtable.config : cardtable.reaching",
-    "cardtable.settings : cardtable.service : cardtable.interface : cardtable.artwork : cardtable.admin",
+    "cardtable.settings : cardtable.service : cardtable.interface : cardtable.artwork : cardtable.admin : cardtable.records",
     "cardtable.games : cardtable.paths",
 ]
 
@@ -123,6 +123,7 @@ layers = [
     "cardserver.sessions",
     "cardserver.identity",
     "cardserver.errors",
+    "cardserver.remembering",
     "cardserver.schemas",
     "cardserver.naming",
     "cardserver.protocols : cardserver.codes",

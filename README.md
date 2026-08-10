@@ -283,7 +283,10 @@ stand in it, and the seat whose turn it is stands in theirs at full strength.
 A run bound to `0.0.0.0` is reached from another machine at the address it announces, so a table of people in
 one room needs nothing further; `--advertise` states an address instead, for a run behind a name or a tunnel.
 
-A table lives as long as the process: the position is held in memory, and a restart deals a fresh one.
+A table is held in the memory of one process, so a run left to itself deals a fresh one at every start. A run
+told to write its tables down lays each room and each commit into `records/` as it happens, and the run after
+it reads them back: the company returns to the room they were in and the table they were at, at the sequence
+they left it, through the address their page already holds. `records.kept` in `config.yaml` is what says so.
 
 ## Putting one on the internet
 

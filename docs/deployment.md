@@ -33,8 +33,13 @@ Three things, each a consequence of the design rather than a preference (`docs/a
   the room changes, and the connection stays open between frames for as long as the page is there. Closing it
   is how the table learns a page has left, which is what the presence in the room is read from.
 
-A fourth follows from the first: a table lives as long as its process, so a restart deals a fresh one. That is
-true of every deployment, local or public.
+A fourth follows from the first: a table is held in the memory of its process, so by default a restart deals
+a fresh one. That is the default rather than the law. A run told to write its tables down lays each room and
+each commit into `records/` as it happens, and the run started after it reads them back — so the company is
+handed the room they were in and the table they were at, at the sequence they left it, through the same
+address their page already holds. §4.6 states what a run is told, and `docs/architecture.md` §10 states what
+is written and why. What no record answers is the first three: presence, the loop and the open connections
+are facts of a process, and each restart still costs every page a reconnection.
 
 ## 2. What a WSGI host offers instead
 
@@ -138,10 +143,42 @@ service:
 
 admin:
   secret: hunter2     # pinned, so a restart oversees under the token already held
+
+records:
+  kept: true          # so a restart hands the company back the table they were at
+  directory: null     # null names the records/ directory beside this file
+  retain_hours: 24.0  # a record nothing has written to for this long is collected at the next start
 ```
 
 Leaving `code`, `seed` and `admin.secret` unstated is right for a local run, where each start deals a match of
 its own; on a public table it means a restart hands out a code nobody has and a token nobody holds.
+
+`records` is what makes a restart survivable, and it is the section a host that stops the table on idle
+traffic most needs. `kept: true` writes each room down as it changes and each commit as it lands, and the
+next run reads the whole store before it answers anything. `directory: null` names `records/` beside the
+entry file; state a path where the store belongs elsewhere. `retain_hours` is how long a record outlives
+the last thing written to it — a run collects the store as it starts and never again, so a host restarted
+all day stays the size of the tables being played at it.
+
+Records answer two of the three pins on their own — the run announces the code the room it read back admits
+on, and a table comes back off its record whatever seed the run drew — so pinning them is what holds when
+the store does not: a store cleared by hand, a record set aside, a first start. `admin.secret` is pinned
+either way, since the overseer's token is a run's own and is written down nowhere.
+
+Three things follow. The store is **one run's to write**: a lock over it is taken before a record is read
+and held for the run, so a second table process started over the same store waits and then refuses rather
+than writing into it — which is a useful alarm rather than a nuisance, since two tables behind one domain
+is the failure §7 is about. That lock is `flock`, which is **weak over NFS** and silently so, and shared
+hosts do mount home directories that way; the entry file already bets on the same call for `table.lock`
+(§6), so a deployment where it does not hold is one where two tables can start at once whatever this
+section says. `pgrep -af cardtable.cli` remains the answer that asks nothing of the file system. The
+directory and everything in it stand at **`0o700` and `0o600`**, because a
+journal names every card every seat is hiding; a backup that copies `$HOME` off the machine copies that
+too. And a record is a record of the build that wrote it: `records` is where a deploy that changed a game's
+rules starts clean (§6).
+
+With `kept: false` a run holds its tables for as long as it runs and writes nothing, which is what a
+checkout being played with wants.
 
 **7. Open the site, then read the log.** `table.log` beside the entry file holds both halves — the entry's own
 lines under `passenger:` and everything the table says — and §7 states what to look for in it.
@@ -217,8 +254,35 @@ asks nothing of the host beyond its Python:
 python3 -c "import socket;print('quiet' if socket.socket().connect_ex(('127.0.0.1',8421)) else 'answering')"
 ```
 
-Either way, replacing the table ends the game in progress, hands out a fresh join code where `table.code` is
-unpinned, and is what a changed `config.yaml` waits on.
+Either way, replacing the table is what a changed `config.yaml` waits on. What it does to the game in
+progress is what `records.kept` states.
+
+**With `records.kept: true`**, the company keeps their game across it. The new run reads the store before it
+answers anything: each room comes back with its seating, its colours and the tokens it minted, each dealt
+table comes back at the sequence it stood at, and a page that was open reopens its own seat from the address
+already in its bar. The run answers under the room it read back and announces that room's code, so an
+unpinned `table.code` no longer hands out a code nobody has. A round that was inside its grace window when
+the process ended is settled as the table is taken up and written down settled, so the table a company
+returns to is the one the last move would have left them.
+
+Two things still change under them. Every open page reconnects, since a stream is a fact of a process; and
+a run's own room is read back at one revision further on, so a page holding the revision from before is
+answered `The command was built on revision N while the gathering stands at M` once and re-reads. Both are
+paths the page already travels.
+
+**With `records.kept: false`**, replacing the table ends the game in progress and hands out a fresh join
+code where `table.code` is unpinned.
+
+`rm -r records/` is the escape hatch, and it is how a deploy that changed the rules starts clean:
+
+```bash
+pkill -f cardtable.cli && rm -r records/ && touch tmp/restart.txt
+```
+
+A record is a record of the build that wrote it. A change to a game's own state fields or to what an effect
+carries invalidates every record in flight, and so does a rollback to a build older than the records on
+disk. The store says so where it can — a record it reads as nothing it knows is renamed aside rather than
+served — but clearing it outright is the certain answer, and it costs whatever games were in progress.
 
 ## 7. Reading the log
 
@@ -242,6 +306,27 @@ it, which is what says the ask reached the table rather than the workers in fron
 2026-08-09 19:22:07 INFO [31998] passenger: the table answers on process 32104 after 1.9 seconds
 ```
 
+A run that writes its tables down says what it made of the store, between the two — one line per record it
+could not take up, and one per record it collected. A start that read everything back says nothing at all,
+so silence here is the ordinary case and each line below names the table it is about:
+
+```
+2026-08-09 19:22:07 INFO  [32104] cardtable: The last commit written down of table 'cardtable' was cut short, and it is read without it
+2026-08-09 19:22:07 INFO  [32104] cardtable: The record of table 'green-baize' has stood unwritten too long, and it is cleared away
+2026-08-09 19:22:07 WARNING [32104] cardtable: The record of table 'red-baize' is set aside: ...
+2026-08-09 19:22:07 WARNING [32104] cardtable: The record in 'red-baize-8489181efbb4c105' is set aside: ...
+```
+
+The first is the expected shape of a kill and not a fault: a process ended mid-line, the line will not read,
+and the commits before it are the table. The second is `retain_hours` doing its work. The last two are a
+record this build makes nothing of — a game the host offers nowhere, a state model that has moved on, a
+file that reads as no record at all. That table is renamed `*.broken` beside the others and the rest are
+served; the directory stays on disk, so it can be read or removed by hand.
+
+The join code is announced from the room the run read back, so **a code that has changed after a restart on
+a run that keeps records means the room was not read back** — the store was empty, unreadable, or somewhere
+other than where the last run wrote it. `ls records/*/` says which.
+
 Several `passenger:` PIDs are ordinary — those are the workers, and a run of them all reaching one table is
 the arrangement working. **A second announcement, under a second join code, is a host serving two tables**,
 and it is the first thing to rule out when a company finds itself in an empty room:
@@ -264,6 +349,12 @@ pgrep -af cardtable                   # what is running now
 | A deploy changes nothing at all | the table is the process that was already running | ask for one afresh (§6); `table.log` says where the ask reached a table it cannot stop |
 | The panel reports a restart and the table is unchanged | the panel restarts workers, and the table is neither | the same ask (§6), which the button itself makes where `tmp/restart.txt` is what it touches |
 | The panel reports the app as started, and the domain answers 500 | the entry file was imported and raised | the panel's own error log, then `table.log` |
+| A restart loses the game after all | the run wrote nothing down, or read it back from somewhere else | `records.kept: true` (§4.6); `ls records/*/` says whether anything was written, and `records.directory` says where it is read from |
+| The join code changes after a restart | the room was not read back — an empty, unreadable or differently-placed store | the same check; `table.log` says which records were set aside (§7). Pinning `table.code` masks it rather than fixing it |
+| The table comes back and admits nobody new | the room was read back dealt, and a dealt room takes no further guests | the seats already at it rejoin through the addresses their pages hold; a new company waits for the match to play out, or `rm -r records/` (§6) |
+| A record is gone from the store after a start | it stood unwritten longer than `retain_hours` | raise `retain_hours` (§4.6); `table.log` names each record it collected (§7) |
+| The table will not start, and says another run holds the records | a table process is already up over that store, or one was killed holding the lock on a file system that keeps it | `pgrep -af cardtable.cli` (§6); the lock goes with the process, so one still named is one still running |
+| A record is renamed `*.broken` at every start | the build has moved on from what wrote it, or the game it names is offered nowhere | it is one table and the rest are served; `rm -r records/` where a deploy changed the rules (§6) |
 
 ## 9. Hosts other than cPanel
 
@@ -275,3 +366,7 @@ A host that runs a long-lived process of its own accord needs none of it. A syst
 shell you can leave `uv run cardtable` running in serves the table directly, with a reverse proxy in front for
 the certificate: state `service.forwarded_allow_ips` as the proxy's address, leave the port closed to
 everything else, and pass event streams through unbuffered.
+
+`records` applies wherever the table runs, and a container is the case that needs stating: the store must
+stand on a volume that outlives the container, or a restart reads back a directory as empty as the memory it
+replaced. A unit restarted by systemd keeps its store on disk and asks for nothing further.

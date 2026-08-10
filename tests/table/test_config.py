@@ -35,6 +35,7 @@ SPARE: Final[dict[str, object]] = {
         "stream_patience": 20.0,
         "presence_stands": 60.0,
     },
+    "records": {"kept": False, "directory": None, "retain_hours": 24.0},
     "admin": {"secret": None},
 }
 
@@ -102,6 +103,14 @@ def test_a_field_the_tuning_is_held_under_is_asked_for_outright(tmp_path: Path) 
         Configuration.read(a_file_stating(tmp_path, lacking))
 
 
+def test_what_a_run_does_with_the_tables_it_holds_is_asked_for_outright(tmp_path: Path) -> None:
+    """Whether a company is handed their table back after a restart is stated rather than assumed."""
+    lacking = {key: value for key, value in SPARE.items() if key != "records"}
+
+    with pytest.raises(ValidationError):
+        Configuration.read(a_file_stating(tmp_path, lacking))
+
+
 def test_a_name_the_configuration_holds_no_field_for_is_turned_away(tmp_path: Path) -> None:
     mistaken = {**SPARE, "grace": 2.0}
 
@@ -125,6 +134,14 @@ def test_a_table_seating_nobody_at_all_is_turned_away_as_the_file_is_read(tmp_pa
 
     with pytest.raises(ValidationError):
         Configuration.read(a_file_stating(tmp_path, alone))
+
+
+def test_a_name_reading_through_a_directory_is_turned_away_as_the_file_is_read(tmp_path: Path) -> None:
+    """The name a run announces is written down under a name of the store's own, and reads at a table here."""
+    stepping = {**SPARE, "table": {"name": "../escape", "grace_seconds": 0.0}}
+
+    with pytest.raises(ValidationError):
+        Configuration.read(a_file_stating(tmp_path, stepping))
 
 
 def test_a_code_reading_as_no_hand_of_ranks_is_turned_away_as_the_file_is_read(tmp_path: Path) -> None:

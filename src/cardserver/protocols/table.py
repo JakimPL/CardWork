@@ -1,5 +1,8 @@
-from typing import Protocol
+from typing import Annotated, Final, Protocol
 
+from pydantic import AfterValidator, Field
+
+from cardserver.limits import NAME_LONGEST
 from cardwork.decks.deck import Order
 from cardwork.moves.move import Move
 from cardwork.states.state import StateT
@@ -9,7 +12,36 @@ from cardwork.views.event import EventView
 from cardwork.views.position import PositionView
 from cardwork.zones.zone import ZoneId
 
-TableId = str
+SEPARATORS: Final[frozenset[str]] = frozenset("/\\")
+DOTTED: Final[frozenset[str]] = frozenset({".", ".."})
+
+
+def a_table_name(offered: str) -> str:
+    """The name with the space around it trimmed, held to what reads at a table and names one place alone.
+
+    A name is a word a person is handed and a page carries in its own address, and a host is free to write a
+    table down under a name of its own making. So a name reads plainly and names nothing but the table: the
+    two separators and the two dotted names are the whole of what steps through a directory, and a name
+    holding none of them is a name every route reaches, since a path stands between two slashes.
+
+    Raises:
+        ValueError: when nothing but space was offered, when a character of it shows nothing, or when it
+            reads as a step through a directory rather than as a name.
+    """
+    read = offered.strip()
+    if not read:
+        raise ValueError("A name is what a table is read by, and this one holds nothing but space")
+
+    if not read.isprintable():
+        raise ValueError(f"A name reads at a table, and {offered!r} holds a character that shows nothing")
+
+    if SEPARATORS & set(read) or read in DOTTED:
+        raise ValueError(f"A name reads at a table rather than through a directory, and {offered!r} steps through one")
+
+    return read
+
+
+TableId = Annotated[str, Field(min_length=1, max_length=NAME_LONGEST), AfterValidator(a_table_name)]
 
 
 class Table(Protocol[StateT]):

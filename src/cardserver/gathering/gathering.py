@@ -25,6 +25,7 @@ from cardserver.gathering.opening import Opening
 from cardserver.limits import TOKEN_BYTES
 from cardserver.naming.seated import Seated
 from cardserver.protocols.table import TableId
+from cardserver.remembering import Remembering, RoomRecord, digest_of
 from cardserver.schemas.choice import Choice
 from cardserver.schemas.gathering import GatheringView
 from cardserver.schemas.guest import Guest
@@ -35,6 +36,7 @@ from cardwork.presentation.tint import Tint
 TINTS: Final[tuple[Tint, ...]] = tuple(Tint)
 COMPANY_MOST: Final[int] = len(TINTS)
 FIRST_REVISION: Final[int] = 0
+ONE_CHANGE: Final[int] = 1
 STANDING: Final[None] = None
 
 
@@ -59,6 +61,7 @@ class Gathering:
         offerings: tuple[Offering, ...],
         opening: Opening,
         *,
+        keeping: Remembering,
         clock: Callable[[], float],
         presence_stands: float,
         democratic: bool,
@@ -68,13 +71,14 @@ class Gathering:
         self._code = code
         self._offerings = offerings
         self._opening = opening
+        self._keeping = keeping
         self._clock = clock
         self._presence_stands = presence_stands
         self._host = host
         self._democratic = democratic
         self._seats: dict[str, int | None] = {}
         self._tints: dict[str, Tint] = {}
-        self._tokens: dict[str, str] = {}
+        self._marks: dict[str, str] = {}
         self._watching: dict[str, float] = {}
         self._ready: dict[str, bool] = {}
         self._revision = FIRST_REVISION
@@ -104,6 +108,11 @@ class Gathering:
     def reason(self) -> str | None:
         """The word left for the company on why the gathering was broken up, and none where it stands open."""
         return self._reason
+
+    @property
+    def code(self) -> str:
+        """The hand of ranks this room admits on, which is the whole of what a company is handed to arrive by."""
+        return self._code
 
     @property
     def host(self) -> str | None:
@@ -149,17 +158,21 @@ class Gathering:
         token = token_urlsafe(TOKEN_BYTES)
         self._seats[name] = STANDING
         self._tints[name] = tint
-        self._tokens[token] = name
+        self._marks[digest_of(token)] = name
         self._publish()
         return token
 
     def guest(self, token: str) -> str:
-        """The guest a token speaks for.
+        """The guest a token speaks for, read by the mark it is written down under.
+
+        A room holds the marks of the tokens it minted rather than the tokens, so what a run keeps of a
+        company reads every guest back and admits nobody: the mark is taken afresh from what a client
+        offers, at one hash of it per request.
 
         Raises:
             Unauthenticated: when the token was minted at no gathering of this table.
         """
-        name = self._tokens.get(token)
+        name = self._marks.get(digest_of(token))
         if name is None:
             raise Unauthenticated(self._table)
 
@@ -346,18 +359,80 @@ class Gathering:
 
         A gathering changes without awaiting anything, so the event a waiter takes hold of is the one the next
         change will set and nothing lands between reading the revision and waiting on it.
+
+        Waiting is for the one change a room is short of. A cursor naming any revision further off than that
+        is a cursor from a room this one has never been, which a page holds after a run gathered a fresh room
+        under a name it once read; the room answers such a page with how it stands, so the page reads where it
+        really is and picks up from there.
         """
-        while self._revision < cursor:
+        while self._revision + ONE_CHANGE == cursor:
             await self._changed.wait()
 
         return self.view(guest)
 
+    def keep(self) -> None:
+        """Write the room down as it stands, which a run does as it gathers one."""
+        self._keeping.remember_room(self._record())
+
+    def restore(self, record: RoomRecord, *, dealt: bool) -> None:
+        """Take the room back from the record kept of it, so a company is handed the room they were in.
+
+        What comes back is everything the company settled: where each of them sits, what tells them apart, the
+        marks their tokens are read by, the commitments they gave and how far the room had got. What is left
+        behind is what was true of a process rather than of a room — nobody is here until a page says so, the
+        room was last touched now, and nothing is waiting on it.
+
+        Whether the table was dealt is the caller's to say. The journal of a table is opened before the room
+        is written down dealt, so a run holding one holds the mark the deal left and says so here, and a room
+        written down in the moment between the two is taken back as the dealt room it had become.
+
+        The room stands one change past the revision it was written at, so a command built before the restart
+        is refused rather than landing on a room whose company has moved on under it. The page holding it
+        reads the refusal and asks for the room afresh, which is what shows it the company as it now stands.
+        """
+        self._seats = dict(record.seats)
+        self._tints = dict(record.tints)
+        self._marks = dict(record.tokens)
+        self._ready = dict(record.ready)
+        self._revision = record.revision + ONE_CHANGE
+        self._dealt = dealt
+        self._closed = record.closed
+        self._reason = record.reason
+
     def _publish(self) -> None:
-        """Count the change and wake everyone watching, which is the whole of how a gathering is followed."""
+        """Count the change, write the room down, and wake everyone watching, which is how one is followed.
+
+        The record lands before anybody is woken, so the revision a page is handed is one a run reading the
+        room back stands at: a command built on what a client was told is a command the room still answers.
+        """
         self._revision += 1
         self._touched = self._clock()
+        self.keep()
         changed, self._changed = self._changed, asyncio.Event()
         changed.set()
+
+    def _record(self) -> RoomRecord:
+        """The room as a record holds it, which is everything a run reads a gathering back from.
+
+        The seating a table is dealt with travels along, since that is what the plaques of the table carry and
+        the deal is the moment it comes to be settled.
+        """
+        return RoomRecord(
+            table=self._table,
+            code=self._code,
+            choice=self._choice,
+            host=self._host,
+            democratic=self._democratic,
+            seats=dict(self._seats),
+            tints=dict(self._tints),
+            tokens=dict(self._marks),
+            ready=dict(self._ready),
+            seated=dict(self._seated()),
+            revision=self._revision,
+            dealt=self._dealt,
+            closed=self._closed,
+            reason=self._reason,
+        )
 
     def _company(self) -> tuple[Guest, ...]:
         """Everyone at the gathering, in the order they arrived."""

@@ -12,6 +12,7 @@ from cardgames.frontend.passing.layout import PASSING_SCENE
 from cardgames.frontend.shedding.layout import SHEDDING_SCENE
 from cardgames.frontend.showdown.layout import SHOWDOWN_SCENE
 from cardserver.registry import TableRegistry
+from cardserver.remembering import FORGETFUL
 from cardserver.schemas import Offering
 from cardtable.catalogue import OFFERINGS, Deals
 from cardtable.games import GAMES_HELD, GameName
@@ -60,7 +61,7 @@ DEALS: Final[tuple[DealCase, ...]] = tuple(
 
 def _is_dealt(case: DealCase) -> bool:
     """Whether the rules deal the table one offered case asks for, which is what a company meets at the deal."""
-    tables = TableRegistry(NO_GRACE)
+    tables = TableRegistry(NO_GRACE, keeping=FORGETFUL)
     try:
         Deals(tables, SEED).open(
             TABLE, settled(GameName(case.game), case.seats, case.decks), a_seated_company(case.seats)
@@ -97,7 +98,7 @@ def test_a_table_a_host_offers_is_dealt_or_refused_in_words(case: DealCase) -> N
     hand of at most twenty-six cards, so two decks halved between two seats are refused where they are asked
     for. What this rules out is the third answer — a promise that hangs, or one the server meets with a defect.
     """
-    tables = TableRegistry(NO_GRACE)
+    tables = TableRegistry(NO_GRACE, keeping=FORGETFUL)
     choice = settled(GameName(case.game), case.seats, case.decks)
 
     try:
