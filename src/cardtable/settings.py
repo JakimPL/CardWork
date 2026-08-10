@@ -5,6 +5,7 @@ from pydantic import Field, field_validator
 
 from cardserver.codes import a_drawn_code, code_in
 from cardserver.limits import CODE_LENGTH
+from cardserver.protocols import TableId
 from cardwork.models.base import BaseFrozen
 
 SEEDS: Final[int] = 1 << 32
@@ -28,7 +29,7 @@ class Settings(BaseFrozen):
     address it has handed out already.
     """
 
-    name: str = Field(min_length=1)
+    name: TableId
     code: str = Field(default_factory=a_drawn_code)
     seed: int = Field(default_factory=a_drawn_seed)
     grace_seconds: float = Field(ge=0.0)

@@ -11,6 +11,7 @@ ROOM: Final[str] = "room"
 JOURNAL: Final[str] = "journal"
 COMMIT: Final[str] = "commit"
 FORGOTTEN: Final[str] = "forgotten"
+ASIDE: Final[str] = "aside"
 
 
 def read_back(record: TableRecord) -> tuple[Written[GameState], ...]:
@@ -49,6 +50,7 @@ class Keeping:
         self.origins: dict[TableId, str] = {}
         self.commits: dict[TableId, list[str]] = {}
         self.forgotten: list[TableId] = []
+        self.aside: list[TableId] = []
         self.order: list[str] = []
 
     @property
@@ -79,6 +81,11 @@ class Keeping:
         self.commits.pop(table, None)
         self.forgotten.append(table)
         self.order.append(FORGOTTEN)
+
+    def set_aside(self, table: TableId) -> None:
+        """Set the record of one table aside, which leaves it where a test reads what was set aside."""
+        self.aside.append(table)
+        self.order.append(ASIDE)
 
     def written(self, table: TableId) -> TableRecord:
         """The record kept of one table in service, which a test reads back the way a run resuming it does.

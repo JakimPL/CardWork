@@ -205,6 +205,7 @@ def test_a_host_keeping_nothing_takes_every_word_and_holds_none(gathered: Gather
     forgetful.remember_room(gathered.keeping.rooms[TABLE])
     forgetful.open_journal(TABLE, NOTHING_YET)
     forgetful.append(TABLE, NOTHING_YET)
+    forgetful.set_aside(TABLE)
     forgetful.forget(TABLE)
 
     assert forgetful.kept() == ()

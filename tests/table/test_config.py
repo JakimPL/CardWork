@@ -127,6 +127,14 @@ def test_a_table_seating_nobody_at_all_is_turned_away_as_the_file_is_read(tmp_pa
         Configuration.read(a_file_stating(tmp_path, alone))
 
 
+def test_a_name_reading_through_a_directory_is_turned_away_as_the_file_is_read(tmp_path: Path) -> None:
+    """The name a run announces is written down under a name of the store's own, and reads at a table here."""
+    stepping = {**SPARE, "table": {"name": "../escape", "grace_seconds": 0.0}}
+
+    with pytest.raises(ValidationError):
+        Configuration.read(a_file_stating(tmp_path, stepping))
+
+
 def test_a_code_reading_as_no_hand_of_ranks_is_turned_away_as_the_file_is_read(tmp_path: Path) -> None:
     unread = {**SPARE, "table": {"name": "baize", "code": "hello", "grace_seconds": 0.0}}
 

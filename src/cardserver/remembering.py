@@ -119,6 +119,14 @@ class Remembering(Protocol):
     def forget(self, table: TableId) -> None:
         """Drop everything written down of one table, which clearing it away and breaking it up both do."""
 
+    def set_aside(self, table: TableId) -> None:
+        """Set the record of one table aside as one nothing here reads, leaving it for whoever comes to look.
+
+        A record is read by the run that finds it, and a run whose rules have moved on since it was written
+        finds records it makes nothing of. Setting one aside is what lets the tables beside it open: the run
+        says so of the one record and gathers the rest.
+        """
+
     def kept(self) -> tuple[Kept, ...]:
         """Everything written down here, which is what a run gathers its lobby from as it starts."""
 
@@ -141,6 +149,9 @@ class Forgetful:
 
     def forget(self, table: TableId) -> None:
         """Hear the table cleared away, which leaves as much written down as it found."""
+
+    def set_aside(self, table: TableId) -> None:
+        """Hear the record set aside, which is a word about a record a run of this kind holds none of."""
 
     def kept(self) -> tuple[Kept, ...]:
         """The tables a run of this kind starts with, which is none of them."""
