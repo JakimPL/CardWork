@@ -4,6 +4,7 @@ import pytest
 
 from cardserver.naming import Named
 from cardserver.registry import TableRegistry
+from cardserver.remembering import FORGETFUL
 from cardtable.catalogue import (
     TWO_DECKS,
     Deals,
@@ -178,7 +179,7 @@ def test_a_count_of_decks_a_game_is_dealt_from_nowhere_gathers_no_table() -> Non
 @pytest.mark.parametrize("case", CASES, ids=descriptions(CASES))
 def test_a_settled_choice_is_dealt_as_the_game_it_names(case: HostCase) -> None:
     """A gathering names a game and this is where the rules of that name are found, dealt and put in service."""
-    tables = TableRegistry(NO_GRACE)
+    tables = TableRegistry(NO_GRACE, keeping=FORGETFUL)
 
     Deals(tables, SEED).open(SETTINGS.name, settled(case.game, PLAYERS, ONE_DECK), a_seated_company(PLAYERS))
 

@@ -25,6 +25,7 @@ from cardserver.gathering.opening import Opening
 from cardserver.limits import TOKEN_BYTES
 from cardserver.naming.seated import Seated
 from cardserver.protocols.table import TableId
+from cardserver.remembering import Remembering, RoomRecord, digest_of
 from cardserver.schemas.choice import Choice
 from cardserver.schemas.gathering import GatheringView
 from cardserver.schemas.guest import Guest
@@ -59,6 +60,7 @@ class Gathering:
         offerings: tuple[Offering, ...],
         opening: Opening,
         *,
+        keeping: Remembering,
         clock: Callable[[], float],
         presence_stands: float,
         democratic: bool,
@@ -68,6 +70,7 @@ class Gathering:
         self._code = code
         self._offerings = offerings
         self._opening = opening
+        self._keeping = keeping
         self._clock = clock
         self._presence_stands = presence_stands
         self._host = host
@@ -104,6 +107,11 @@ class Gathering:
     def reason(self) -> str | None:
         """The word left for the company on why the gathering was broken up, and none where it stands open."""
         return self._reason
+
+    @property
+    def code(self) -> str:
+        """The hand of ranks this room admits on, which is the whole of what a company is handed to arrive by."""
+        return self._code
 
     @property
     def host(self) -> str | None:
@@ -352,12 +360,44 @@ class Gathering:
 
         return self.view(guest)
 
+    def keep(self) -> None:
+        """Write the room down as it stands, which a run does as it gathers one."""
+        self._keeping.remember_room(self._record())
+
     def _publish(self) -> None:
-        """Count the change and wake everyone watching, which is the whole of how a gathering is followed."""
+        """Count the change, write the room down, and wake everyone watching, which is how one is followed.
+
+        The record lands before anybody is woken, so the revision a page is handed is one a run reading the
+        room back stands at: a command built on what a client was told is a command the room still answers.
+        """
         self._revision += 1
         self._touched = self._clock()
+        self.keep()
         changed, self._changed = self._changed, asyncio.Event()
         changed.set()
+
+    def _record(self) -> RoomRecord:
+        """The room as a record holds it, which is everything a run reads a gathering back from.
+
+        The seating a table is dealt with travels along, since that is what the plaques of the table carry and
+        the deal is the moment it comes to be settled.
+        """
+        return RoomRecord(
+            table=self._table,
+            code=self._code,
+            choice=self._choice,
+            host=self._host,
+            democratic=self._democratic,
+            seats=dict(self._seats),
+            tints=dict(self._tints),
+            tokens={digest_of(token): name for token, name in self._tokens.items()},
+            ready=dict(self._ready),
+            seated=dict(self._seated()),
+            revision=self._revision,
+            dealt=self._dealt,
+            closed=self._closed,
+            reason=self._reason,
+        )
 
     def _company(self) -> tuple[Guest, ...]:
         """Everyone at the gathering, in the order they arrived."""

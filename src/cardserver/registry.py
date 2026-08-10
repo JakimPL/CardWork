@@ -4,6 +4,7 @@ from time import monotonic
 from cardserver.errors import TableTaken, UnknownTable
 from cardserver.protocols.presentation import Presentation
 from cardserver.protocols.table import Table, TableId
+from cardserver.remembering import Remembering
 from cardserver.sessions.in_service import InService
 from cardserver.sessions.table import TableSession
 from cardwork.states.state import GameState
@@ -25,10 +26,13 @@ class TableRegistry:
     def __init__(
         self,
         grace_seconds: float,
+        *,
+        keeping: Remembering,
         clock: Callable[[], float] = monotonic,
     ) -> None:
         self._sessions: dict[TableId, InService] = {}
         self._grace_seconds = grace_seconds
+        self._keeping = keeping
         self._clock = clock
 
     def open[StateT: GameState](
@@ -43,6 +47,9 @@ class TableRegistry:
         once a seat has acted. It opens with the arrangement it is read through besides, since a client
         joining asks for both and the host holding the game holds the layout of it too.
 
+        The record of it is opened as the table is, so a table stands written down from its deal onward and
+        the whole of what a company has played survives whatever becomes of the process serving it.
+
         Raises:
             TableTaken: when a table of that name is already in service, which would leave the record
                 a client was reading replaced under it.
@@ -54,10 +61,12 @@ class TableRegistry:
             table_id,
             table,
             presentation,
-            self._grace_seconds,
-            self._clock,
+            keeping=self._keeping,
+            grace_seconds=self._grace_seconds,
+            clock=self._clock,
         )
         self._sessions[table_id] = session
+        session.keep()
         return session
 
     def session(self, table_id: TableId) -> InService:
@@ -94,13 +103,15 @@ class TableRegistry:
 
         The session is woken before it is dropped, since the streams still on it hold it themselves and read it
         closed to carry their last word; what forgetting it does is leave a client reconnecting to find the
-        table gone rather than the game going on without it.
+        table gone rather than the game going on without it. The record kept of it goes the same way, so a
+        table broken up stays broken up across a restart.
 
         Raises:
             UnknownTable: when no table of that name is in service.
         """
         await self.session(table_id).dismiss(reason)
         self._sessions.pop(table_id, None)
+        self._keeping.forget(table_id)
 
     async def close(self) -> None:
         """Drop every timer still in hand, which is what ends service cleanly."""

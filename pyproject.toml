@@ -123,6 +123,7 @@ layers = [
     "cardserver.sessions",
     "cardserver.identity",
     "cardserver.errors",
+    "cardserver.remembering",
     "cardserver.schemas",
     "cardserver.naming",
     "cardserver.protocols : cardserver.codes",

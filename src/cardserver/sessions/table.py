@@ -5,11 +5,13 @@ from typing import Generic
 from cardserver.errors import JournalSealed
 from cardserver.protocols.presentation import Presentation
 from cardserver.protocols.table import Table, TableId
+from cardserver.remembering import UNKEYED, Remembering, Written
 from cardwork.decks.deck import Order
 from cardwork.moves.move import Move
 from cardwork.presentation.layout import Layout
 from cardwork.states.state import StateT
 from cardwork.transactions.journal import Journal
+from cardwork.transactions.transaction import Transaction
 from cardwork.views.event import EventView
 from cardwork.views.position import PositionView
 from cardwork.zones.zone import ZoneId
@@ -36,12 +38,15 @@ class TableSession(Generic[StateT]):
         table_id: TableId,
         table: Table[StateT],
         presentation: Presentation,
+        *,
+        keeping: Remembering,
         grace_seconds: float,
         clock: Callable[[], float],
     ) -> None:
         self._table_id = table_id
         self._table = table
         self._presentation = presentation
+        self._keeping = keeping
         self._grace_seconds = grace_seconds
         self._clock = clock
         self._commits = asyncio.Condition()
@@ -112,6 +117,17 @@ class TableSession(Generic[StateT]):
         """Open the table's full record for analysis, which the host does once the game it holds is over."""
         self._revealed = True
 
+    def keep(self) -> None:
+        """Write the table down as it opens: the origin its record stands on, and the commits it already holds.
+
+        A deal lands a table holding commits of its own, so opening the record and laying those into it is one
+        act. They carry no key, since a key names a client's own attempt and the deal is the table's.
+        """
+        journal = self._table.journal
+        self._keeping.open_journal(self._table_id, journal.initial.model_dump_json())
+        for transaction in journal.transactions:
+            self._append(transaction, UNKEYED)
+
     def layout(self, observer: int | None) -> Layout:
         """How this table is laid out for one observer, which is what an interface draws it from.
 
@@ -153,6 +169,7 @@ class TableSession(Generic[StateT]):
 
             transaction = self._table.submit(move, base_seq)
             self._applied[key] = transaction.seq
+            self._append(transaction, key)
             self._publish()
             self._restart_grace()
             return transaction.seq
@@ -191,6 +208,7 @@ class TableSession(Generic[StateT]):
 
             transaction = self._table.arrange(zone, order, seat, base_seq)
             self._applied[key] = transaction.seq
+            self._append(transaction, key)
             self._publish()
             return transaction.seq
 
@@ -229,6 +247,14 @@ class TableSession(Generic[StateT]):
             settlement.cancel()
             await asyncio.wait((settlement,))
 
+    def _append(self, transaction: Transaction[StateT], key: str | None) -> None:
+        """Lay one commit into the record kept of this table, under the key a client landed it by.
+
+        Every commit is written down before the stream that carries it is woken, so a sequence a client has
+        been told about is one the record already holds and a table read back stands where its seats left it.
+        """
+        self._keeping.append(self._table_id, Written(key=key, transaction=transaction).model_dump_json())
+
     def _publish(self) -> None:
         """Close the table's commits to undo and wake every stream watching, with the lock in hand."""
         self._table.mark_published()
@@ -251,5 +277,9 @@ class TableSession(Generic[StateT]):
         """
         await asyncio.sleep(self._grace_seconds)
         async with self._commits:
-            if self._table.settle():
+            settled = self._table.settle()
+            if settled:
+                for transaction in settled:
+                    self._append(transaction, UNKEYED)
+
                 self._publish()

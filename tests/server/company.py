@@ -15,6 +15,7 @@ from cardwork.games.capacity import Capacity
 from cardwork.rounds.conclusion import Conclusion
 
 from ..games.demo import DECK, SealedRoundGame
+from .keeping import Keeping
 from .layout import SEALED_SCENE, TITLE
 
 GAME: Final[str] = "sealed"
@@ -117,6 +118,7 @@ class Gathered:
     gatherings: Gatherings
     gathering: Gathering
     deals: Deals
+    keeping: Keeping
     ticking: Ticking
     app: FastAPI
 
@@ -124,7 +126,8 @@ class Gathered:
 def gathered(table: TableId, players: int) -> Gathered:
     """One table gathering on its code, at a choice of the demo game seating that many."""
     ticking = Ticking()
-    registry = TableRegistry(NO_GRACE, ticking)
+    keeping = Keeping()
+    registry = TableRegistry(NO_GRACE, keeping=keeping, clock=ticking)
     deals = Deals(registry)
     gatherings = Gatherings(
         deals,
@@ -135,6 +138,7 @@ def gathered(table: TableId, players: int) -> Gathered:
             window=TURNSTILE_WINDOW,
             wrong_codes_allowed=WRONG_CODES_ALLOWED,
         ),
+        keeping=keeping,
         clock=ticking,
         presence_stands=PRESENCE_STANDS,
     )
@@ -148,6 +152,7 @@ def gathered(table: TableId, players: int) -> Gathered:
             democratic=True,
         ),
         deals=deals,
+        keeping=keeping,
         ticking=ticking,
         app=create_app(
             registry,

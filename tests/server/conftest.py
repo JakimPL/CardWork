@@ -11,6 +11,7 @@ from cardserver.app import create_app
 from cardserver.identity import SEAT_HEADER, TokenSeats
 from cardserver.protocols import Presentation, Table
 from cardserver.registry import TableRegistry
+from cardserver.remembering import FORGETFUL
 from cardserver.schemas import ArrangementRequest, Arriving, Claiming, MoveRequest, Readying
 from cardserver.sessions import InService, TableSession
 from cardwork.decks.deck import Order
@@ -119,7 +120,7 @@ async def served[StateT: GameState](
     that type out to the wire, which is what a real game served in its own module reads for. The window is
     left at nothing, so a round closed by the last seat to act settles as soon as the session is drained.
     """
-    registry = TableRegistry(NO_GRACE)
+    registry = TableRegistry(NO_GRACE, keeping=FORGETFUL)
     session = registry.open(TABLE, table, presentation)
     seats = TokenSeats({TABLE: {token_of(seat): seat for seat in range(table.players)}})
     app = create_app(registry, seats, None, sweep_seconds=SWEEP_SECONDS, stream_patience=STREAM_PATIENCE)
@@ -150,7 +151,7 @@ def grace_fixture() -> float:
 
 @pytest.fixture(name="registry")
 async def registry_fixture(grace: float) -> AsyncIterator[TableRegistry]:
-    registry = TableRegistry(grace)
+    registry = TableRegistry(grace, keeping=FORGETFUL)
     registry.open(
         TABLE,
         SealedRoundGame(players=SEATS, deck=DECK, rng=Random(SEED)),

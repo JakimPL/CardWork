@@ -5,6 +5,7 @@ import pytest
 
 from cardserver.errors import TableTaken, UnknownTable
 from cardserver.registry import TableRegistry
+from cardserver.remembering import FORGETFUL
 from cardserver.streams import STREAM_START, commits
 
 from ..games.demo import DECK, SEATS, SealedRoundGame
@@ -21,7 +22,7 @@ def another_table() -> SealedRoundGame:
 
 def a_table_on(ticking: Ticking) -> TableRegistry:
     """One table in service, told the time by a clock a test moves by hand."""
-    registry = TableRegistry(NO_GRACE, ticking)
+    registry = TableRegistry(NO_GRACE, keeping=FORGETFUL, clock=ticking)
     registry.open(TABLE, another_table(), SEALED_SCENE)
     return registry
 
@@ -54,7 +55,7 @@ async def test_tables_are_served_one_session_each(registry: TableRegistry) -> No
 
 
 def test_a_registry_opens_holding_no_tables() -> None:
-    registry = TableRegistry(NO_GRACE)
+    registry = TableRegistry(NO_GRACE, keeping=FORGETFUL)
 
     with pytest.raises(UnknownTable):
         registry.session(TABLE)

@@ -20,6 +20,7 @@ from cardserver.naming.seated import Seated
 from cardserver.protocols.presentation import Presentation
 from cardserver.protocols.table import Table, TableId
 from cardserver.registry import TableRegistry
+from cardserver.remembering import FORGETFUL
 from cardserver.schemas.choice import Choice
 from cardserver.schemas.offering import Offering
 from cardtable.admin import Admin
@@ -229,7 +230,7 @@ def opened(
         GameValidationError: when the choice the run opens at names a game offered nowhere, a table that game
             seats nowhere, or a count of decks it is dealt from nowhere.
     """
-    registry = TableRegistry(settings.grace_seconds)
+    registry = TableRegistry(settings.grace_seconds, keeping=FORGETFUL)
     gatherings = Gatherings(
         Deals(registry, settings.seed),
         offerings=OFFERINGS,
@@ -239,6 +240,7 @@ def opened(
             window=advanced.turnstile_window,
             wrong_codes_allowed=advanced.wrong_codes_allowed,
         ),
+        keeping=FORGETFUL,
         clock=monotonic,
         presence_stands=advanced.presence_stands,
     )

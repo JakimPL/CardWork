@@ -12,6 +12,7 @@ from cardserver.oversight.lobby.setting import NO_LIMIT
 from cardserver.oversight.oversight import Oversight
 from cardserver.oversight.token_admin import TokenAdmin
 from cardserver.registry import TableRegistry
+from cardserver.remembering import FORGETFUL
 from cardtable.catalogue import OFFERINGS, Deals
 from cardtable.paths import SPECIFICATION
 
@@ -40,7 +41,7 @@ def document() -> Document:
     answer only where one is held. An oversight stands over it so the panel and the founding a company reaches
     itself land in the document a client generates from, under a token that opens nothing a run answers on.
     """
-    registry = TableRegistry(NO_GRACE)
+    registry = TableRegistry(NO_GRACE, keeping=FORGETFUL)
     gatherings = Gatherings(
         Deals(registry, NO_SEED),
         offerings=OFFERINGS,
@@ -50,6 +51,7 @@ def document() -> Document:
             window=TURNSTILE_WINDOW,
             wrong_codes_allowed=WRONG_CODES_ALLOWED,
         ),
+        keeping=FORGETFUL,
         clock=monotonic,
         presence_stands=PRESENCE_STANDS,
     )

@@ -13,6 +13,7 @@ from cardserver.gathering.opening import Opening
 from cardserver.gathering.say_policy import SayPolicy
 from cardserver.gathering.turnstile import Turnstile
 from cardserver.protocols.table import TableId
+from cardserver.remembering import Remembering
 from cardserver.schemas.admitted import Admitted
 from cardserver.schemas.arriving import Arriving
 from cardserver.schemas.choice import Choice
@@ -44,6 +45,7 @@ class Gatherings:
         offerings: tuple[Offering, ...],
         say: SayPolicy,
         turnstile: Turnstile,
+        keeping: Remembering,
         clock: Callable[[], float],
         presence_stands: float,
     ) -> None:
@@ -51,6 +53,7 @@ class Gatherings:
         self._offerings = offerings
         self._say = say
         self._turnstile = turnstile
+        self._keeping = keeping
         self._clock = clock
         self._presence_stands = presence_stands
         self._gatherings: dict[TableId, Gathering] = {}
@@ -71,6 +74,9 @@ class Gatherings:
     ) -> Gathering:
         """Gather one table under a name, on a code, at the choice it opens with.
 
+        The room is written down as it is gathered, so a company arriving at a room a run opened moments ago
+        reaches the same room after a restart as they would have reached before it.
+
         Raises:
             TableTaken: when a table of that name is already gathering, which would leave the company that
                 was at it holding tokens for a room that had been replaced under them.
@@ -85,12 +91,14 @@ class Gatherings:
             choice,
             self._offerings,
             self._opening,
+            keeping=self._keeping,
             clock=self._clock,
             presence_stands=self._presence_stands,
             democratic=democratic,
             host=host,
         )
         self._gatherings[table] = gathering
+        gathering.keep()
         return gathering
 
     def create(self, founding: Founding, *, democratic: bool) -> Admitted:
@@ -152,8 +160,12 @@ class Gatherings:
         )
 
     def drop(self, table: TableId) -> None:
-        """Forget one gathering, which a reaper does once it is stale and a founder does by breaking it up."""
+        """Forget one gathering, which a reaper does once it is stale and a founder does by breaking it up.
+
+        What was written down of it goes with it, so a room cleared away stays cleared away across a restart.
+        """
         self._gatherings.pop(table, None)
+        self._keeping.forget(table)
 
     def at(self, table: TableId) -> Gathering:
         """The gathering of one table.
