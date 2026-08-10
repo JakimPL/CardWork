@@ -84,8 +84,17 @@ class TableSession(Generic[StateT]):
 
     @property
     def touched(self) -> float:
-        """When the table last committed, read off its clock, which is what a reaper counts a game idle by."""
+        """When the table was last committed to or last taken up, which a reaper counts a game idle by."""
         return self._touched
+
+    def attends(self) -> None:
+        """Read the table as one somebody is at, which a stream taken up on it says.
+
+        A turn a company is still thinking about is a table nobody commits to for as long as the thinking
+        takes, so what says a game is alive is a page following it rather than a move landing on it. Every
+        stream says so as it is taken up, and a page picking its stream up again keeps saying it.
+        """
+        self._touched = self._clock()
 
     @property
     def record(self) -> Journal[StateT]:

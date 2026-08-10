@@ -20,6 +20,7 @@ from cardserver.sessions.in_service import InService
 OVERSEER: Final[str] = ""
 GATHERING_PHASE: Final[str] = "gathering"
 PLAYING_PHASE: Final[str] = "playing"
+NOTHING_ABIDES: Final[None] = None
 
 
 class Oversight:
@@ -32,6 +33,9 @@ class Oversight:
 
     The governance a table opens under is settled here once and handed to every table gathered through it, which
     is the single place a run says whether its tables start democratic; a host toggles their own from there.
+
+    A run that gathers a table of its own names it here as the one that abides: it is the address the run
+    announced, so it stands for as long as the run does while every room a company opens falls due on the clock.
     """
 
     def __init__(
@@ -46,6 +50,7 @@ class Oversight:
         stale_seconds: float,
         idle_seconds: float,
         capacity: int = NO_LIMIT,
+        abiding: TableId | None = NOTHING_ABIDES,
     ) -> None:
         self._gatherings = gatherings
         self._registry = registry
@@ -56,6 +61,7 @@ class Oversight:
         self._capacity = capacity
         self._stale_seconds = stale_seconds
         self._idle_seconds = idle_seconds
+        self._abiding = abiding
 
     def confirm(self, credential: str | None) -> None:
         """Confirm a request carries the overseer's own credential, which the panel is answered behind.
@@ -127,7 +133,7 @@ class Oversight:
             UnknownTable: when this host holds no table of that name.
         """
         if table in dict(self._registry.sessions()):
-            await self._registry.dismiss(table, reason)
+            await self._retire(table, reason)
             return
 
         self._gatherings.break_up(table, reason)
@@ -135,21 +141,37 @@ class Oversight:
     async def reap(self) -> tuple[TableId, ...]:
         """Clear away every table nobody is at that has sat too long, and answer with the ones cleared.
 
-        A gathering nobody holds a stream on and a game no seat has committed to both come due on the clock, so
-        the lobby a run leaves behind it is the lobby a run keeps: a room a company walked out of frees the name
-        it stood under and the room a founder opened and forgot frees the one it took.
+        A gathering nobody holds a stream on and a game nobody is at both come due on the clock, so the lobby a
+        run leaves behind it is the lobby a run keeps: a room a company walked out of frees the name it stood
+        under and the room a founder opened and forgot frees the one it took.
+
+        The table this run gathers under its own name is left where it stands, since its address is the one the
+        run handed out and a lobby that stands empty for an afternoon is still the lobby that address names.
         """
         now = self._clock()
         cleared: list[TableId] = []
         for table in self._gatherings.stale(self._stale_seconds, now):
+            if table == self._abiding:
+                continue
+
             self._gatherings.drop(table)
             cleared.append(table)
 
         for table in self._registry.idle(self._idle_seconds, now):
-            await self._registry.dismiss(table, None)
+            await self._retire(table, None)
             cleared.append(table)
 
         return tuple(cleared)
+
+    async def _retire(self, table: TableId, reason: str | None) -> None:
+        """Break one table in play up and clear the room it was played through, which end together.
+
+        A dealt room is the identity of the table it became, so it stands for exactly as long as that table and
+        goes when it goes: what frees a name is the pair of them, and a room left behind would hold the name
+        against every company that came after.
+        """
+        await self._registry.dismiss(table, reason)
+        self._gatherings.drop(table)
 
     def _confirm_room(self) -> None:
         """Confirm this host holds room for another table.

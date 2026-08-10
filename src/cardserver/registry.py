@@ -81,10 +81,11 @@ class TableRegistry:
         return len(self._sessions)
 
     def idle(self, idle: float, now: float) -> tuple[TableId, ...]:
-        """The tables no seat has committed to in too long, which is what a reaper comes to clear away.
+        """The tables nobody is at that have stood too long, which is what a reaper comes to clear away.
 
-        A table is idle once the clock has run past the allowance since its last commit, so a game a company
-        left mid-play and one broken up and left to be forgotten both fall due to be cleared.
+        A table is idle once the clock has run past the allowance since the last commit landed on it or the
+        last stream was taken up on it, so a game a company left mid-play and one broken up and left to be
+        forgotten both fall due to be cleared, while a company still turning a hand over keeps their table.
         """
         return tuple(table for table, session in self._sessions.items() if now - session.touched > idle)
 

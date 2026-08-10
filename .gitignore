@@ -16,6 +16,8 @@ __pycache__/
 *.txt
 *.log
 
+*.env
+
 table.lock
 table.pid
 

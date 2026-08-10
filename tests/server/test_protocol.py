@@ -13,6 +13,7 @@ from cardwork.games.game import Game
 from cardwork.presentation.scene import Scene
 
 SERVED: Final[tuple[str, ...]] = (
+    "attends",
     "reveal",
     "layout",
     "view",

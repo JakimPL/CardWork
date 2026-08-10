@@ -83,7 +83,12 @@ async def commits(
     A stream carries what the table has to say and ends there, and the client picks it up again from the commit
     it acknowledged. Ending is what puts each answer whole on the wire, so a host that hands an answer on once
     it is finished carries a table as promptly as one that passes every write straight through.
+
+    Taking the stream up is what reads the table as one somebody is at, which is what a reaper counts it alive
+    by: a company thinking over a turn commits nothing for as long as the thinking takes, and a page following
+    them says they are there throughout.
     """
+    session.attends()
     events = session.events(observer, since)
     if not events and not session.closed:
         try:

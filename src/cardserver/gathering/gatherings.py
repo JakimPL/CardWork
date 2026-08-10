@@ -138,11 +138,17 @@ class Gatherings:
 
         A gathering is stale once no one holds a stream on it and the clock has run past the allowance since it
         last changed, so a room a company left and a room a founder opened and never returned to both fall due.
+
+        A room whose table has been dealt stands for as long as that table does, and is cleared away with it.
+        It is the whole of identity there — a token holds its seat through the room it was minted at — and its
+        company has crossed over to the table's own stream, so the two marks a room is read stale by are marks
+        of a room that is over rather than of one nobody wants: it changes no further, and nobody looks at it
+        again. Clearing it would leave every seat of a game still in service turned away from it.
         """
         return tuple(
             table
             for table, gathering in self._gatherings.items()
-            if gathering.present == 0 and now - gathering.touched > idle
+            if not gathering.dealt and gathering.present == 0 and now - gathering.touched > idle
         )
 
     def drop(self, table: TableId) -> None:

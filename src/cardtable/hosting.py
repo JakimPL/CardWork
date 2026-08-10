@@ -57,11 +57,15 @@ def an_oversight(
     registry: TableRegistry,
     token: str,
     advanced: Advanced,
+    abiding: TableId,
 ) -> Oversight:
     """The overseer's view of this host's lobby, held under the terms the run is tuned to and the token it minted.
 
     The clock is the machine's own monotonic reading, the same one the gatherings count their idleness on, so a
     reap here and the ages a card reads are told against one clock.
+
+    The table this run gathers under its own name is named as the one that abides, since the announcement handed
+    its address out and a sweep is for the rooms a company opened and walked away from.
     """
     return Oversight(
         gatherings,
@@ -73,6 +77,7 @@ def an_oversight(
         stale_seconds=advanced.stale_seconds,
         idle_seconds=advanced.idle_seconds,
         capacity=NO_LIMIT if advanced.capacity is None else advanced.capacity,
+        abiding=abiding,
     )
 
 
@@ -117,7 +122,7 @@ def serve(
             nowhere, or a count of decks it is dealt from nowhere.
     """
     token = an_admin_token(admin.secret)
-    oversight = an_oversight(gatherings, registry, token, advanced)
+    oversight = an_oversight(gatherings, registry, token, advanced, settings.name)
     gatherings.open(
         settings.name,
         settings.code,
