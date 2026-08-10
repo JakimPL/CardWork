@@ -249,7 +249,7 @@ export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement
       : null;
 
   return (
-    <section className={classes("slot", landing !== null && "live")} data-spread={slot.spread}>
+    <section className={classes("slot", landing !== null && "live")} data-spread={slot.spread} style={fanning(zone)}>
       <header className="slot-label">
         <span className="label">{slot.label}</span>
         {slot.counted && <span className="count">{cards.length}</span>}
@@ -262,7 +262,7 @@ export function Slot({ slot, zone, arrivals, playing }: SlotProps): ReactElement
           />
         )}
       </header>
-      <div ref={run} className={classes("cards", cards.length > shown.length && "deep")} style={fanning(shown.length)}>
+      <div ref={run} className={classes("cards", cards.length > shown.length && "deep")}>
         {landing !== null && (
           <Landing onto={onto} caption={landing.caption} label={landing.caption} playing={playing} />
         )}

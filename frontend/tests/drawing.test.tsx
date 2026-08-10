@@ -27,6 +27,7 @@ import {
   PASSING,
   PILE,
   PLAQUES,
+  sortable,
   STACK,
   TAKING,
   TINTED,
@@ -43,15 +44,19 @@ const LAYOUT: Layout = aLayout({
   plaques: PLAQUES,
 });
 
-const DEALT: PositionView = aView(
-  {
-    [HAND]: [card("9", "♦", true), card("8", "♠", true), card("4", "♦", true)],
-    "hand:0": [null, null, null],
-    "hand:2": [null, null, null],
-    [PILE]: [null, null, null, null],
-    [STACK]: [card("2", "♣")],
-  },
-  1,
+/** That table as it stands dealt, the seat's own hand being the one run it lays out in whatever order it pleases. */
+const DEALT: PositionView = sortable(
+  aView(
+    {
+      [HAND]: [card("9", "♦", true), card("8", "♠", true), card("4", "♦", true)],
+      "hand:0": [null, null, null],
+      "hand:2": [null, null, null],
+      [PILE]: [null, null, null, null],
+      [STACK]: [card("2", "♣")],
+    },
+    1,
+  ),
+  HAND,
 );
 
 /** The same table as it stands once a gathering dealt it, every seat playing under a tint of its own. */
@@ -111,7 +116,7 @@ describe("the table one seat reads", () => {
   });
 
   it("says how many cards wide each group of zones lies, which is the room its cards are drawn to", () => {
-    expect(held()).toContain("--widths:2.16");
+    expect(held()).toContain("--widths:1.6");
     expect(middle()).toContain("--widths:2");
   });
 
@@ -138,8 +143,8 @@ describe("the place a turn is said in", () => {
   });
 
   it("counts it in the width the cards are drawn to, which is the room of one card", () => {
-    expect(panel(null)).toContain("--widths:3.16");
-    expect(held()).toContain("--widths:2.16");
+    expect(panel(null)).toContain("--widths:2.6");
+    expect(held()).toContain("--widths:1.6");
   });
 
   it("leaves it quiet where it stands once a card is picked up, which arms it no longer", () => {
@@ -147,7 +152,7 @@ describe("the place a turn is said in", () => {
 
     expect(drawing).toContain('class="word"');
     expect(drawing).toContain("disabled");
-    expect(drawing).toContain("--widths:3.16");
+    expect(drawing).toContain("--widths:2.6");
     expect(drawing).not.toContain("aria-keyshortcuts");
   });
 

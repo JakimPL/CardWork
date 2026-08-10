@@ -12,7 +12,9 @@
  * A group states its own height as the lesser of what it is drawn upright at and what its room allows: the
  * script hands over how many cards wide the group lies, and the height follows from the proportions of a card.
  * So a hand of three is drawn as large as the window has height for, and a holding beside a row of five as large
- * as the width leaves them both.
+ * as the width leaves them both. The panel a player plays from has the width of the page for its room; a group on
+ * the felt has the width its own cards ask for at the width one card is drawn to, which the felt works out from
+ * everything standing across it, so every card on the table is drawn from that one figure.
  *
  * Every card is drawn at the one height `--dealt`, the cards in hand and the cards on the table alike, and the
  * seats standing one above another at a side of the table are what it gives way to, so a table of many seats
@@ -50,12 +52,13 @@
   --card-aspect-width: 71;
   --card-aspect-height: 96;
   --radius: calc(var(--dealt) * 0.07);
-  --overlap: 0.42;
+  --closest: 0.3;
+  --loosest: 0.42;
   --widths: 1;
-  --lines: 1;
+  --filling: 1;
+  --fanned: 1;
   --caption: clamp(10px, 1.5vh, 14px);
   --lettering: calc(var(--caption) * 2);
-  --edging: calc(var(--gap) * 8);
 }
 
 * {
@@ -289,15 +292,19 @@ body {
  *
  * The middle takes the height of the line it lies in and the seats take the rest, so a table sharing nothing gives
  * the whole of the felt to the seats round it. The seats divide their share again by however many of them stand
- * one above another at a side and by how many lines each of them stands in, and a seat drawn where that comes to
- * less than the table's own height is drawn at the lesser of the two.
+ * one above another at a side and by however many lines the deepest of them stands in, and a seat drawn where that
+ * comes to less than the table's own height is drawn at the lesser of the two.
  *
- * It divides its width the same way: a quarter of it to each side that holds seats, and what is left down the
- * middle to the seats facing the near edge and the cards they share.
+ * It divides its width by what the seats hold. The script counts the widest cut across the felt in cards — the
+ * widest seat up either side, and the seats facing the near edge weighed against the zones they share, since those
+ * lie beneath them — and states the boxes and partings standing along that cut beside it. What is left over
+ * belongs to the cards, so `--to-a-card` is the width one card is drawn to where the width is what binds, and
+ * every group on the felt is measured from that one figure. So the seats round a table draw alike wherever they
+ * sit, and a seat holding more cards is handed more of the felt rather than larger cards.
  *
  * The shares are stated on what lies inside the felt rather than on the felt itself, since a container states its
  * size to what it holds. The card on the pile is the largest card the table draws, so what a player reads of
- * another seat is a card of that size or of the size that seat's own share leaves it.
+ * another seat is a card of that size or of the size the height at a seat leaves it.
  *
  * The seats round the edge give way to the middle where the two of them want the same height, and the felt keeps
  * whatever it draws inside itself, so the table stays between the standing above it and the panel below however
@@ -322,7 +329,12 @@ body {
   --on-a-card: min(var(--dealt), var(--evenly));
   --on-the-table: calc(var(--laid) * (var(--on-a-card) + var(--lettering)));
   --round-the-table: calc(100cqh - var(--on-the-table));
-  --down-the-middle: calc(100cqw - var(--flanked) * 50cqw);
+  --round-a-seat: calc(var(--gap) * 2 + 2px);
+  --parting: calc(
+    var(--gap) * 2 + var(--round-a-seat) * var(--boxes) + var(--gap) * (var(--abreast) - 1) + var(--gap) *
+      var(--parted-across) + var(--gap) / 2 * var(--jointed-across)
+  );
+  --to-a-card: max(0px, calc((100cqw - var(--parting)) / var(--cards-across)));
 }
 
 .sitting {
@@ -421,35 +433,31 @@ body {
 
 .zones.shared {
   --upright: var(--on-a-card);
-  --room: calc(var(--down-the-middle) - var(--edging));
+  --room: calc(var(--widths) * var(--to-a-card));
 
   grid-area: middle;
 }
 
 /*
- * A seat up a side of the table has a quarter of its width, and the seats facing the near edge share what is left
- * down the middle. Each of them keeps the edging of its own box out of the width its cards are drawn to, so the
- * shares add to the width of the felt and the seats of a table of any size stand clear of each other and clear of
- * the cards they share.
+ * A seat has the room its own cards ask for, which is how many of them it holds at the width one card is drawn to.
+ * So the seats of a table of any size stand clear of each other and clear of the cards they share, wherever they
+ * sit: a seat holding more cards is handed more of the felt rather than larger cards.
  *
- * A seat is drawn at the height its share leaves it and at no other, so the seats round a short table give way
- * together and the felt holds all of them. What a seat says from across the table is a figure beside the backs
- * standing for its cards, and that figure reads at any size the table draws the backs at.
+ * A seat is drawn at the height its share leaves it and at no other, and every seat reserves the height the
+ * deepest of them stands in, so the seats round a short table give way together and all of them draw alike. What
+ * a seat says from across the table is a figure beside the backs standing for its cards, and that figure reads at
+ * any size the table draws the backs at.
  */
 
 .zones.theirs {
   --upright: min(
     var(--on-a-card),
-    calc((var(--round-the-table) / var(--stacked) - var(--lettering)) / var(--lines) - var(--lettering))
+    calc((var(--round-the-table) / var(--stacked) - var(--lettering)) / var(--deepest) - var(--lettering))
   );
-  --room: calc(25cqw - var(--edging));
+  --room: calc(var(--widths) * var(--to-a-card));
 }
 
-.sitting.across .zones.theirs {
-  --room: calc(var(--down-the-middle) / var(--abreast) - var(--edging));
-}
-
-.zones.theirs .line {
+.felt .line {
   gap: var(--gap);
 }
 
@@ -835,12 +843,28 @@ button.card {
 }
 
 /*
- * How far a fan overlaps itself, which the script works out from the number of cards in it: a handful lies open
- * enough to read every face, and a holding of a dozen and more closes up to the room its zone has.
+ * How far a fan lies open, which is the room the line it lies along has to spare.
+ *
+ * A card is read by the part of it the card lying over it leaves showing, so a fan shows as much of every card as
+ * there is room for: the room the line was handed, less the width its cards take at the closest they may lie,
+ * shared out among the cards lying over another. So a fan lies as open as a fan opens where the line has room to
+ * spare, closes towards the corner carrying the index as the line fills, and the cards themselves give way only
+ * once even the closest of them asks for more room than the line has.
+ *
+ * The script says how many cards wide the line lies and how many of them lie over another, and the widths are
+ * worked out here, since how wide a card is drawn is the sheet's own answer.
  */
 
+.slot[data-spread="fan"] .cards {
+  --to-spare: max(0px, calc(var(--room) - var(--filling) * var(--card-width)));
+  --showing: min(
+    calc(var(--card-width) * var(--loosest)),
+    calc(var(--card-width) * var(--closest) + var(--to-spare) / var(--fanned))
+  );
+}
+
 .slot[data-spread="fan"] .card + .card {
-  margin-left: calc(var(--card-width) * var(--overlap) * -1);
+  margin-left: calc(var(--showing) - var(--card-width));
 }
 
 .slot[data-spread="fan"] button.card:hover {

@@ -8,7 +8,7 @@ import type { Playing } from "../play/usePlay";
 import { classes } from "./classes";
 import type { Placement } from "./placing";
 import { linesOf } from "./placing";
-import { measuring, spanning } from "./sizing";
+import { lining, measuring, spanning } from "./sizing";
 import { Slot } from "./Slot";
 import { Words } from "./Words";
 
@@ -35,6 +35,9 @@ interface ZonesProps {
  * table stands its holdings on one line with the places it seals a card in beneath them, which is the shape of
  * the room round the edge of a table.
  *
+ * Each line carries the width of its own cards besides, and how many of them lie over another, so the room a line
+ * has over what its cards ask for is room the fans along it lie open by.
+ *
  * That panel holds the moves a player says as well as the cards they play: a move landing on no place is drawn
  * at the end of it and counted in the width like a card, so it lies among the cards it is said instead of.
  *
@@ -48,13 +51,11 @@ export function Zones({ place, slots, view, arrivals, playing }: ZonesProps): Re
   const said = mine ? wordsOf(playing.standing) : [];
   const turn = mine && onTurn(playing.standing);
   const lines = linesOf(place, slots);
+  const runs = measuring(lines, view, said);
   return (
-    <div
-      className={classes("zones", place, mine && (turn ? "acting" : "idle"))}
-      style={spanning(measuring(lines, view, said))}
-    >
+    <div className={classes("zones", place, mine && (turn ? "acting" : "idle"))} style={spanning(runs)}>
       {lines.map((line, index) => (
-        <div key={naming(line)} className="line">
+        <div key={naming(line)} className="line" style={lining(runs[index] ?? [])}>
           {line.map((slot) => (
             <Slot key={slot.zone} slot={slot} zone={view.zones[slot.zone]} arrivals={arrivals} playing={playing} />
           ))}
